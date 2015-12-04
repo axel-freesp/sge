@@ -3,7 +3,7 @@ package freesp
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/axel-freesp/tool"
+	"github.com/axel-freesp/sge/tool"
 )
 
 var nodeTypes map[string]*nodeType

@@ -1,7 +1,7 @@
 package views
 
 import (
-	"github.com/axel-freesp/tool"
+	"github.com/axel-freesp/sge/tool"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 )

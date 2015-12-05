@@ -22,8 +22,9 @@ func (t *portType) SignalType() SignalType {
 // namedPortType
 
 type namedPortType struct {
-	name  string
-	pType *portType
+	name      string
+	pType     *portType
+	direction PortDirection
 }
 
 func (t *namedPortType) TypeName() string {
@@ -34,10 +35,14 @@ func (t *namedPortType) Name() string {
 	return t.name
 }
 
+func (t *namedPortType) Direction() PortDirection {
+	return t.direction
+}
+
 func (t *namedPortType) SignalType() SignalType {
 	return t.pType.SignalType()
 }
 
 func newNamedPortType(name, tname string) NamedPortType {
-	return &namedPortType{name, newPortType(tname)}
+	return &namedPortType{name, newPortType(tname), InPort}
 }

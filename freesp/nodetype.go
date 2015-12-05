@@ -11,11 +11,19 @@ func newNodeType(name string) *nodeType {
 }
 
 func (t *nodeType) addInPort(name string, pType *portType) {
-	t.inPorts = append(t.inPorts, &namedPortType{name, pType})
+	t.inPorts = append(t.inPorts, &namedPortType{name, pType, InPort})
 }
 
 func (t *nodeType) addOutPort(name string, pType *portType) {
-	t.outPorts = append(t.outPorts, &namedPortType{name, pType})
+	t.outPorts = append(t.outPorts, &namedPortType{name, pType, OutPort})
+}
+
+func (t *nodeType) addNamedInPortType(name string, pType *portType) {
+	t.inPorts = append(t.inPorts, &namedPortType{name, pType, InPort})
+}
+
+func (t *nodeType) addNamedOutPortType(name string, pType *portType) {
+	t.outPorts = append(t.outPorts, &namedPortType{name, pType, OutPort})
 }
 
 func (t *nodeType) TypeName() string {

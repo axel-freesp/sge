@@ -89,17 +89,25 @@ func main() {
 	// Handle command line arguments: treat each as a filename:
 	for i, p := range unhandledArgs {
 		if i > 0 {
+			filepath := fmt.Sprintf("%s/%s", backend.XmlRoot(), p)
 			var sg freesp.SignalGraph
 			sg = freesp.SignalGraphNew()
-
-			err := sg.ReadFile(fmt.Sprintf("%s/%s", backend.XmlRoot(), p))
-			if err != nil {
-				log.Println("WARNING: sg.ReadFile", p, "failed")
+			err := sg.ReadFile(filepath)
+			if err == nil {
+				log.Println("Loading signal graph", filepath)
+				fts.AddBehaviourFile(p, sg)
 				continue
 			}
-
-			fts.AddBehaviourFile(p, sg)
-
+			log.Println(err)
+			var lib freesp.Library
+			lib = freesp.LibraryNew(filepath)
+			err = lib.ReadFile(filepath)
+			if err == nil {
+				log.Println("Loading library file", filepath)
+				fts.AddLibraryFile(p, lib)
+				continue
+			}
+			log.Println("Warning: Could not read file ", filepath)
 		}
 	}
 

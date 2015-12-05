@@ -56,28 +56,43 @@ func (x *XmlTextView) Set(object interface{}) error {
 				buf, err = xmlnode.Write()
 			}
 		case freesp.NodeType:
-			log.Println("XmlTextView.Set: freesp.NodeType")
+			t := object.(freesp.NodeType)
+			xmlnodetype := createXmlNodeType(t)
+			buf, err = xmlnodetype.Write()
 		case freesp.Port:
 			p := object.(freesp.Port)
-			switch p.Direction() {
-			case freesp.OutPort:
+			if p.Direction() == freesp.OutPort {
 				xmlport := createXmlOutPort(p)
 				buf, err = xmlport.Write()
-			default:
+			} else {
 				xmlport := createXmlInPort(p)
 				buf, err = xmlport.Write()
 			}
+		case freesp.NamedPortType:
+			t := object.(freesp.NamedPortType)
+			if t.Direction() == freesp.InPort {
+				xmlporttype := createXmlNamedInPort(t)
+				buf, err = xmlporttype.Write()
+			} else {
+				xmlporttype := createXmlNamedOutPort(t)
+				buf, err = xmlporttype.Write()
+			}
 		case freesp.PortType:
 			log.Println("XmlTextView.Set: freesp.PortType")
-		case freesp.NamedPortType:
-			log.Println("XmlTextView.Set: freesp.NamedPortType")
 		case freesp.Connection:
 			xmlconn := createXmlConnection(object.(freesp.Connection))
 			buf, err = xmlconn.Write()
 		case freesp.SignalType:
 			s := object.(freesp.SignalType)
-			xmlsignaltype := createXmlSignalType(s)
-			buf, err = xmlsignaltype.Write()
+			if s != nil {
+				xmlsignaltype := createXmlSignalType(s)
+				buf, err = xmlsignaltype.Write()
+			}
+		case freesp.Library:
+			log.Println("XmlTextView.Set: freesp.Library")
+			l := object.(freesp.Library)
+			xmllib := createXmlLibrary(l)
+			buf, err = xmllib.Write()
 		default:
 			log.Println("XmlTextView.Set: invalid data type")
 		}
@@ -98,6 +113,14 @@ func createXmlInPort(p freesp.Port) *backend.XmlInPort {
 
 func createXmlOutPort(p freesp.Port) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.PortName(), p.ItsType().TypeName())
+}
+
+func createXmlNamedInPort(p freesp.NamedPortType) *backend.XmlInPort {
+	return backend.XmlInPortNew(p.Name(), p.TypeName())
+}
+
+func createXmlNamedOutPort(p freesp.NamedPortType) *backend.XmlOutPort {
+	return backend.XmlOutPortNew(p.Name(), p.TypeName())
 }
 
 func createXmlInputNode(n freesp.Node) *backend.XmlInputNode {
@@ -127,6 +150,17 @@ func createXmlProcessingNode(n freesp.Node) *backend.XmlProcessingNode {
 	return ret
 }
 
+func createXmlNodeType(t freesp.NodeType) *backend.XmlNodeType {
+	ret := backend.XmlNodeTypeNew(t.TypeName())
+	for _, p := range t.InPorts() {
+		ret.InPort = append(ret.InPort, *createXmlNamedInPort(p))
+	}
+	for _, p := range t.OutPorts() {
+		ret.OutPort = append(ret.OutPort, *createXmlNamedOutPort(p))
+	}
+	return ret
+}
+
 func createXmlConnection(p freesp.Connection) *backend.XmlConnect {
 	switch p.From.Direction() {
 	case freesp.OutPort:
@@ -145,6 +179,17 @@ func createXmlSignalType(s freesp.SignalType) *backend.XmlSignalType {
 		mode = "sync"
 	}
 	return backend.XmlSignalTypeNew(s.TypeName(), scope, mode, s.CType(), s.ChannelId())
+}
+
+func createXmlLibrary(l freesp.Library) *backend.XmlLibrary {
+	ret := backend.XmlLibraryNew()
+	for _, t := range l.SignalTypes() {
+		ret.SignalTypes = append(ret.SignalTypes, *createXmlSignalType(t))
+	}
+	for _, t := range l.NodeTypes() {
+		ret.NodeTypes = append(ret.NodeTypes, *createXmlNodeType(t))
+	}
+	return ret
 }
 
 func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph {

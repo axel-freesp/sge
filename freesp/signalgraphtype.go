@@ -1,12 +1,13 @@
 package freesp
 
 type signalGraphType struct {
+	libraries                                       []Library
 	signalTypes                                     []SignalType
 	nodes, inputNodes, outputNodes, processingNodes []Node
 }
 
 func newSignalGraphType() *signalGraphType {
-	return &signalGraphType{nil, nil, nil, nil, nil}
+	return &signalGraphType{nil, nil, nil, nil, nil, nil}
 }
 
 func (t *signalGraphType) Nodes() []Node {
@@ -24,6 +25,10 @@ func (t *signalGraphType) NodeByName(name string) Node {
 		}
 	}
 	return nil
+}
+
+func (t *signalGraphType) Libraries() []Library {
+	return t.libraries
 }
 
 func (t *signalGraphType) InputNodes() []Node {

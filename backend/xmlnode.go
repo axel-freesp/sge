@@ -44,7 +44,7 @@ func (n *XmlInputNode) Write() (data []byte, err error) {
 }
 
 func XmlInputNodeNew(nName, nType string) *XmlInputNode {
-	return &XmlInputNode{xml.Name{"http://www.freesp.de/xml/freeSP", "input"}, XmlNode{nName, nType, nil, nil}}
+	return &XmlInputNode{xml.Name{freespNamespace, "input"}, XmlNode{nName, nType, nil, nil}}
 }
 
 func (n *XmlOutputNode) Write() (data []byte, err error) {
@@ -56,7 +56,7 @@ func (n *XmlOutputNode) Write() (data []byte, err error) {
 }
 
 func XmlOutputNodeNew(nName, nType string) *XmlOutputNode {
-	return &XmlOutputNode{xml.Name{"http://www.freesp.de/xml/freeSP", "output"}, XmlNode{nName, nType, nil, nil}}
+	return &XmlOutputNode{xml.Name{freespNamespace, "output"}, XmlNode{nName, nType, nil, nil}}
 }
 
 func (n *XmlProcessingNode) Write() (data []byte, err error) {
@@ -68,5 +68,5 @@ func (n *XmlProcessingNode) Write() (data []byte, err error) {
 }
 
 func XmlProcessingNodeNew(nName, nType string) *XmlProcessingNode {
-	return &XmlProcessingNode{xml.Name{"http://www.freesp.de/xml/freeSP", "processing-node"}, XmlNode{nName, nType, nil, nil}}
+	return &XmlProcessingNode{xml.Name{freespNamespace, "processing-node"}, XmlNode{nName, nType, nil, nil}}
 }

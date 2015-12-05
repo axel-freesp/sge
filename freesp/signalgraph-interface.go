@@ -1,6 +1,7 @@
 package freesp
 
 type SignalGraphType interface {
+	Libraries() []Library
 	SignalTypes() []SignalType
 	Nodes() []Node
 	NodeByName(string) Node
@@ -18,8 +19,13 @@ type SignalGraph interface {
 }
 
 type Library interface {
+	Filename() string
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
+	Read(data []byte) error
+	ReadFile(filepath string) error
+	Write() (data []byte, err error)
+	WriteFile(filepath string) error
 }
 
 type NodeType interface {
@@ -80,6 +86,7 @@ type PortType interface {
 type NamedPortType interface {
 	PortType
 	Name() string
+	Direction() PortDirection
 }
 
 type Port interface {

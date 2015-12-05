@@ -41,6 +41,7 @@ var (
 	imageOutputPort     *gdk.Pixbuf = nil
 	imagePortType       *gdk.Pixbuf = nil
 	imageConnected      *gdk.Pixbuf = nil
+	imageLibrary        *gdk.Pixbuf = nil
 )
 
 func Init() error {
@@ -85,6 +86,10 @@ func Init() error {
 	if err != nil {
 		return gtkErr("FilesTreeStore.Init", "test0.png", err)
 	}
+	imageLibrary, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/test1.png", iconPath))
+	if err != nil {
+		return gtkErr("FilesTreeStore.Init", "test0.png", err)
+	}
 	fmt.Println("models.Init: all icons intitialized")
 	return nil
 }
@@ -94,9 +99,14 @@ type behaviourFile struct {
 	graph    freesp.SignalGraph
 }
 
+type libraryFile struct {
+	filename string
+	library  freesp.Library
+}
+
 type FilesTreeStore struct {
 	treestore *gtk.TreeStore
-	//library []freesp.Library
+	libraries []libraryFile
 	behaviour []behaviourFile
 	//mappings [] freesp.Mapping
 	lookup map[string]interface{}
@@ -113,7 +123,7 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		ret = nil
 		return
 	}
-	ret = &FilesTreeStore{ts, nil, make(map[string]interface{})}
+	ret = &FilesTreeStore{ts, nil, nil, make(map[string]interface{})}
 	err = nil
 	return
 }
@@ -160,6 +170,99 @@ func (ts *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text st
 	return nil
 }
 
+func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) error {
+	s.libraries = append(s.libraries, libraryFile{filename, lib})
+	ts := s.treestore
+	iter := ts.Append(nil)
+	err := s.addEntry(iter, imageLibrary, filename, lib)
+	if err != nil {
+		return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(filename)", err)
+	}
+	i := ts.Append(iter)
+	err = s.addEntry(i, imagePortType, "Signal Types", nil)
+	if err != nil {
+		return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(SignalTypes dummy)", err)
+	}
+	for _, st := range lib.SignalTypes() {
+		j := ts.Append(i)
+		err := s.addEntry(j, imagePortType, st.TypeName(), st)
+		if err != nil {
+			return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(SignalTypes)", err)
+		}
+	}
+	err = s.addNodeTypes(iter, lib.NodeTypes())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *FilesTreeStore) addNodeTypes(iter *gtk.TreeIter, types []freesp.NodeType) error {
+	ts := s.treestore
+	for _, t := range types {
+		i := ts.Append(iter)
+		err := s.addEntry(i, imageNodeType, t.TypeName(), t)
+		if err != nil {
+			return gtkErr("FilesTreeStore.addNodeTypes", "ts.addEntry(0)", err)
+		}
+		if len(t.InPorts()) > 0 {
+			err = s.addNamedPortTypes(i, t.InPorts(), imageInputPort)
+			if err != nil {
+				return err
+			}
+		}
+		if len(t.OutPorts()) > 0 {
+			err = s.addNamedPortTypes(i, t.OutPorts(), imageOutputPort)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *FilesTreeStore) addNamedPortTypes(iter *gtk.TreeIter, ports []freesp.NamedPortType, kind *gdk.Pixbuf) error {
+	ts := s.treestore
+	for _, p := range ports {
+		i := ts.Append(iter)
+		err := s.addEntry(i, kind, p.Name(), p)
+		if err != nil {
+			return gtkErr("FilesTreeStore.addNamedPortTypes", "s.addEntry()", err)
+		}
+		j := ts.Append(i)
+		err = s.addEntry(j, imagePortType, p.TypeName(), nil)
+		if err != nil {
+			return gtkErr("FilesTreeStore.addNamedPortTypes", "s.addEntry()", err)
+		}
+	}
+	return nil
+}
+
+func (s *FilesTreeStore) addLibrary(iter *gtk.TreeIter, lib freesp.Library) error {
+	ts := s.treestore
+	err := s.addEntry(iter, imageLibrary, lib.Filename(), lib)
+	if err != nil {
+		return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(filename)", err)
+	}
+	i := ts.Append(iter)
+	err = s.addEntry(i, imagePortType, "Signal Types", nil)
+	if err != nil {
+		return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(SignalTypes dummy)", err)
+	}
+	for _, st := range lib.SignalTypes() {
+		j := ts.Append(i)
+		err := s.addEntry(j, imagePortType, st.TypeName(), st)
+		if err != nil {
+			return gtkErr("FilesTreeStore.AddLibraryFile", "ts.addEntry(SignalTypes)", err)
+		}
+	}
+	err = s.addNodeTypes(iter, lib.NodeTypes())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *FilesTreeStore) AddBehaviourFile(filename string, graph freesp.SignalGraph) error {
 	s.behaviour = append(s.behaviour, behaviourFile{filename, graph})
 	ts := s.treestore
@@ -168,16 +271,25 @@ func (s *FilesTreeStore) AddBehaviourFile(filename string, graph freesp.SignalGr
 	if err != nil {
 		return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(filename)", err)
 	}
-	i := ts.Append(iter)
-	err = s.addEntry(i, imagePortType, "Signal Types", nil)
-	if err != nil {
-		return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes dummy)", err)
-	}
-	for _, st := range graph.ItsType().SignalTypes() {
-		j := ts.Append(i)
-		err := s.addEntry(j, imagePortType, st.TypeName(), st)
+	for _, l := range graph.ItsType().Libraries() {
+		i := ts.Append(iter)
+		err = s.addLibrary(i, l)
 		if err != nil {
-			return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes)", err)
+			return gtkErr("FilesTreeStore.AddBehaviourFile", "s.addLibrary()", err)
+		}
+	}
+	if len(graph.ItsType().SignalTypes()) > 0 {
+		i := ts.Append(iter)
+		err = s.addEntry(i, imagePortType, "Signal Types", nil)
+		if err != nil {
+			return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes dummy)", err)
+		}
+		for _, st := range graph.ItsType().SignalTypes() {
+			j := ts.Append(i)
+			err := s.addEntry(j, imagePortType, st.TypeName(), st)
+			if err != nil {
+				return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes)", err)
+			}
 		}
 	}
 	err = s.addNodes(iter, graph.ItsType().InputNodes(), imageInputNode)

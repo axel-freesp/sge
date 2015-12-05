@@ -16,7 +16,7 @@ type XmlInPort struct {
 }
 
 func XmlInPortNew(pName, pType string) *XmlInPort {
-	return &XmlInPort{xml.Name{"http://www.freesp.de/xml/freeSP", "intype"},
+	return &XmlInPort{xml.Name{freespNamespace, "intype"},
 		XmlPort{pName, pType}}
 }
 
@@ -26,7 +26,7 @@ type XmlOutPort struct {
 }
 
 func XmlOutPortNew(pName, pType string) *XmlOutPort {
-	return &XmlOutPort{xml.Name{"http://www.freesp.de/xml/freeSP", "outtype"},
+	return &XmlOutPort{xml.Name{freespNamespace, "outtype"},
 		XmlPort{pName, pType}}
 }
 

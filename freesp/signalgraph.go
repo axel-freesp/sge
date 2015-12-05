@@ -43,7 +43,7 @@ func getPortType(name string) *portType {
 	return pt
 }
 
-func createNodeTypeFromXml(n backend.XmlNode, ntName string) *nodeType {
+func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 	nt := newNodeType(ntName)
 	for _, p := range n.InPort {
 		nt.addInPort(p.PName, getPortType(p.PType))
@@ -63,7 +63,7 @@ func (s *signalGraph) createNodeFromXml(n backend.XmlNode) *node {
 	}
 	nt := nodeTypes[ntName]
 	if nt == nil {
-		nt = createNodeTypeFromXml(n, ntName)
+		nt = createNodeTypeFromXmlNode(n, ntName)
 		nodeTypes[ntName] = nt
 	}
 	ret := newNode(nName, nt, s)
@@ -84,6 +84,21 @@ func (s *signalGraph) Read(data []byte) error {
 	}
 	s.itsType = newSignalGraphType()
 	sgType := s.itsType.(*signalGraphType)
+	for _, ref := range g.Libraries {
+		l := LibraryNew(ref.Name)
+		sgType.libraries = append(sgType.libraries, l)
+		fmt.Println("signalGraph.Read: loading library", ref.Name)
+		for _, try := range backend.XmlSearchPaths() {
+			err = l.ReadFile(fmt.Sprintf("%s/%s", try, ref.Name))
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return newSignalGraphError(fmt.Sprintf("signalGraph.Read: referenced library file %s not found", ref.Name))
+		}
+		fmt.Println("signalGraph.Read: library", ref.Name, "successfully loaded")
+	}
 	for _, st := range g.SignalTypes {
 		var scope Scope
 		var mode Mode

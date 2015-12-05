@@ -15,7 +15,7 @@ type XmlSignalType struct {
 }
 
 func XmlSignalTypeNew(name, scope, mode, ctype, msgid string) *XmlSignalType {
-	return &XmlSignalType{xml.Name{"http://www.freesp.de/xml/freeSP", "signal-type"}, name, scope, mode, ctype, msgid}
+	return &XmlSignalType{xml.Name{freespNamespace, "signal-type"}, name, scope, mode, ctype, msgid}
 }
 
 func (t *XmlSignalType) Read(data []byte) error {

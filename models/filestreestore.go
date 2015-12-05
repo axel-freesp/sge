@@ -8,15 +8,12 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
-	"unsafe"
 )
 
 const envIconPathKey = "SGE_ICON_PATH"
 const (
 	iconCol = 0
 	textCol = 1
-	typeCol = 2
-	dataCol = 3
 )
 
 type storedType int
@@ -24,7 +21,7 @@ type storedType int
 const (
 	TInvalid storedType = iota
 	TNone
-	TBehaviourFile
+	TSignalGraph
 	TNode
 	TNodeType
 	TPort
@@ -94,7 +91,7 @@ func Init() error {
 
 type behaviourFile struct {
 	filename string
-	graph    *freesp.SignalGraph
+	graph    freesp.SignalGraph
 }
 
 type FilesTreeStore struct {
@@ -102,6 +99,7 @@ type FilesTreeStore struct {
 	//library []freesp.Library
 	behaviour []behaviourFile
 	//mappings [] freesp.Mapping
+    lookup map[string]interface{}
 }
 
 func (s *FilesTreeStore) TreeStore() *gtk.TreeStore {
@@ -109,13 +107,13 @@ func (s *FilesTreeStore) TreeStore() *gtk.TreeStore {
 }
 
 func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
-	ts, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING, glib.TYPE_INT, glib.TYPE_POINTER)
+	ts, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING)
 	if err != nil {
 		err = gtkErr("FilesTreeStoreNew", "TreeStoreNew", err)
 		ret = nil
 		return
 	}
-	ret = &FilesTreeStore{ts, nil}
+	ret = &FilesTreeStore{ts, nil, make(map[string]interface{})}
 	err = nil
 	return
 }
@@ -135,79 +133,23 @@ func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 }
 
 func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err error) {
-	v, err := s.treestore.GetValue(iter, typeCol)
+    path, err := s.treestore.GetPath(iter)
 	if err != nil {
-		err = gtkErr("FilesTreeStore.GetValue", "GetValue", err)
+		err = gtkErr("FilesTreeStore.GetObject", "iter.GetPath", err)
 		return
 	}
-	x, err := v.GoValue()
-	if err != nil {
-		err = gtkErr("FilesTreeStore.GetValue", "v.GoValue", err)
-		return
-	}
-	typ := storedType(x.(int))
-	v, err = s.treestore.GetValue(iter, dataCol)
-	if err != nil {
-		err = gtkErr("FilesTreeStore.GetObject", "GetValue", err)
-		return
-	}
-	data, err := v.GoValue()
-	if err != nil {
-		err = gtkErr("FilesTreeStore.GetObject", "v.GoValue", err)
-		return
-	}
-	switch typ {
-	case TBehaviourFile:
-		ret = ((*behaviourFile)(data.(unsafe.Pointer))).graph
-	case TNode:
-		ret = (*freesp.Node)(data.(unsafe.Pointer))
-	case TNodeType:
-		ret = (*freesp.NodeType)(data.(unsafe.Pointer))
-	case TPort:
-		ret = (*freesp.Port)(data.(unsafe.Pointer))
-	case TPortType:
-		ret = (*freesp.PortType)(data.(unsafe.Pointer))
-	case TNamedPortType:
-		ret = (*freesp.NamedPortType)(data.(unsafe.Pointer))
-	case TConnection:
-		ret = (*freesp.Connection)(data.(unsafe.Pointer))
-	case TSignalType:
-		ret = (*freesp.SignalType)(data.(unsafe.Pointer))
-	case TNone:
-		ret = nil
-	default:
-		err = fmt.Errorf("FilesTreeStore.GetObject: invalid data type")
-	}
+    ret = s.lookup[path.String()]
 	return
 }
 
-type dummy unsafe.Pointer
-
 func (ts *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text string, data interface{}) error {
-	var typ storedType
-	switch data.(type) {
-	case *freesp.SignalGraph:
-		typ = TBehaviourFile
-	case *freesp.Node:
-		typ = TNode
-	case *freesp.NodeType:
-		typ = TNodeType
-	case *freesp.Port:
-		typ = TPort
-	case *freesp.PortType:
-		typ = TPortType
-	case *freesp.NamedPortType:
-		typ = TNamedPortType
-	case *freesp.Connection:
-		typ = TConnection
-	case *freesp.SignalType:
-		typ = TSignalType
-	case *dummy:
-		typ = TNone
-	default:
-		return fmt.Errorf("FilesTreeStore.addEntry: invalid data type for", text)
+    path, err := ts.treestore.GetPath(iter)
+	if err != nil {
+		err = gtkErr("FilesTreeStore.addEntry", "iter.GetPath", err)
+		return err
 	}
-	err := ts.treestore.SetValue(iter, iconCol, icon)
+    ts.lookup[path.String()] = data
+	err = ts.treestore.SetValue(iter, iconCol, icon)
 	if err != nil {
 		return gtkErr("FilesTreeStore.addEntry", "ts.SetValue(iconCol)", err)
 	}
@@ -215,18 +157,10 @@ func (ts *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text st
 	if err != nil {
 		return gtkErr("FilesTreeStore.addEntry", "ts.SetValue(textCol)", err)
 	}
-	err = ts.treestore.SetValue(iter, typeCol, typ)
-	if err != nil {
-		return gtkErr("FilesTreeStore.addEntry", "ts.SetValue(typeCol)", err)
-	}
-	err = ts.treestore.SetValue(iter, dataCol, &data)
-	if err != nil {
-		return gtkErr("FilesTreeStore.addEntry", "ts.SetValue(dataCol)", err)
-	}
 	return nil
 }
 
-func (s *FilesTreeStore) AddBehaviourFile(filename string, graph *freesp.SignalGraph) error {
+func (s *FilesTreeStore) AddBehaviourFile(filename string, graph freesp.SignalGraph) error {
 	s.behaviour = append(s.behaviour, behaviourFile{filename, graph})
 	ts := s.treestore
 	iter := ts.Append(nil)
@@ -235,27 +169,26 @@ func (s *FilesTreeStore) AddBehaviourFile(filename string, graph *freesp.SignalG
 		return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(filename)", err)
 	}
 	i := ts.Append(iter)
-	d := dummy(nil)
-	err = s.addEntry(i, imagePortType, "Signal Types", &d)
+	err = s.addEntry(i, imagePortType, "Signal Types", nil)
 	if err != nil {
 		return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes dummy)", err)
 	}
-	for _, st := range (*graph).ItsType().SignalTypes() {
+	for _, st := range graph.ItsType().SignalTypes() {
 		j := ts.Append(i)
-		err := s.addEntry(j, imagePortType, st.TypeName(), &st)
+		err := s.addEntry(j, imagePortType, st.TypeName(), st)
 		if err != nil {
 			return gtkErr("FilesTreeStore.AddBehaviourFile", "ts.addEntry(SignalTypes)", err)
 		}
 	}
-	err = s.addNodes(iter, (*graph).ItsType().InputNodes(), imageInputNode)
+	err = s.addNodes(iter, graph.ItsType().InputNodes(), imageInputNode)
 	if err != nil {
 		return err
 	}
-	err = s.addNodes(iter, (*graph).ItsType().OutputNodes(), imageOutputNode)
+	err = s.addNodes(iter, graph.ItsType().OutputNodes(), imageOutputNode)
 	if err != nil {
 		return err
 	}
-	err = s.addNodes(iter, (*graph).ItsType().ProcessingNodes(), imageProcessingNode)
+	err = s.addNodes(iter, graph.ItsType().ProcessingNodes(), imageProcessingNode)
 	if err != nil {
 		return err
 	}
@@ -266,13 +199,13 @@ func (s *FilesTreeStore) addNodes(iter *gtk.TreeIter, nodes []freesp.Node, kind 
 	ts := s.treestore
 	for _, n := range nodes {
 		i := ts.Append(iter)
-		err := s.addEntry(i, kind, n.NodeName(), &n)
+		err := s.addEntry(i, kind, n.NodeName(), n)
 		if err != nil {
 			return gtkErr("FilesTreeStore.addNodes", "ts.addEntry(0)", err)
 		}
 		j := ts.Append(i)
 		t := n.ItsType()
-		err = s.addEntry(j, imageNodeType, n.ItsType().TypeName(), &t)
+		err = s.addEntry(j, imageNodeType, n.ItsType().TypeName(), t)
 		if err != nil {
 			return gtkErr("FilesTreeStore.addNodes", "ts.addEntry(2)", err)
 		}
@@ -296,7 +229,7 @@ func (s *FilesTreeStore) addPorts(iter *gtk.TreeIter, ports []freesp.Port, kind 
 	ts := s.treestore
 	for _, p := range ports {
 		i := ts.Append(iter)
-		err := s.addEntry(i, kind, p.PortName(), &p)
+		err := s.addEntry(i, kind, p.PortName(), p)
 		if err != nil {
 			return gtkErr("FilesTreeStore.addPorts", "s.addEntry()", err)
 		}
@@ -312,14 +245,14 @@ func (s *FilesTreeStore) addPortDetails(iter *gtk.TreeIter, port freesp.Port) er
 	ts := s.treestore
 	i := ts.Append(iter)
 	t := port.ItsType()
-	err := s.addEntry(i, imagePortType, port.ItsType().TypeName(), &t)
+	err := s.addEntry(i, imagePortType, port.ItsType().TypeName(), t)
 	if err != nil {
 		return gtkErr("FilesTreeStore.addPortDetails", "s.addEntry()", err)
 	}
 	for _, c := range port.Connections() {
 		con := freesp.Connection{port, c}
 		i = ts.Append(iter)
-		err := s.addEntry(i, imageConnected, c.Node().NodeName(), &con)
+		err := s.addEntry(i, imageConnected, c.Node().NodeName(), con)
 		if err != nil {
 			return gtkErr("FilesTreeStore.addPortDetails", "s.addEntry", err)
 		}

@@ -1,9 +1,9 @@
 package freesp
 
 import (
-	"encoding/xml"
 	"fmt"
 	"github.com/axel-freesp/sge/tool"
+	"github.com/axel-freesp/sge/backend"
 )
 
 var nodeTypes map[string]*nodeType
@@ -26,7 +26,7 @@ func (s *signalGraph) ItsType() SignalGraphType {
 	return s.itsType
 }
 
-func createNodeTypeName(n *XmlNode) string {
+func createNodeTypeName(n backend.XmlNode) string {
 	ntName := n.NType
 	if len(ntName) == 0 {
 		ntName = fmt.Sprintf("autoTypeOfNode-%s", n.NName)
@@ -43,7 +43,7 @@ func getPortType(name string) *portType {
 	return pt
 }
 
-func createNodeTypeFromXml(n *XmlNode, ntName string) *nodeType {
+func createNodeTypeFromXml(n backend.XmlNode, ntName string) *nodeType {
 	nt := newNodeType(ntName)
 	for _, p := range n.InPort {
 		nt.addInPort(p.PName, getPortType(p.PType))
@@ -55,7 +55,7 @@ func createNodeTypeFromXml(n *XmlNode, ntName string) *nodeType {
 	return nt
 }
 
-func (s *signalGraph) createNodeFromXml(n *XmlNode) *node {
+func (s *signalGraph) createNodeFromXml(n backend.XmlNode) *node {
 	nName := n.NName
 	ntName := n.NType
 	if len(ntName) == 0 {
@@ -77,7 +77,7 @@ func (s *signalGraph) createNodeFromXml(n *XmlNode) *node {
 }
 
 func (s *signalGraph) Read(data []byte) error {
-	g := newXmlSignalGraph()
+	g := backend.NewXmlSignalGraph()
 	err := g.Read(data)
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
@@ -86,27 +86,34 @@ func (s *signalGraph) Read(data []byte) error {
 	sgType := s.itsType.(*signalGraphType)
 	for _, st := range g.SignalTypes {
 		var scope Scope
+		var mode Mode
 		switch st.Scope {
 		case "local":
 			scope = Local
 		default:
 			scope = Global
 		}
-		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope)
+		switch st.Mode {
+		case "sync":
+			mode = Synchronous
+		default:
+			mode = Asynchronous
+		}
+		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
 		sgType.signalTypes = append(sgType.signalTypes, sType)
 	}
 	for _, n := range g.InputNodes {
-		nnode := s.createNodeFromXml(&n)
+		nnode := s.createNodeFromXml(n.XmlNode)
 		sgType.inputNodes = append(sgType.inputNodes, nnode)
 		sgType.nodes = append(sgType.nodes, nnode)
 	}
 	for _, n := range g.OutputNodes {
-		nnode := s.createNodeFromXml(&n)
+		nnode := s.createNodeFromXml(n.XmlNode)
 		sgType.outputNodes = append(sgType.outputNodes, nnode)
 		sgType.nodes = append(sgType.nodes, nnode)
 	}
 	for _, n := range g.ProcessingNodes {
-		nnode := s.createNodeFromXml(&n)
+		nnode := s.createNodeFromXml(n.XmlNode)
 		sgType.processingNodes = append(sgType.processingNodes, nnode)
 		sgType.nodes = append(sgType.nodes, nnode)
 	}
@@ -173,71 +180,3 @@ func newSignalGraphError(reason string) *signalGraphError {
 	return &signalGraphError{reason}
 }
 
-///////////////////////////////////////
-
-type XmlLibrary struct {
-	Name string `xml:"ref,attr"`
-}
-
-type XmlPort struct {
-	PName string `xml:"port,attr"`
-	PType string `xml:"type,attr"`
-}
-
-type XmlNode struct {
-	NName   string    `xml:"name,attr"`
-	NType   string    `xml:"type,attr"`
-	InPort  []XmlPort `xml:"intype"`
-	OutPort []XmlPort `xml:"outtype"`
-	//gHint   Hint   `xml:"graph-hint"`
-}
-
-type XmlConnect struct {
-	From     string `xml:"from,attr"`
-	To       string `xml:"to,attr"`
-	FromPort string `xml:"from-port,attr"`
-	ToPort   string `xml:"to-port,attr"`
-}
-
-type XmlSignalType struct {
-	Name  string `xml:"name,attr"`
-	Scope string `xml:"scope,attr"`
-	Ctype string `xml:"c-type,attr"`
-	Msgid string `xml:"message-id,attr"`
-}
-
-type XmlSignalGraph struct {
-	XMLName         xml.Name        `xml:"http://www.freesp.de/xml/freeSP signal-graph"`
-	Version         string          `xml:"version,attr"`
-	Libraries       []XmlLibrary    `xml:"library"`
-	SignalTypes     []XmlSignalType `xml:"signal-type"`
-	InputNodes      []XmlNode       `xml:"nodes>input"`
-	OutputNodes     []XmlNode       `xml:"nodes>output"`
-	ProcessingNodes []XmlNode       `xml:"nodes>processing-node"`
-	Connections     []XmlConnect    `xml:"connections>connect"`
-}
-
-func (g *XmlSignalGraph) Read(data []byte) error {
-	err := xml.Unmarshal(data, g)
-	if err != nil {
-		fmt.Printf("SignalGraph.Read error: %v", err)
-	}
-	return err
-}
-
-func (g *XmlSignalGraph) ReadFile(filepath string) error {
-	data, err := tool.ReadFile(filepath)
-	if err != nil {
-		fmt.Println("signalgraph.ReadFile error: Failed to read file", filepath)
-		return err
-	}
-	err = g.Read(data)
-	if err != nil {
-		fmt.Printf("signalgraph.ReadFile error: %v", err)
-	}
-	return err
-}
-
-func newXmlSignalGraph() *XmlSignalGraph {
-	return &XmlSignalGraph{xml.Name{"", ""}, "", nil, nil, nil, nil, nil, nil}
-}

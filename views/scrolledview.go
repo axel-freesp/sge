@@ -13,7 +13,7 @@ type ScrolledView struct {
 
 func ScrolledViewNew(width, height int) (viewer *ScrolledView, err error) {
 	viewer = &ScrolledView{nil, nil, nil}
-	err = viewer.ScrolledViewInit(width, height)
+	err = viewer.scrolledViewInit(width, height)
 	return
 }
 
@@ -21,7 +21,7 @@ func (v *ScrolledView) Widget() *gtk.Widget {
 	return (*gtk.Widget)(unsafe.Pointer(v.scrolled))
 }
 
-func (v *ScrolledView) ScrolledViewInit(width, height int) (err error) {
+func (v *ScrolledView) scrolledViewInit(width, height int) (err error) {
 	v.hadj, err = gtk.AdjustmentNew(0, 0, float64(width), 1, 10, float64(width))
 	if err != nil {
 		log.Println("Unable to create hadj:", err)

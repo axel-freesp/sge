@@ -22,9 +22,11 @@ import (
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
+	"github.com/axel-freesp/sge/backend"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
+	"fmt"
 )
 
 const (
@@ -32,42 +34,20 @@ const (
 	height = 600
 )
 
+var (
+	win *GoAppWindow
+	xmlview *views.XmlTextView
+)
+
 func treeSelectionChangedCB(selection *gtk.TreeSelection, treeStore *models.FilesTreeStore) {
 	var iter gtk.TreeIter
 	var model gtk.ITreeModel
 	if selection.GetSelected(&model, &iter) {
-		s, err := treeStore.GetValue(&iter)
-		if err != nil {
-			log.Fatal("treeSelectionChangedCB: Could not selected from model:", err)
-		}
-		log.Println("selected:", s)
 		obj, err := treeStore.GetObject(&iter)
 		if err != nil {
 			log.Fatal("treeSelectionChangedCB: Could not get object from model", err)
 		}
-		if obj == nil {
-			return
-		}
-		switch obj.(type) {
-		case *freesp.SignalGraph:
-			log.Println("treeSelectionChangedCB: freesp.SignalGraph")
-		case *freesp.Node:
-			log.Println("treeSelectionChangedCB: freesp.Node")
-		case *freesp.NodeType:
-			log.Println("treeSelectionChangedCB: freesp.NodeType")
-		case *freesp.Port:
-			log.Println("treeSelectionChangedCB: freesp.Port")
-		case *freesp.PortType:
-			log.Println("treeSelectionChangedCB: freesp.PortType")
-		case *freesp.NamedPortType:
-			log.Println("treeSelectionChangedCB: freesp.NamedPortType")
-		case *freesp.Connection:
-			log.Println("treeSelectionChangedCB: freesp.Connection")
-		case *freesp.SignalType:
-			log.Println("treeSelectionChangedCB: freesp.SignalType")
-		default:
-			log.Println("treeSelectionChangedCB: invalid data type")
-		}
+		xmlview.Set(obj)
 	}
 }
 
@@ -75,6 +55,7 @@ func main() {
 	// Initialize GTK with parsing the command line arguments.
 	unhandledArgs := os.Args
 	gtk.Init(&unhandledArgs)
+	backend.Init()
 	freesp.SignalGraphInit()
 
 	// Create a new toplevel window.
@@ -111,16 +92,23 @@ func main() {
 			var sg freesp.SignalGraph
 			sg = freesp.SignalGraphNew()
 
-			err := sg.ReadFile(p)
+			err := sg.ReadFile(fmt.Sprintf("%s/%s", backend.XmlRoot(), p))
 			if err != nil {
 				log.Println("WARNING: sg.ReadFile", p, "failed")
 				continue
 			}
 
-			fts.AddBehaviourFile(p, &sg)
+			fts.AddBehaviourFile(p, sg)
 
 		}
 	}
+
+	xmlview, err = views.XmlTextViewNew(width, height)
+	if err != nil {
+		log.Fatal("Could not create XML view.");
+	}
+	win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
+
 	win.Window().ShowAll()
 	gtk.Main()
 }

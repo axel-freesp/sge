@@ -5,10 +5,11 @@ package freesp
 type signalType struct {
 	name, ctype, msgid string
 	scope              Scope
+	mode               Mode
 }
 
-func newSignalType(name, ctype, msgid string, scope Scope) *signalType {
-	return &signalType{name, ctype, msgid, scope}
+func newSignalType(name, ctype, msgid string, scope Scope, mode Mode) *signalType {
+	return &signalType{name, ctype, msgid, scope, mode}
 }
 
 func (t *signalType) TypeName() string {
@@ -25,4 +26,8 @@ func (t *signalType) ChannelId() string {
 
 func (t *signalType) Scope() Scope {
 	return t.scope
+}
+
+func (t *signalType) Mode() Mode {
+	return t.mode
 }

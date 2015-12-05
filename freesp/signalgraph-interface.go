@@ -17,6 +17,11 @@ type SignalGraph interface {
 	WriteFile(filepath string) error
 }
 
+type Library interface {
+    SignalTypes() []SignalType
+    NodeTypes()   []NodeType
+}
+
 type NodeType interface {
 	TypeName() string
 	InPorts() []NamedPortType
@@ -47,10 +52,16 @@ type Node interface {
 }
 
 type Scope int
+type Mode int
 
 const (
 	Local Scope = iota
 	Global
+)
+
+const (
+    Synchronous Mode = iota
+    Asynchronous
 )
 
 type SignalType interface {
@@ -58,6 +69,7 @@ type SignalType interface {
 	CType() string
 	ChannelId() string
 	Scope() Scope
+	Mode() Mode
 }
 
 type PortType interface {

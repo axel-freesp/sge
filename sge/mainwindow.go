@@ -19,14 +19,14 @@
 package main
 
 import (
+	"fmt"
+	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
-	"github.com/axel-freesp/sge/backend"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
-	"fmt"
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	win *GoAppWindow
+	win     *GoAppWindow
 	xmlview *views.XmlTextView
 )
 
@@ -105,7 +105,7 @@ func main() {
 
 	xmlview, err = views.XmlTextViewNew(width, height)
 	if err != nil {
-		log.Fatal("Could not create XML view.");
+		log.Fatal("Could not create XML view.")
 	}
 	win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
 

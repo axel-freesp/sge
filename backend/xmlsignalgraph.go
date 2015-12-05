@@ -7,18 +7,18 @@ import (
 )
 
 type XmlSignalGraph struct {
-	XMLName         xml.Name        `xml:"http://www.freesp.de/xml/freeSP signal-graph"`
-	Version         string          `xml:"version,attr"`
-	Libraries       []XmlLibraryRef `xml:"library"`
-	SignalTypes     []XmlSignalType `xml:"signal-type"`
-	InputNodes      []XmlInputNode  `xml:"nodes>input"`
-	OutputNodes     []XmlOutputNode `xml:"nodes>output"`
+	XMLName         xml.Name            `xml:"http://www.freesp.de/xml/freeSP signal-graph"`
+	Version         string              `xml:"version,attr"`
+	Libraries       []XmlLibraryRef     `xml:"library"`
+	SignalTypes     []XmlSignalType     `xml:"signal-type"`
+	InputNodes      []XmlInputNode      `xml:"nodes>input"`
+	OutputNodes     []XmlOutputNode     `xml:"nodes>output"`
 	ProcessingNodes []XmlProcessingNode `xml:"nodes>processing-node"`
-	Connections     []XmlConnect    `xml:"connections>connect"`
+	Connections     []XmlConnect        `xml:"connections>connect"`
 }
 
 func XmlSignalGraphNew() *XmlSignalGraph {
-    return &XmlSignalGraph{xml.Name{"http://www.freesp.de/xml/freeSP", "signal-graph"}, "1.0", nil, nil, nil, nil, nil, nil}
+	return &XmlSignalGraph{xml.Name{"http://www.freesp.de/xml/freeSP", "signal-graph"}, "1.0", nil, nil, nil, nil, nil, nil}
 }
 
 func (g *XmlSignalGraph) Read(data []byte) error {
@@ -31,10 +31,10 @@ func (g *XmlSignalGraph) Read(data []byte) error {
 
 func (g *XmlSignalGraph) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(g, "", "   ")
-    if err != nil {
+	if err != nil {
 		err = fmt.Errorf("XmlSignalGraph.Write error: %v", err)
-    }
-    return
+	}
+	return
 }
 
 func (g *XmlSignalGraph) ReadFile(filepath string) error {
@@ -57,4 +57,3 @@ func (g *XmlSignalGraph) WriteFile(filepath string) error {
 func NewXmlSignalGraph() *XmlSignalGraph {
 	return &XmlSignalGraph{xml.Name{"", ""}, "", nil, nil, nil, nil, nil, nil}
 }
-

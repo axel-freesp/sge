@@ -2,8 +2,8 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/tool"
 )
 
 var nodeTypes map[string]*nodeType
@@ -179,4 +179,3 @@ func (e *signalGraphError) Error() string {
 func newSignalGraphError(reason string) *signalGraphError {
 	return &signalGraphError{reason}
 }
-

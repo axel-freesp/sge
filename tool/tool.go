@@ -16,7 +16,6 @@ func MaxInt(a, b int) int {
 	return b
 }
 
-
 func ReadFile(filepath string) (data []byte, err error) {
 	var file *os.File
 	var size int64
@@ -66,7 +65,5 @@ func Basename(path string) string {
 	if idx < 0 {
 		return path
 	}
-	return path[idx + 1 : len(path)]
+	return path[idx+1 : len(path)]
 }
-
-

@@ -18,8 +18,8 @@ type SignalGraph interface {
 }
 
 type Library interface {
-    SignalTypes() []SignalType
-    NodeTypes()   []NodeType
+	SignalTypes() []SignalType
+	NodeTypes() []NodeType
 }
 
 type NodeType interface {
@@ -60,8 +60,8 @@ const (
 )
 
 const (
-    Synchronous Mode = iota
-    Asynchronous
+	Synchronous Mode = iota
+	Asynchronous
 )
 
 type SignalType interface {

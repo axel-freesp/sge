@@ -99,7 +99,7 @@ type FilesTreeStore struct {
 	//library []freesp.Library
 	behaviour []behaviourFile
 	//mappings [] freesp.Mapping
-    lookup map[string]interface{}
+	lookup map[string]interface{}
 }
 
 func (s *FilesTreeStore) TreeStore() *gtk.TreeStore {
@@ -133,22 +133,22 @@ func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 }
 
 func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err error) {
-    path, err := s.treestore.GetPath(iter)
+	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.GetObject", "iter.GetPath", err)
 		return
 	}
-    ret = s.lookup[path.String()]
+	ret = s.lookup[path.String()]
 	return
 }
 
 func (ts *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text string, data interface{}) error {
-    path, err := ts.treestore.GetPath(iter)
+	path, err := ts.treestore.GetPath(iter)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "iter.GetPath", err)
 		return err
 	}
-    ts.lookup[path.String()] = data
+	ts.lookup[path.String()] = data
 	err = ts.treestore.SetValue(iter, iconCol, icon)
 	if err != nil {
 		return gtkErr("FilesTreeStore.addEntry", "ts.SetValue(iconCol)", err)

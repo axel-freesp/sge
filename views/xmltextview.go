@@ -1,12 +1,12 @@
 package views
 
 import (
-	"log"
-	"fmt"
 	"encoding/xml"
+	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/gotk3/gotk3/gtk"
+	"log"
 )
 
 type XmlTextView struct {
@@ -92,15 +92,15 @@ func (x *XmlTextView) Set(object interface{}) error {
 
 // Conversions: freesp interface type -> backend XML type
 
-func createXmlInPort(p freesp.Port) *backend.XmlInPort{
+func createXmlInPort(p freesp.Port) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.PortName(), p.ItsType().TypeName())
 }
 
-func createXmlOutPort(p freesp.Port) *backend.XmlOutPort{
+func createXmlOutPort(p freesp.Port) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.PortName(), p.ItsType().TypeName())
 }
 
-func createXmlInputNode(n freesp.Node) *backend.XmlInputNode{
+func createXmlInputNode(n freesp.Node) *backend.XmlInputNode {
 	ret := backend.XmlInputNodeNew(n.NodeName(), n.ItsType().TypeName())
 	for _, p := range n.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *createXmlOutPort(p))
@@ -108,7 +108,7 @@ func createXmlInputNode(n freesp.Node) *backend.XmlInputNode{
 	return ret
 }
 
-func createXmlOutputNode(n freesp.Node) *backend.XmlOutputNode{
+func createXmlOutputNode(n freesp.Node) *backend.XmlOutputNode {
 	ret := backend.XmlOutputNodeNew(n.NodeName(), n.ItsType().TypeName())
 	for _, p := range n.InPorts() {
 		ret.InPort = append(ret.InPort, *createXmlInPort(p))
@@ -116,7 +116,7 @@ func createXmlOutputNode(n freesp.Node) *backend.XmlOutputNode{
 	return ret
 }
 
-func createXmlProcessingNode(n freesp.Node) *backend.XmlProcessingNode{
+func createXmlProcessingNode(n freesp.Node) *backend.XmlProcessingNode {
 	ret := backend.XmlProcessingNodeNew(n.NodeName(), n.ItsType().TypeName())
 	for _, p := range n.InPorts() {
 		ret.InPort = append(ret.InPort, *createXmlInPort(p))
@@ -127,7 +127,7 @@ func createXmlProcessingNode(n freesp.Node) *backend.XmlProcessingNode{
 	return ret
 }
 
-func createXmlConnection(p freesp.Connection) *backend.XmlConnect{
+func createXmlConnection(p freesp.Connection) *backend.XmlConnect {
 	switch p.From.Direction() {
 	case freesp.OutPort:
 		return &backend.XmlConnect{xml.Name{"http://www.freesp.de/xml/freeSP", "connect"}, p.From.Node().NodeName(), p.To.Node().NodeName(), p.From.PortName(), p.To.PortName()}
@@ -147,7 +147,7 @@ func createXmlSignalType(s freesp.SignalType) *backend.XmlSignalType {
 	return backend.XmlSignalTypeNew(s.TypeName(), scope, mode, s.CType(), s.ChannelId())
 }
 
-func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph{
+func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph {
 	t := g.ItsType()
 	ret := backend.XmlSignalGraphNew()
 	for _, s := range t.SignalTypes() {
@@ -172,6 +172,3 @@ func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph{
 	}
 	return ret
 }
-
-
-

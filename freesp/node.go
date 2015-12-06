@@ -1,14 +1,14 @@
 package freesp
 
 type node struct {
-	context  SignalGraph
+	context  SignalGraphType
 	name     string
 	nodetype NodeType
 	inPort   []Port
 	outPort  []Port
 }
 
-func newNode(name string, ntype *nodeType, context *signalGraph) *node {
+func newNode(name string, ntype *nodeType, context *signalGraphType) *node {
 	return &node{context, name, ntype, nil, nil}
 }
 
@@ -66,7 +66,7 @@ func (n *node) ItsType() NodeType {
 	return n.nodetype
 }
 
-func (n *node) Context() SignalGraph {
+func (n *node) Context() SignalGraphType {
 	return n.context
 }
 

@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-type XmlBackend struct {
-}
-
 const envPathKey = "FREESP_PATH"
 const envSearchPathKey = "FREESP_SEARCH_PATH"
 const envSearchPathSep = ":"
@@ -41,4 +38,8 @@ func XmlSearchPaths() []string {
 type XmlLibraryRef struct {
 	XMLName xml.Name `xml:"library"`
 	Name    string   `xml:"ref,attr"`
+}
+
+func XmlLibraryRefNew(filename string) *XmlLibraryRef {
+	return &XmlLibraryRef{xml.Name{freespNamespace, "library"}, filename}
 }

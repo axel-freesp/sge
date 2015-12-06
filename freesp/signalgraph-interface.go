@@ -1,6 +1,7 @@
 package freesp
 
 type SignalGraphType interface {
+	Name() string
 	Libraries() []Library
 	SignalTypes() []SignalType
 	Nodes() []Node
@@ -11,6 +12,7 @@ type SignalGraphType interface {
 }
 
 type SignalGraph interface {
+	Filename() string
 	ItsType() SignalGraphType
 	Read(data []byte) error
 	ReadFile(filepath string) error
@@ -30,29 +32,30 @@ type Library interface {
 
 type NodeType interface {
 	TypeName() string
+	DefinedAt() string
 	InPorts() []NamedPortType
 	OutPorts() []NamedPortType
-	//Implementation() NodeImplementation
+	Implementation() Implementation
 }
 
-type NodeImplementation interface {
-	ImplementationType() NodeImplementationType
+type Implementation interface {
+	ImplementationType() ImplementationType
 	ElementName() string
 	Graph() SignalGraphType
 	// missing: input mapping, output mapping
 }
 
-type NodeImplementationType int
+type ImplementationType int
 
 const (
-	NodeTypeElement NodeImplementationType = 0
-	NodeTypeGraph   NodeImplementationType = 1
+	NodeTypeElement ImplementationType = 0
+	NodeTypeGraph   ImplementationType = 1
 )
 
 type Node interface {
 	NodeName() string
 	ItsType() NodeType
-	Context() SignalGraph
+	Context() SignalGraphType
 	InPorts() []Port
 	OutPorts() []Port
 }

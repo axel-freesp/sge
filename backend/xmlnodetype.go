@@ -6,14 +6,15 @@ import (
 )
 
 type XmlNodeType struct {
-	XMLName  xml.Name     `xml:"node-type"`
-	TypeName string       `xml:"name,attr"`
-	InPort   []XmlInPort  `xml:"intype"`
-	OutPort  []XmlOutPort `xml:"outtype"`
+	XMLName        xml.Name            `xml:"node-type"`
+	TypeName       string              `xml:"name,attr"`
+	InPort         []XmlInPort         `xml:"intype"`
+	OutPort        []XmlOutPort        `xml:"outtype"`
+	Implementation []XmlImplementation `xml:"implementation"`
 }
 
 func XmlNodeTypeNew(name string) *XmlNodeType {
-	return &XmlNodeType{xml.Name{freespNamespace, "node-type"}, name, nil, nil}
+	return &XmlNodeType{xml.Name{freespNamespace, "node-type"}, name, nil, nil, nil}
 }
 
 func (n *XmlNodeType) Read(data []byte) (err error) {

@@ -13,6 +13,10 @@ type XmlConnect struct {
 	ToPort   string   `xml:"to-port,attr"`
 }
 
+func XmlConnectNew(from, to, fromPort, toPort string) *XmlConnect {
+	return &XmlConnect{xml.Name{freespNamespace, "connect"}, from, to, fromPort, toPort}
+}
+
 func (c *XmlConnect) Read(data []byte) (err error) {
 	err = xml.Unmarshal(data, c)
 	if err != nil {

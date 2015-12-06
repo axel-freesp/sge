@@ -56,7 +56,7 @@ func main() {
 	unhandledArgs := os.Args
 	gtk.Init(&unhandledArgs)
 	backend.Init()
-	freesp.SignalGraphInit()
+	freesp.Init()
 
 	// Create a new toplevel window.
 	win, err := GoAppWindowNew(width, height)
@@ -91,11 +91,11 @@ func main() {
 		if i > 0 {
 			filepath := fmt.Sprintf("%s/%s", backend.XmlRoot(), p)
 			var sg freesp.SignalGraph
-			sg = freesp.SignalGraphNew()
+			sg = freesp.SignalGraphNew(p)
 			err := sg.ReadFile(filepath)
 			if err == nil {
 				log.Println("Loading signal graph", filepath)
-				fts.AddBehaviourFile(p, sg)
+				fts.AddSignalGraphFile(p, sg)
 				continue
 			}
 			log.Println(err)

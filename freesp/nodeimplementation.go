@@ -1,20 +1,23 @@
 package freesp
 
-type nodeImplementation struct {
-	implementationType          NodeImplementationType
-	elementName                 string
-	graph                       SignalGraphType
-	inputMapping, outputMapping map[Port]Node
+type implementation struct {
+	implementationType ImplementationType
+	elementName        string
+	graph              SignalGraphType
 }
 
-func (n *nodeImplementation) ImplementationType() NodeImplementationType {
+func newImplementation(iType ImplementationType) *implementation {
+	return &implementation{iType, "", nil}
+}
+
+func (n *implementation) ImplementationType() ImplementationType {
 	return n.implementationType
 }
 
-func (n *nodeImplementation) ElementName() string {
+func (n *implementation) ElementName() string {
 	return n.elementName
 }
 
-func (n *nodeImplementation) Graph() SignalGraphType {
+func (n *implementation) Graph() SignalGraphType {
 	return n.graph
 }

@@ -28,19 +28,6 @@ func (l *library) NodeTypes() []NodeType {
 	return l.nodeTypes
 }
 
-func createNodeTypeFromXml(n backend.XmlNodeType) *nodeType {
-	nt := newNodeType(n.TypeName)
-	for _, p := range n.InPort {
-		nt.addNamedInPortType(p.PName, getPortType(p.PType))
-	}
-	for _, p := range n.OutPort {
-		nt.addNamedOutPortType(p.PName, getPortType(p.PType))
-	}
-	nodeTypes[n.TypeName] = nt
-	// TODO: evaluate <implementation>
-	return nt
-}
-
 func (s *library) Read(data []byte) error {
 	l := backend.XmlLibraryNew()
 	err := l.Read(data)
@@ -66,7 +53,13 @@ func (s *library) Read(data []byte) error {
 		s.signalTypes = append(s.signalTypes, sType)
 	}
 	for _, n := range l.NodeTypes {
-		nType := createNodeTypeFromXml(n)
+		nType := nodeTypes[n.TypeName]
+		if nType != nil {
+			fmt.Println("Warning: reading existing node type definition", n.TypeName, "(ignored)")
+		} else {
+			nType := createNodeTypeFromXml(n, s.Filename())
+			nodeTypes[n.TypeName] = nType
+		}
 		s.nodeTypes = append(s.nodeTypes, nType)
 	}
 	return nil

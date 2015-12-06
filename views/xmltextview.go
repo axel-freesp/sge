@@ -1,12 +1,12 @@
 package views
 
 import (
-	"encoding/xml"
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
+	"strings"
 )
 
 type XmlTextView struct {
@@ -93,6 +93,16 @@ func (x *XmlTextView) Set(object interface{}) error {
 			l := object.(freesp.Library)
 			xmllib := createXmlLibrary(l)
 			buf, err = xmllib.Write()
+		case freesp.Implementation:
+			log.Println("XmlTextView.Set: freesp.Implementation")
+			impl := object.(freesp.Implementation)
+			switch impl.ImplementationType() {
+			case freesp.NodeTypeElement:
+				// TODO
+			default:
+				xmlImpl := createXmlSignalGraphType(impl.Graph())
+				buf, err = xmlImpl.Write()
+			}
 		default:
 			log.Println("XmlTextView.Set: invalid data type")
 		}
@@ -124,7 +134,11 @@ func createXmlNamedOutPort(p freesp.NamedPortType) *backend.XmlOutPort {
 }
 
 func createXmlInputNode(n freesp.Node) *backend.XmlInputNode {
-	ret := backend.XmlInputNodeNew(n.NodeName(), n.ItsType().TypeName())
+	tName := n.ItsType().TypeName()
+	if strings.HasPrefix(tName, "autoInputNodeType-") {
+		tName = ""
+	}
+	ret := backend.XmlInputNodeNew(n.NodeName(), tName)
 	for _, p := range n.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *createXmlOutPort(p))
 	}
@@ -132,7 +146,11 @@ func createXmlInputNode(n freesp.Node) *backend.XmlInputNode {
 }
 
 func createXmlOutputNode(n freesp.Node) *backend.XmlOutputNode {
-	ret := backend.XmlOutputNodeNew(n.NodeName(), n.ItsType().TypeName())
+	tName := n.ItsType().TypeName()
+	if strings.HasPrefix(tName, "autoOutputNodeType-") {
+		tName = ""
+	}
+	ret := backend.XmlOutputNodeNew(n.NodeName(), tName)
 	for _, p := range n.InPorts() {
 		ret.InPort = append(ret.InPort, *createXmlInPort(p))
 	}
@@ -141,11 +159,13 @@ func createXmlOutputNode(n freesp.Node) *backend.XmlOutputNode {
 
 func createXmlProcessingNode(n freesp.Node) *backend.XmlProcessingNode {
 	ret := backend.XmlProcessingNodeNew(n.NodeName(), n.ItsType().TypeName())
-	for _, p := range n.InPorts() {
-		ret.InPort = append(ret.InPort, *createXmlInPort(p))
-	}
-	for _, p := range n.OutPorts() {
-		ret.OutPort = append(ret.OutPort, *createXmlOutPort(p))
+	if len(n.ItsType().DefinedAt()) == 0 {
+		for _, p := range n.InPorts() {
+			ret.InPort = append(ret.InPort, *createXmlInPort(p))
+		}
+		for _, p := range n.OutPorts() {
+			ret.OutPort = append(ret.OutPort, *createXmlOutPort(p))
+		}
 	}
 	return ret
 }
@@ -158,15 +178,27 @@ func createXmlNodeType(t freesp.NodeType) *backend.XmlNodeType {
 	for _, p := range t.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *createXmlNamedOutPort(p))
 	}
+	impl := t.Implementation()
+	if impl != nil {
+		ret.Implementation = append(ret.Implementation, *createXmlImplementation(impl))
+	}
+	return ret
+}
+
+func createXmlImplementation(impl freesp.Implementation) *backend.XmlImplementation {
+	ret := backend.XmlImplementationNew(impl.ElementName())
+	if impl.ImplementationType() == freesp.NodeTypeGraph {
+		ret.SignalGraph = append(ret.SignalGraph, *createXmlSignalGraphType(impl.Graph()))
+	}
 	return ret
 }
 
 func createXmlConnection(p freesp.Connection) *backend.XmlConnect {
 	switch p.From.Direction() {
 	case freesp.OutPort:
-		return &backend.XmlConnect{xml.Name{"http://www.freesp.de/xml/freeSP", "connect"}, p.From.Node().NodeName(), p.To.Node().NodeName(), p.From.PortName(), p.To.PortName()}
+		return backend.XmlConnectNew(p.From.Node().NodeName(), p.To.Node().NodeName(), p.From.PortName(), p.To.PortName())
 	default:
-		return &backend.XmlConnect{xml.Name{"http://www.freesp.de/xml/freeSP", "connect"}, p.To.Node().NodeName(), p.From.Node().NodeName(), p.To.PortName(), p.From.PortName()}
+		return backend.XmlConnectNew(p.To.Node().NodeName(), p.From.Node().NodeName(), p.To.PortName(), p.From.PortName())
 	}
 }
 
@@ -193,8 +225,14 @@ func createXmlLibrary(l freesp.Library) *backend.XmlLibrary {
 }
 
 func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph {
-	t := g.ItsType()
+	return createXmlSignalGraphType(g.ItsType())
+}
+
+func createXmlSignalGraphType(t freesp.SignalGraphType) *backend.XmlSignalGraph {
 	ret := backend.XmlSignalGraphNew()
+	for _, l := range t.Libraries() {
+		ret.Libraries = append(ret.Libraries, *createXmlLibraryRef(l))
+	}
 	for _, s := range t.SignalTypes() {
 		ret.SignalTypes = append(ret.SignalTypes, *createXmlSignalType(s))
 	}
@@ -216,4 +254,8 @@ func createXmlSignalGraph(g freesp.SignalGraph) *backend.XmlSignalGraph {
 		}
 	}
 	return ret
+}
+
+func createXmlLibraryRef(l freesp.Library) *backend.XmlLibraryRef {
+	return backend.XmlLibraryRefNew(l.Filename())
 }

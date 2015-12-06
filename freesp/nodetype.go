@@ -56,6 +56,22 @@ func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 	return nt
 }
 
+func (t *nodeType) doResolvePort(name string, dir PortDirection) *namedPortType {
+	var ports []NamedPortType
+	switch dir {
+	case InPort:
+		ports = t.inPorts
+	default:
+		ports = t.outPorts
+	}
+	for _, p := range ports {
+		if name == p.Name() {
+			return p.(*namedPortType)
+		}
+	}
+	return nil
+}
+
 func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 	nt := newNodeType(n.TypeName, filename)
 	for _, p := range n.InPort {
@@ -81,19 +97,7 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 			default:
 				var err error
 				var resolvePort = func(name string, dir PortDirection) *namedPortType {
-					var ports []NamedPortType
-					switch dir {
-					case InPort:
-						ports = nt.inPorts
-					default:
-						ports = nt.outPorts
-					}
-					for _, p := range ports {
-						if name == p.Name() {
-							return p.(*namedPortType)
-						}
-					}
-					return nil
+					return nt.doResolvePort(name, dir)
 				}
 				log.Println("adding implementation for node type", n.TypeName)
 				impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, resolvePort)

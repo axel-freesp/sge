@@ -50,3 +50,14 @@ func (g *XmlLibrary) WriteFile(filepath string) error {
 	// TODO
 	return fmt.Errorf("XmlLibrary.WriteFile() interface not implemented")
 }
+
+///////////////////////////////////////
+
+type XmlLibraryRef struct {
+	XMLName xml.Name `xml:"library"`
+	Name    string   `xml:"ref,attr"`
+}
+
+func XmlLibraryRefNew(filename string) *XmlLibraryRef {
+	return &XmlLibraryRef{xml.Name{freespNamespace, "library"}, filename}
+}

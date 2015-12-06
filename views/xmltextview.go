@@ -39,7 +39,6 @@ func (x *XmlTextView) Set(object interface{}) error {
 	if object != nil {
 		switch object.(type) {
 		case freesp.SignalGraph:
-			log.Println("XmlTextView.Set: freesp.SignalGraph")
 			s := object.(freesp.SignalGraph)
 			xmlsignalgraph := createXmlSignalGraph(s)
 			buf, err = xmlsignalgraph.Write()
@@ -78,7 +77,12 @@ func (x *XmlTextView) Set(object interface{}) error {
 				buf, err = xmlporttype.Write()
 			}
 		case freesp.PortType:
-			log.Println("XmlTextView.Set: freesp.PortType")
+			pt := object.(freesp.PortType)
+			s := pt.SignalType()
+			if s != nil {
+				xmlsignaltype := createXmlSignalType(s)
+				buf, err = xmlsignaltype.Write()
+			}
 		case freesp.Connection:
 			xmlconn := createXmlConnection(object.(freesp.Connection))
 			buf, err = xmlconn.Write()
@@ -89,12 +93,10 @@ func (x *XmlTextView) Set(object interface{}) error {
 				buf, err = xmlsignaltype.Write()
 			}
 		case freesp.Library:
-			log.Println("XmlTextView.Set: freesp.Library")
 			l := object.(freesp.Library)
 			xmllib := createXmlLibrary(l)
 			buf, err = xmllib.Write()
 		case freesp.Implementation:
-			log.Println("XmlTextView.Set: freesp.Implementation")
 			impl := object.(freesp.Implementation)
 			switch impl.ImplementationType() {
 			case freesp.NodeTypeElement:

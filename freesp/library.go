@@ -51,6 +51,7 @@ func (s *library) Read(data []byte) error {
 		}
 		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
 		s.signalTypes = append(s.signalTypes, sType)
+		signalTypes[st.Name] = sType
 	}
 	for _, n := range l.NodeTypes {
 		nType := nodeTypes[n.TypeName]

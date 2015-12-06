@@ -308,7 +308,7 @@ func (s *FilesTreeStore) addNamedPortTypes(iter *gtk.TreeIter, ports []freesp.Na
 			return gtkErr("FilesTreeStore.addNamedPortTypes", "s.addEntry()", err)
 		}
 		j := ts.Append(i)
-		err = s.addEntry(j, imageSignalType, p.TypeName(), nil)
+		err = s.addEntry(j, imageSignalType, p.TypeName(), p.SignalType())
 		if err != nil {
 			return gtkErr("FilesTreeStore.addNamedPortTypes", "s.addEntry()", err)
 		}

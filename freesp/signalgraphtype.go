@@ -7,11 +7,13 @@ import (
 	//"encoding/xml"
 )
 
+var signalTypes map[string]*signalType
 var nodeTypes map[string]*nodeType
 var portTypes map[string]*portType
 var libraries map[string]*library
 
 func Init() {
+	signalTypes = make(map[string]*signalType)
 	nodeTypes = make(map[string]*nodeType)
 	portTypes = make(map[string]*portType)
 	libraries = make(map[string]*library)
@@ -170,7 +172,11 @@ func createOutputNodeTypeName(name string) string {
 func getPortType(name string) *portType {
 	pt := portTypes[name]
 	if pt == nil {
-		pt = newPortType(name)
+		st := signalTypes[name]
+		if st == nil {
+			log.Fatal("getPortType: signalType '", name, "' is not defined")
+		}
+		pt = newPortType(name, st)
 		portTypes[name] = pt
 	}
 	return pt

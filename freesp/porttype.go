@@ -7,8 +7,8 @@ type portType struct {
 	ref  *signalType
 }
 
-func newPortType(name string) *portType {
-	return &portType{name, nil}
+func newPortType(name string, st *signalType) *portType {
+	return &portType{name, st}
 }
 
 func (t *portType) TypeName() string {
@@ -41,8 +41,4 @@ func (t *namedPortType) Direction() PortDirection {
 
 func (t *namedPortType) SignalType() SignalType {
 	return t.pType.SignalType()
-}
-
-func newNamedPortType(name, tname string) NamedPortType {
-	return &namedPortType{name, newPortType(tname), InPort}
 }

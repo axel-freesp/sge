@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"encoding/xml"
 	"log"
 	"os"
 	"strings"
@@ -31,15 +30,4 @@ func XmlRoot() string {
 
 func XmlSearchPaths() []string {
 	return xmlSearchPaths
-}
-
-///////////////////////////////////////
-
-type XmlLibraryRef struct {
-	XMLName xml.Name `xml:"library"`
-	Name    string   `xml:"ref,attr"`
-}
-
-func XmlLibraryRefNew(filename string) *XmlLibraryRef {
-	return &XmlLibraryRef{xml.Name{freespNamespace, "library"}, filename}
 }

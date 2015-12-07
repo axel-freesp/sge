@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"log"
-	//"encoding/xml"
 )
 
 var signalTypes map[string]*signalType
@@ -127,7 +126,6 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 		if n1 == nil {
 			dump, _ := g.Write()
 			log.Fatal(fmt.Sprintf("invalid edge %d: node %s not found\n%s", i, c.From, dump))
-			//return nil, newSignalGraphError(fmt.Sprintf("invalid edge %d: node %s not found", i, c.From))
 		}
 		n2 := t.NodeByName(c.To)
 		if n2 == nil {

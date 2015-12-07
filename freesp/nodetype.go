@@ -99,7 +99,6 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 				var resolvePort = func(name string, dir PortDirection) *namedPortType {
 					return nt.doResolvePort(name, dir)
 				}
-				log.Println("adding implementation for node type", n.TypeName)
 				impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, resolvePort)
 				if err != nil {
 					log.Fatal(err)

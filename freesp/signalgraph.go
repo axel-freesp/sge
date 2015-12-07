@@ -7,7 +7,7 @@ import (
 )
 
 func SignalGraphNew(filename string) *signalGraph {
-	return &signalGraph{filename, nil}
+	return &signalGraph{filename, newSignalGraphType(filename)}
 }
 
 type signalGraph struct {
@@ -29,7 +29,8 @@ func (s *signalGraph) Read(data []byte) error {
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
 	}
-	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, func(_ string, _ PortDirection) *namedPortType { return nil })
+	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
+		func(_ string, _ PortDirection) *namedPortType { return nil })
 	return err
 }
 

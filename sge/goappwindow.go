@@ -62,13 +62,14 @@ func (w *GoAppWindow) Init(width, height int) (err error) {
 		log.Println("Unable to create Stack:", err)
 		return
 	}
-	w.layout_box.PackStart(w.navigation_box, true, true, 6)
-	w.content_box.Add(w.header)
+	w.layout_box.PackStart(w.navigation_box, true, true, 0)
+	w.content_box.PackStart(w.header, false, true, 0)
 	w.header.Add(w.tabs)
 	w.tabs.SetStack(w.stack)
 	w.content_box.Add(w.stack)
-	w.layout_box.PackEnd(w.content_box, true, true, 6)
+	w.layout_box.PackEnd(w.content_box, true, true, 0)
 	w.window.Add(w.layout_box)
+
 	return
 }
 

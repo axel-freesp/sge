@@ -22,11 +22,7 @@ func XmlSignalGraphNew() *XmlSignalGraph {
 }
 
 func (g *XmlSignalGraph) Read(data []byte) error {
-	err := xml.Unmarshal(data, g)
-	if err != nil {
-		fmt.Printf("XmlSignalGraph.Read error: %v", err)
-	}
-	return err
+	return xml.Unmarshal(data, g)
 }
 
 func (g *XmlSignalGraph) Write() (data []byte, err error) {

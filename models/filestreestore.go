@@ -88,8 +88,9 @@ type FilesTreeStore struct {
 	treestore *gtk.TreeStore
 	//mappings [] freesp.Mapping
 	lookup map[string]interface{}
-	graphs map[string]freesp.SignalGraphType
-	libs   map[string]freesp.Library
+	//graphs map[string]freesp.SignalGraphType
+	libs             map[string]freesp.Library
+	CurrentSelection *gtk.TreeIter
 }
 
 func (s *FilesTreeStore) TreeStore() *gtk.TreeStore {
@@ -104,8 +105,9 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		return
 	}
 	ret = &FilesTreeStore{ts, make(map[string]interface{}),
-		make(map[string]freesp.SignalGraphType),
-		make(map[string]freesp.Library)}
+		//make(map[string]freesp.SignalGraphType),
+		make(map[string]freesp.Library),
+		nil}
 	err = nil
 	return
 }
@@ -122,6 +124,7 @@ func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 		err = gtkErr("FilesTreeStore.GetValue", "GetString", err)
 		return
 	}
+	s.CurrentSelection = iter
 	return
 }
 
@@ -133,6 +136,7 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err err
 		return
 	}
 	ret = s.lookup[path.String()]
+	s.CurrentSelection = iter
 	return
 }
 
@@ -179,44 +183,35 @@ func (s *FilesTreeStore) addSignalGraph(iter *gtk.TreeIter, graph freesp.SignalG
 func (s *FilesTreeStore) addSignalGraphType(iter *gtk.TreeIter, gtype freesp.SignalGraphType) error {
 	ts := s.treestore
 	var err error
-	if s.graphs[gtype.Name()] == nil {
-		s.graphs[gtype.Name()] = gtype
-		/*
-		   for _, l := range gtype.Libraries() {
-		       i := ts.Append(iter)
-		       err = s.addLibrary(i, l)
-		       if err != nil {
-		           return gtkErr("FilesTreeStore.addSignalGraph", "s.addLibrary()", err)
-		       }
-		   }
-		*/
-		if len(gtype.SignalTypes()) > 0 {
-			i := ts.Append(iter)
-			err = s.addEntry(i, imageSignalType, "Signal Types", nil)
+	//if s.graphs[gtype.Name()] == nil {
+	//	s.graphs[gtype.Name()] = gtype
+	if len(gtype.SignalTypes()) > 0 {
+		i := ts.Append(iter)
+		err = s.addEntry(i, imageSignalType, "Signal Types", nil)
+		if err != nil {
+			return gtkErr("FilesTreeStore.addSignalGraph", "ts.addEntry(SignalTypes dummy)", err)
+		}
+		for _, st := range gtype.SignalTypes() {
+			j := ts.Append(i)
+			err := s.addEntry(j, imageSignalType, st.TypeName(), st)
 			if err != nil {
-				return gtkErr("FilesTreeStore.addSignalGraph", "ts.addEntry(SignalTypes dummy)", err)
+				return gtkErr("FilesTreeStore.addSignalGraph", "ts.addEntry(SignalTypes)", err)
 			}
-			for _, st := range gtype.SignalTypes() {
-				j := ts.Append(i)
-				err := s.addEntry(j, imageSignalType, st.TypeName(), st)
-				if err != nil {
-					return gtkErr("FilesTreeStore.addSignalGraph", "ts.addEntry(SignalTypes)", err)
-				}
-			}
-		}
-		err = s.addNodes(iter, gtype.InputNodes(), imageInputNode)
-		if err != nil {
-			return err
-		}
-		err = s.addNodes(iter, gtype.OutputNodes(), imageOutputNode)
-		if err != nil {
-			return err
-		}
-		err = s.addNodes(iter, gtype.ProcessingNodes(), imageProcessingNode)
-		if err != nil {
-			return err
 		}
 	}
+	err = s.addNodes(iter, gtype.InputNodes(), imageInputNode)
+	if err != nil {
+		return err
+	}
+	err = s.addNodes(iter, gtype.OutputNodes(), imageOutputNode)
+	if err != nil {
+		return err
+	}
+	err = s.addNodes(iter, gtype.ProcessingNodes(), imageProcessingNode)
+	if err != nil {
+		return err
+	}
+	//}
 	return nil
 }
 

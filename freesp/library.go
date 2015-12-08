@@ -52,6 +52,7 @@ func (s *library) Read(data []byte) error {
 		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
 		s.signalTypes = append(s.signalTypes, sType)
 		signalTypes[st.Name] = sType
+		registeredSignalTypes = append(registeredSignalTypes, st.Name)
 	}
 	for _, n := range l.NodeTypes {
 		nType := nodeTypes[n.TypeName]
@@ -60,6 +61,7 @@ func (s *library) Read(data []byte) error {
 		} else {
 			nType := createNodeTypeFromXml(n, s.Filename())
 			nodeTypes[n.TypeName] = nType
+			registeredNodeTypes = append(registeredNodeTypes, n.TypeName)
 		}
 		s.nodeTypes = append(s.nodeTypes, nType)
 	}

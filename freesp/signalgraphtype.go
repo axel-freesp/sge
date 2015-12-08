@@ -10,6 +10,8 @@ var signalTypes map[string]*signalType
 var nodeTypes map[string]*nodeType
 var portTypes map[string]*portType
 var libraries map[string]*library
+var registeredNodeTypes []string
+var registeredSignalTypes []string
 
 func Init() {
 	signalTypes = make(map[string]*signalType)
@@ -105,6 +107,8 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 		}
 		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
 		t.signalTypes = append(t.signalTypes, sType)
+		signalTypes[st.Name] = sType
+		registeredSignalTypes = append(registeredSignalTypes, st.Name)
 	}
 	for _, n := range g.InputNodes {
 		nnode := t.createInputNodeFromXml(n, resolvePort)

@@ -110,3 +110,11 @@ const (
 type Connection struct {
 	From, To Port
 }
+
+func GetRegisteredNodeTypes() []string {
+	return registeredNodeTypes
+}
+
+func GetRegisteredSignalTypes() []string {
+	return registeredSignalTypes
+}

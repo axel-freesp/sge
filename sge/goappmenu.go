@@ -27,11 +27,13 @@ type GoAppMenu struct {
 	aboutmenu  *gtk.MenuItem
 	aboutAbout *gtk.MenuItem
 	aboutHelp  *gtk.MenuItem
+
+	aboutdialog *gtk.AboutDialog
 }
 
 func GoAppMenuNew() *GoAppMenu {
 	return &GoAppMenu{nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 }
 
 func (m *GoAppMenu) Init() {
@@ -107,7 +109,7 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editNew, err = gtk.MenuItemNewWithLabel("New")
+	m.editNew, err = gtk.MenuItemNewWithLabel("New Element")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}

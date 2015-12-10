@@ -6,8 +6,12 @@ type implementation struct {
 	graph              SignalGraphType
 }
 
-func newImplementation(iType ImplementationType) *implementation {
-	return &implementation{iType, "", nil}
+func ImplementationNew(iName string, iType ImplementationType) *implementation {
+	ret := &implementation{iType, iName, nil}
+	if iType == NodeTypeGraph {
+		ret.graph = SignalGraphTypeNew()
+	}
+	return ret
 }
 
 func (n *implementation) ImplementationType() ImplementationType {

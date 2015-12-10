@@ -10,7 +10,6 @@ type XmlSignalGraph struct {
 	XMLName         xml.Name            `xml:"http://www.freesp.de/xml/freeSP signal-graph"`
 	Version         string              `xml:"version,attr"`
 	Libraries       []XmlLibraryRef     `xml:"library"`
-	SignalTypes     []XmlSignalType     `xml:"signal-type"`
 	InputNodes      []XmlInputNode      `xml:"nodes>input"`
 	OutputNodes     []XmlOutputNode     `xml:"nodes>output"`
 	ProcessingNodes []XmlProcessingNode `xml:"nodes>processing-node"`
@@ -18,7 +17,7 @@ type XmlSignalGraph struct {
 }
 
 func XmlSignalGraphNew() *XmlSignalGraph {
-	return &XmlSignalGraph{xml.Name{freespNamespace, "signal-graph"}, "1.0", nil, nil, nil, nil, nil, nil}
+	return &XmlSignalGraph{xml.Name{freespNamespace, "signal-graph"}, "1.0", nil, nil, nil, nil, nil}
 }
 
 func (g *XmlSignalGraph) Read(data []byte) error {
@@ -48,8 +47,4 @@ func (g *XmlSignalGraph) ReadFile(filepath string) error {
 func (g *XmlSignalGraph) WriteFile(filepath string) error {
 	// TODO
 	return fmt.Errorf("XmlSignalGraph.WriteFile() interface not implemented")
-}
-
-func NewXmlSignalGraph() *XmlSignalGraph {
-	return &XmlSignalGraph{xml.Name{"", ""}, "", nil, nil, nil, nil, nil, nil}
 }

@@ -50,6 +50,10 @@ func findPort(list []Port, prt *port) bool {
 	return false
 }
 
+func (p *port) AddConnection(c Port) error {
+	return PortConnect(p, c)
+}
+
 func PortConnect(port1, port2 Port) error {
 	p1, p2 := port1.(*port), port2.(*port)
 	if p1.itsType != p2.itsType {

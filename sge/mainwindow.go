@@ -19,6 +19,7 @@ const (
 
 var (
 	win *GoAppWindow
+	jl  *jobList
 )
 
 type selectionArg struct {
@@ -118,8 +119,11 @@ func main() {
 		}
 	}
 
+	japp := jobApplierNew(fts)
+	jl = jobListNew(japp)
+
 	MenuFileInit(menu, fts)
-	MenuEditInit(menu, fts)
+	MenuEditInit(menu, fts, jl, ftv)
 	MenuAboutInit(menu)
 
 	win.Window().ShowAll()

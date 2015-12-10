@@ -6,6 +6,7 @@ import (
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
+	"strings"
 )
 
 type inputElement string
@@ -14,6 +15,8 @@ const (
 	iNodeName           inputElement = "NodeName"
 	iTypeName                        = "TypeName"
 	iPortName                        = "PortName"
+	iImplName                        = "ImplName"
+	iSignalTypeName                  = "SignalTypeName"
 	iNodeTypeSelect                  = "NodeTypeSelect"
 	iSignalTypeSelect                = "SignalTypeSelect"
 	iImplementationType              = "ImplementationType"
@@ -33,7 +36,6 @@ const (
 	eNodeType                   = "NodeType"
 	ePort                       = "Port"
 	eNamedPortType              = "NamedPortType"
-	ePortType                   = "PortType"
 	eConnection                 = "Connection"
 	eSignalType                 = "SignalType"
 	eLibrary                    = "Library"
@@ -41,29 +43,24 @@ const (
 )
 
 var choiceMap = map[elementType][]elementType{
-	eSignalGraph:    {eSignalType, eNode},
+	eSignalGraph:    {eNode},
 	eNode:           {eNode},
 	eNodeType:       {eNodeType, eNamedPortType, eImplementation},
 	ePort:           {eConnection},
 	eNamedPortType:  {eNamedPortType},
-	ePortType:       {},
 	eConnection:     {eConnection},
 	eSignalType:     {eSignalType},
 	eLibrary:        {eSignalType, eNodeType},
-	eImplementation: {eSignalGraph, eImplementation},
+	eImplementation: {eImplementation},
 }
 
 var inputElementMap = map[elementType][]inputElement{
-	eSignalGraph:    {},
 	eNode:           {iNodeName, iNodeTypeSelect},
 	eNodeType:       {iTypeName},
-	ePort:           {},
 	eNamedPortType:  {iPortName, iSignalTypeSelect, iDirection},
-	ePortType:       {},
 	eConnection:     {iPortSelect},
-	eSignalType:     {iCType, iChannelId, iScope, iSignalMode},
-	eLibrary:        {},
-	eImplementation: {iImplementationType},
+	eSignalType:     {iSignalTypeName, iCType, iChannelId, iScope, iSignalMode},
+	eImplementation: {iImplName, iImplementationType},
 }
 
 type NewElementDialog struct {
@@ -79,11 +76,13 @@ type NewElementDialog struct {
 	implementationSelector *gtk.ComboBoxText
 	portSelector           *gtk.ComboBoxText
 
-	nodeNameEntry  *gtk.Entry
-	typeNameEntry  *gtk.Entry
-	portNameEntry  *gtk.Entry
-	cTypeEntry     *gtk.Entry
-	channelIdEntry *gtk.Entry
+	nodeNameEntry       *gtk.Entry
+	typeNameEntry       *gtk.Entry
+	portNameEntry       *gtk.Entry
+	implNameEntry       *gtk.Entry
+	signalTypeNameEntry *gtk.Entry
+	cTypeEntry          *gtk.Entry
+	channelIdEntry      *gtk.Entry
 }
 
 func NewElementDialogNew(fts *models.FilesTreeStore) (dialog *NewElementDialog, err error) {
@@ -91,7 +90,7 @@ func NewElementDialogNew(fts *models.FilesTreeStore) (dialog *NewElementDialog, 
 	if err != nil {
 		return
 	}
-	dialog = &NewElementDialog{d, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+	dialog = &NewElementDialog{d, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 	err = dialog.init(fts)
 	return
 }
@@ -99,12 +98,12 @@ func NewElementDialogNew(fts *models.FilesTreeStore) (dialog *NewElementDialog, 
 // Lookup current selection in fts, choose which pageset to show.
 func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 	var activeElem elementType
-	object, err := fts.GetObject(fts.CurrentSelection)
+	object, err := fts.GetObjectById(fts.GetCurrentId())
 	if err != nil {
 		return []elementType{}
 	}
 	switch object.(type) {
-	case freesp.SignalGraph:
+	case freesp.SignalGraph, freesp.SignalGraphType:
 		activeElem = eSignalGraph
 	case freesp.Node:
 		activeElem = eNode
@@ -114,8 +113,6 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		activeElem = ePort
 	case freesp.NamedPortType:
 		activeElem = eNamedPortType
-	case freesp.PortType:
-		activeElem = ePortType
 	case freesp.Connection:
 		activeElem = eConnection
 	case freesp.SignalType:
@@ -137,7 +134,7 @@ func comboSelectionChangedCB(dialog *NewElementDialog) {
 
 // For connection only: lookup matching ports to connect.
 func getMatchingPorts(fts *models.FilesTreeStore) (ret []freesp.Port) {
-	object, err := fts.GetObject(fts.CurrentSelection)
+	object, err := fts.GetObjectById(fts.GetCurrentId())
 	if err != nil {
 		return []freesp.Port{}
 	}
@@ -195,6 +192,20 @@ func (dialog *NewElementDialog) createInputElement(i inputElement, fts *models.F
 			return
 		}
 		obj = &dialog.portNameEntry.Widget
+	case iImplName:
+		label = "Name:"
+		dialog.implNameEntry, err = gtk.EntryNew()
+		if err != nil {
+			return
+		}
+		obj = &dialog.implNameEntry.Widget
+	case iSignalTypeName:
+		label = "Name:"
+		dialog.signalTypeNameEntry, err = gtk.EntryNew()
+		if err != nil {
+			return
+		}
+		obj = &dialog.signalTypeNameEntry.Widget
 	case iNodeTypeSelect:
 		label = "Select node type:"
 		registeredTypes := freesp.GetRegisteredNodeTypes()
@@ -316,15 +327,11 @@ func (dialog *NewElementDialog) fillBox(box *gtk.Box, e elementType, fts *models
 
 // List of keys into the named stack
 var stackAlternatives = []elementType{
-	eSignalGraph,
 	eNode,
 	eNodeType,
-	ePort,
 	eNamedPortType,
-	ePortType,
 	eConnection,
 	eSignalType,
-	eLibrary,
 	eImplementation,
 }
 
@@ -347,7 +354,7 @@ func (dialog *NewElementDialog) init(fts *models.FilesTreeStore) (err error) {
 	d := dialog.dialog
 	d.SetTitle("New Element")
 
-	active, err := fts.GetValue(fts.CurrentSelection)
+	active, err := fts.GetValueById(fts.GetCurrentId())
 	if err != nil {
 		return
 	}
@@ -416,6 +423,12 @@ func (dialog *NewElementDialog) readOut(i inputElement) string {
 	case iPortName:
 		text, _ := dialog.portNameEntry.GetText()
 		return text
+	case iImplName:
+		text, _ := dialog.implNameEntry.GetText()
+		return text
+	case iSignalTypeName:
+		text, _ := dialog.signalTypeNameEntry.GetText()
+		return text
 	case iNodeTypeSelect:
 		return dialog.nodeTypeSelector.GetActiveText()
 	case iSignalTypeSelect:
@@ -440,7 +453,7 @@ func (dialog *NewElementDialog) readOut(i inputElement) string {
 	return ""
 }
 
-func (dialog *NewElementDialog) collectJob(context interface{}) *EditorJob {
+func (dialog *NewElementDialog) collectJob(context string) *EditorJob {
 	log.Println("Selector =", dialog.selector.GetActiveText())
 	job := NewElementJobNew(context, elementType(dialog.selector.GetActiveText()))
 	for _, i := range inputElementMap[job.elemType] {
@@ -449,36 +462,153 @@ func (dialog *NewElementDialog) collectJob(context interface{}) *EditorJob {
 	return EditorJobNew(JobNewElement, job)
 }
 
-func (dialog *NewElementDialog) Run(fts *models.FilesTreeStore) {
-	context, err := fts.GetObject(fts.CurrentSelection)
-	if err != nil {
+func (dialog *NewElementDialog) Run(fts *models.FilesTreeStore) (job *EditorJob, ok bool) {
+	context := fts.GetCurrentId()
+	if context == "" {
 		log.Fatal("NewElementDialog.Run error: Could not get context")
+		return
 	}
-	response := dialog.dialog.Run()
-	switch gtk.ResponseType(response) {
-	case gtk.RESPONSE_OK:
-		job := dialog.collectJob(context)
+	ok = (gtk.ResponseType(dialog.dialog.Run()) == gtk.RESPONSE_OK)
+	if ok {
+		job = dialog.collectJob(context)
 		log.Println("editNew terminated: OK", job)
-	default:
 	}
 	dialog.dialog.Destroy()
+	return
 }
 
 // TODO: should go to separate module
 type NewElementJob struct {
-	context  interface{}
-	elemType elementType
-	input    map[inputElement]string
+	parentId, newId string
+	elemType        elementType
+	input           map[inputElement]string
 }
 
-func NewElementJobNew(context interface{}, t elementType) *NewElementJob {
-	return &NewElementJob{context, t, make(map[inputElement]string)}
+func NewElementJobNew(context string, t elementType) *NewElementJob {
+	return &NewElementJob{context, "", t, make(map[inputElement]string)}
 }
 
 func (j *NewElementJob) String() string {
-	ret := fmt.Sprintf("%s", j.elemType)
+	ret := fmt.Sprintf("%s (context=%s, newPath=%s)", j.elemType, j.parentId, j.newId)
 	for _, i := range inputElementMap[j.elemType] {
 		ret = fmt.Sprintf("%s, %s=%s", ret, i, j.input[i])
 	}
 	return ret
+}
+
+func getParentId(id string) string {
+	split := strings.Split(id, ":")
+	return strings.Join(split[:len(split)-1], ":")
+}
+
+func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) interface{} {
+	switch j.elemType {
+	case eNode:
+		var context freesp.SignalGraphType
+		object, err := fts.GetObjectById(j.parentId)
+		if err != nil {
+			log.Fatal("NewElementJob.CreateObject error: referenced object run away...")
+		}
+		switch object.(type) {
+		case freesp.Node:
+			context = object.(freesp.Node).Context()
+			j.parentId = getParentId(j.parentId)
+		case freesp.SignalGraph:
+			context = object.(freesp.SignalGraph).ItsType()
+		case freesp.SignalGraphType:
+			context = object.(freesp.SignalGraphType)
+		default:
+			log.Fatal("NewElementJob.CreateObject error: referenced object wrong type...")
+		}
+		ntype, ok := freesp.GetNodeTypeByName(j.input[iNodeTypeSelect])
+		if !ok {
+			log.Fatal("NewElementJob.CreateObject error: referenced object type wrong...")
+		}
+		return freesp.NodeNew(j.input[iNodeName], ntype, context)
+	case eNodeType:
+		object, err := fts.GetObjectById(j.parentId)
+		var context string
+		if err != nil {
+			log.Fatal("NewElementJob.CreateObject error: referenced object run away...")
+		}
+		switch object.(type) {
+		case freesp.NodeType:
+			context = object.(freesp.NodeType).DefinedAt()
+			j.parentId = getParentId(j.parentId)
+		case freesp.Library:
+			context = object.(freesp.Library).Filename()
+		default:
+			log.Fatal("NewElementJob.CreateObject error: referenced object wrong type...")
+		}
+		return freesp.NodeTypeNew(j.input[iTypeName], context)
+	case eConnection:
+		object, err := fts.GetObjectById(j.parentId)
+		if err != nil {
+			log.Fatal("NewElementJob.CreateObject error: referenced object run away...")
+		}
+		switch object.(type) {
+		case freesp.Port:
+		default:
+			log.Fatal("NewElementJob.CreateObject error: referenced object wrong type...")
+		}
+
+		ports := getMatchingPorts(fts)
+		for _, p := range ports {
+			s := fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName())
+			if j.input[iPortSelect] == s {
+				return p
+			}
+		}
+	case eNamedPortType:
+		object, err := fts.GetObjectById(j.parentId)
+		if err != nil {
+			log.Fatal("NewElementJob.CreateObject error: referenced object run away...")
+		}
+		switch object.(type) {
+		case freesp.NamedPortType:
+			j.parentId = getParentId(j.parentId)
+		case freesp.NodeType:
+		default:
+			log.Fatal("NewElementJob.CreateObject error: referenced object wrong type...")
+		}
+		_, ok := freesp.GetSignalTypeByName(j.input[iSignalTypeSelect])
+		if !ok {
+			log.Fatal("NewElementJob.CreateObject error: referenced signal type wrong...")
+		}
+		var dir freesp.PortDirection
+		if j.input[iDirection] == "InPort" {
+			dir = freesp.InPort
+		} else {
+			dir = freesp.OutPort
+		}
+		return freesp.NamedPortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
+	case eSignalType:
+		name := j.input[iSignalTypeName]
+		cType := j.input[iCType]
+		channelId := j.input[iChannelId]
+		var scope freesp.Scope
+		if j.input[iScope] == "Local" {
+			scope = freesp.Local
+		} else {
+			scope = freesp.Global
+		}
+		var mode freesp.Mode
+		if j.input[iSignalMode] == "Asynchronous" {
+			mode = freesp.Asynchronous
+		} else {
+			mode = freesp.Synchronous
+		}
+		return freesp.SignalTypeNew(name, cType, channelId, scope, mode)
+	case eImplementation:
+		var implType freesp.ImplementationType
+		if j.input[iImplementationType] == "Elementary Type" {
+			implType = freesp.NodeTypeElement
+		} else {
+			implType = freesp.NodeTypeGraph
+		}
+		return freesp.ImplementationNew(j.input[iImplName], implType)
+	default:
+		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)
+	}
+	return nil
 }

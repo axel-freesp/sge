@@ -1,14 +1,13 @@
 package freesp
 
 type SignalGraphType interface {
-	Name() string
 	Libraries() []Library
-	SignalTypes() []SignalType
 	Nodes() []Node
 	NodeByName(string) Node
 	InputNodes() []Node
 	OutputNodes() []Node
 	ProcessingNodes() []Node
+	AddNode(Node) error
 }
 
 type SignalGraph interface {
@@ -28,6 +27,8 @@ type Library interface {
 	ReadFile(filepath string) error
 	Write() (data []byte, err error)
 	WriteFile(filepath string) error
+	AddNodeType(NodeType) error
+	AddSignalType(SignalType) error
 }
 
 type NodeType interface {
@@ -35,7 +36,11 @@ type NodeType interface {
 	DefinedAt() string
 	InPorts() []NamedPortType
 	OutPorts() []NamedPortType
-	Implementation() Implementation
+	Implementation() []Implementation
+	//AddInPort(name string, pType PortType)
+	//AddOutPort(name string, pType PortType)
+	AddNamedPortType(NamedPortType)
+	AddImplementation(Implementation)
 }
 
 type Implementation interface {
@@ -98,6 +103,7 @@ type Port interface {
 	Direction() PortDirection
 	Connections() []Port
 	Node() Node
+	AddConnection(Port) error
 }
 
 type PortDirection bool
@@ -117,4 +123,14 @@ func GetRegisteredNodeTypes() []string {
 
 func GetRegisteredSignalTypes() []string {
 	return registeredSignalTypes
+}
+
+func GetNodeTypeByName(typeName string) (nType NodeType, ok bool) {
+	nType, ok = nodeTypes[typeName]
+	return
+}
+
+func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
+	sType, ok = signalTypes[typeName]
+	return
 }

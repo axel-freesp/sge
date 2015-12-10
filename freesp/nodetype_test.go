@@ -17,10 +17,10 @@ func TestNodeType(t *testing.T) {
 	for _, c := range case1 {
 		nt := newNodeType(c.name)
 		for _, p := range c.inports {
-			nt.addInPort(p, newPortType(fmt.Sprintf("%s-type", p)))
+			nt.addInPort(p, PortTypeNew(fmt.Sprintf("%s-type", p)))
 		}
 		for _, p := range c.outports {
-			nt.addOutPort(p, newPortType(fmt.Sprintf("%s-type", p)))
+			nt.addOutPort(p, PortTypeNew(fmt.Sprintf("%s-type", p)))
 		}
 	}
 }

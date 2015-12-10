@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/tool"
+	"log"
 )
 
 func LibraryNew(filename string) *library {
@@ -49,21 +50,18 @@ func (s *library) Read(data []byte) error {
 		default:
 			mode = Asynchronous
 		}
-		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
-		s.signalTypes = append(s.signalTypes, sType)
-		signalTypes[st.Name] = sType
-		registeredSignalTypes = append(registeredSignalTypes, st.Name)
+		sType := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
+		err := s.AddSignalType(sType)
+		if err != nil {
+			log.Println("library.Read warning:", err)
+		}
 	}
 	for _, n := range l.NodeTypes {
-		nType := nodeTypes[n.TypeName]
-		if nType != nil {
-			fmt.Println("Warning: reading existing node type definition", n.TypeName, "(ignored)")
-		} else {
-			nType := createNodeTypeFromXml(n, s.Filename())
-			nodeTypes[n.TypeName] = nType
-			registeredNodeTypes = append(registeredNodeTypes, n.TypeName)
+		nType := createNodeTypeFromXml(n, s.Filename())
+		err := s.AddNodeType(nType)
+		if err != nil {
+			log.Println("library.Read warning:", err)
 		}
-		s.nodeTypes = append(s.nodeTypes, nType)
 	}
 	return nil
 }
@@ -90,4 +88,41 @@ func (s *library) Write() (data []byte, err error) {
 func (s *library) WriteFile(filepath string) error {
 	// TODO
 	return fmt.Errorf("library.WriteFile() interface not implemented")
+}
+
+func (s *library) AddNodeType(t NodeType) error {
+	nType, ok := nodeTypes[t.TypeName()]
+	if ok {
+		log.Printf("library.AddNodeType: warning: adding existing node type definition %s (taking the existing one)", t.TypeName())
+	} else {
+		nType = t.(*nodeType)
+		nodeTypes[t.TypeName()] = nType
+		registeredNodeTypes = append(registeredNodeTypes, t.TypeName())
+		log.Println("library.AddNodeType: registered ", t.TypeName())
+	}
+	for _, nt := range s.nodeTypes {
+		if nt.TypeName() == t.TypeName() {
+			return fmt.Errorf("adding duplicate node type definition %s (ignored)", t.TypeName())
+		}
+	}
+	s.nodeTypes = append(s.nodeTypes, nType)
+	return nil
+}
+
+func (l *library) AddSignalType(s SignalType) error {
+	sType := signalTypes[s.TypeName()]
+	if sType != nil {
+		log.Printf("library.AddSignalType: warning: adding existing signal type definition %s (taking the existing one)", s.TypeName())
+	} else {
+		sType = s.(*signalType)
+		signalTypes[s.TypeName()] = sType
+		registeredSignalTypes = append(registeredSignalTypes, s.TypeName())
+	}
+	for _, st := range l.signalTypes {
+		if st.TypeName() == s.TypeName() {
+			return fmt.Errorf("adding duplicate signal type definition %s (ignored)", s.TypeName())
+		}
+	}
+	l.signalTypes = append(l.signalTypes, sType)
+	return nil
 }

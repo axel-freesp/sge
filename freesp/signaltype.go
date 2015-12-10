@@ -8,7 +8,7 @@ type signalType struct {
 	mode               Mode
 }
 
-func newSignalType(name, ctype, msgid string, scope Scope, mode Mode) *signalType {
+func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) *signalType {
 	return &signalType{name, ctype, msgid, scope, mode}
 }
 

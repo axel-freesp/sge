@@ -33,26 +33,28 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 
 func fileSave(fts *models.FilesTreeStore) {
 	log.Println("fileSave")
-	var path0 string
-	if fts.CurrentSelection == nil {
-		log.Fatal("fileSave error: CurrentSelection = nil")
-	}
-	path, err := fts.TreeStore().GetPath(fts.CurrentSelection)
-	if err != nil {
-		log.Fatal("fileSave error: iter.GetPath failed:", err)
+	var id0, filename string
+	p := fts.GetCurrentId()
+	if p == "" {
+		log.Fatal("fileSave error: fts.GetCurrentId() failed")
 		return
 	}
-	p := path.String()
-	log.Println("Current selection: ", p)
+	log.Println("Current selection id: ", p)
 	spl := strings.Split(p, ":")
-	path0 = spl[0]
-	iter, err := fts.TreeStore().GetIterFromString(path0)
+	id0 = spl[0] // TODO: move to function in fts...
+
+	obj, err := fts.GetObjectById(id0)
 	if err != nil {
-		log.Fatal("fileSave error: fts.TreeStore().GetIterFromString failed:", err)
+		log.Fatal("fileSave error: fts.GetObjectByPath failed:", err)
 	}
-	filename, err := fts.GetValue(iter)
-	if err != nil {
-		log.Fatal("fileSave error: fts.GetValue failed:", err)
+	switch obj.(type) {
+	case freesp.SignalGraph:
+		filename = obj.(freesp.SignalGraph).Filename()
+	case freesp.Library:
+		filename = obj.(freesp.Library).Filename()
+	default:
+		log.Fatal("fileSave error: wrong type '%T' of toplevel object (%v)", obj, obj)
+		return
 	}
 	log.Println("fileSave: filename =", filename)
 }

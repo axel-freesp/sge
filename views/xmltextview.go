@@ -42,6 +42,10 @@ func (x *XmlTextView) Set(object interface{}) error {
 			s := object.(freesp.SignalGraph)
 			xmlsignalgraph := createXmlSignalGraph(s)
 			buf, err = xmlsignalgraph.Write()
+		case freesp.SignalGraphType:
+			s := object.(freesp.SignalGraphType)
+			xmlsignalgraph := createXmlSignalGraphType(s)
+			buf, err = xmlsignalgraph.Write()
 		case freesp.Node:
 			n := object.(freesp.Node)
 			if len(n.InPorts()) == 0 {
@@ -106,7 +110,7 @@ func (x *XmlTextView) Set(object interface{}) error {
 				buf, err = xmlImpl.Write()
 			}
 		default:
-			log.Println("XmlTextView.Set: invalid data type")
+			log.Printf("XmlTextView.Set: invalid data type %T (%v)\n", object, object)
 		}
 	}
 	textbuf, err := x.view.GetBuffer()
@@ -180,8 +184,7 @@ func createXmlNodeType(t freesp.NodeType) *backend.XmlNodeType {
 	for _, p := range t.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *createXmlNamedOutPort(p))
 	}
-	impl := t.Implementation()
-	if impl != nil {
+	for _, impl := range t.Implementation() {
 		ret.Implementation = append(ret.Implementation, *createXmlImplementation(impl))
 	}
 	return ret
@@ -234,9 +237,6 @@ func createXmlSignalGraphType(t freesp.SignalGraphType) *backend.XmlSignalGraph 
 	ret := backend.XmlSignalGraphNew()
 	for _, l := range t.Libraries() {
 		ret.Libraries = append(ret.Libraries, *createXmlLibraryRef(l))
-	}
-	for _, s := range t.SignalTypes() {
-		ret.SignalTypes = append(ret.SignalTypes, *createXmlSignalType(s))
 	}
 	for _, n := range t.InputNodes() {
 		ret.InputNodes = append(ret.InputNodes, *createXmlInputNode(n))

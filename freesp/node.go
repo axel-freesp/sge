@@ -8,8 +8,15 @@ type node struct {
 	outPort  []Port
 }
 
-func newNode(name string, ntype *nodeType, context *signalGraphType) *node {
-	return &node{context, name, ntype, nil, nil}
+func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
+	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), nil, nil}
+	for _, p := range ntype.InPorts() {
+		ret.addInPort(p.(*namedPortType))
+	}
+	for _, p := range ntype.OutPorts() {
+		ret.addOutPort(p.(*namedPortType))
+	}
+	return ret
 }
 
 func (n *node) inPortFromName(name string) (p Port, err error) {

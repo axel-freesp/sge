@@ -21,26 +21,16 @@ func Init() {
 }
 
 type signalGraphType struct {
-	name                                            string
 	libraries                                       []Library
-	signalTypes                                     []SignalType
 	nodes, inputNodes, outputNodes, processingNodes []Node
 }
 
-func newSignalGraphType(name string) *signalGraphType {
-	return &signalGraphType{name, nil, nil, nil, nil, nil, nil}
-}
-
-func (t *signalGraphType) Name() string {
-	return t.name
+func SignalGraphTypeNew() *signalGraphType {
+	return &signalGraphType{nil, nil, nil, nil, nil}
 }
 
 func (t *signalGraphType) Nodes() []Node {
 	return t.nodes
-}
-
-func (t *signalGraphType) SignalTypes() []SignalType {
-	return t.signalTypes
 }
 
 func (t *signalGraphType) NodeByName(name string) Node {
@@ -68,8 +58,26 @@ func (t *signalGraphType) ProcessingNodes() []Node {
 	return t.processingNodes
 }
 
+func (t *signalGraphType) AddNode(n Node) error {
+	if len(n.InPorts()) > 0 {
+		if len(n.OutPorts()) > 0 {
+			t.processingNodes = append(t.processingNodes, n.(*node))
+		} else {
+			t.outputNodes = append(t.outputNodes, n.(*node))
+		}
+	} else {
+		if len(n.OutPorts()) > 0 {
+			t.inputNodes = append(t.inputNodes, n.(*node))
+		} else {
+			return fmt.Errorf("signalGraphType.AddNode error: node has no ports")
+		}
+	}
+	t.nodes = append(t.nodes, n.(*node))
+	return nil
+}
+
 func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolvePort func(portname string, dir PortDirection) *namedPortType) (t *signalGraphType, err error) {
-	t = newSignalGraphType(name)
+	t = SignalGraphTypeNew()
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
 		if l == nil {
@@ -89,26 +97,6 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
 		}
 		t.libraries = append(t.libraries, l)
-	}
-	for _, st := range g.SignalTypes {
-		var scope Scope
-		var mode Mode
-		switch st.Scope {
-		case "local":
-			scope = Local
-		default:
-			scope = Global
-		}
-		switch st.Mode {
-		case "sync":
-			mode = Synchronous
-		default:
-			mode = Asynchronous
-		}
-		sType := newSignalType(st.Name, st.Ctype, st.Msgid, scope, mode)
-		t.signalTypes = append(t.signalTypes, sType)
-		signalTypes[st.Name] = sType
-		registeredSignalTypes = append(registeredSignalTypes, st.Name)
 	}
 	for _, n := range g.InputNodes {
 		nnode := t.createInputNodeFromXml(n, resolvePort)
@@ -178,7 +166,7 @@ func getPortType(name string) *portType {
 		if st == nil {
 			log.Fatal("getPortType: signalType '", name, "' is not defined")
 		}
-		pt = newPortType(name, st)
+		pt = PortTypeNew(name, st)
 		portTypes[name] = pt
 	}
 	return pt
@@ -194,24 +182,14 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) *node {
 	if nt == nil {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
-	ret := newNode(nName, nt, t)
-	for _, p := range nt.InPorts() {
-		ret.addInPort(p.(*namedPortType))
-	}
-	for _, p := range nt.OutPorts() {
-		ret.addOutPort(p.(*namedPortType))
-	}
-	return ret
+	return NodeNew(nName, nt, t)
 }
 
 func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolvePort func(portname string, dir PortDirection) *namedPortType) *node {
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret := newNode(nName, nt, t)
-	for _, p := range nt.OutPorts() {
-		ret.addOutPort(p.(*namedPortType))
-	}
+	ret := NodeNew(nName, nt, t)
 	pt := resolvePort(n.NPort, InPort)
 	if pt != nil {
 		ret.addInPort(pt)
@@ -224,10 +202,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret := newNode(nName, nt, t)
-	for _, p := range nt.InPorts() {
-		ret.addInPort(p.(*namedPortType))
-	}
+	ret := NodeNew(nName, nt, t)
 	pt := resolvePort(n.NPort, OutPort) // matches also empty names
 	if pt != nil {
 		ret.addInPort(pt)

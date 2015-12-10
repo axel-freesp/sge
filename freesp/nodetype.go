@@ -9,19 +9,32 @@ type nodeType struct {
 	name              string
 	definedAt         string
 	inPorts, outPorts []NamedPortType
-	implementation    Implementation
+	implementation    []Implementation
 }
 
-func newNodeType(name, definedAt string) *nodeType {
+func NodeTypeNew(name, definedAt string) *nodeType {
 	return &nodeType{name, definedAt, nil, nil, nil}
 }
 
-func (t *nodeType) addInPort(name string, pType *portType) {
-	t.inPorts = append(t.inPorts, &namedPortType{name, pType, InPort})
+func (t *nodeType) AddNamedPortType(p NamedPortType) {
+	pt := p.(*namedPortType)
+	if p.Direction() == InPort {
+		t.inPorts = append(t.inPorts, pt)
+	} else {
+		t.outPorts = append(t.outPorts, pt)
+	}
 }
 
-func (t *nodeType) addOutPort(name string, pType *portType) {
-	t.outPorts = append(t.outPorts, &namedPortType{name, pType, OutPort})
+func (t *nodeType) AddInPort(name string, pType PortType) {
+	t.inPorts = append(t.inPorts, &namedPortType{name, pType.(*portType), InPort})
+}
+
+func (t *nodeType) AddOutPort(name string, pType PortType) {
+	t.outPorts = append(t.outPorts, &namedPortType{name, pType.(*portType), OutPort})
+}
+
+func (t *nodeType) AddImplementation(imp Implementation) {
+	t.implementation = append(t.implementation, imp)
 }
 
 func (t *nodeType) TypeName() string {
@@ -40,17 +53,17 @@ func (t *nodeType) OutPorts() []NamedPortType {
 	return t.outPorts
 }
 
-func (t *nodeType) Implementation() Implementation {
+func (t *nodeType) Implementation() []Implementation {
 	return t.implementation
 }
 
 func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
-	nt := newNodeType(ntName, "")
+	nt := NodeTypeNew(ntName, "")
 	for _, p := range n.InPort {
-		nt.addInPort(p.PName, getPortType(p.PType))
+		nt.AddInPort(p.PName, getPortType(p.PType))
 	}
 	for _, p := range n.OutPort {
-		nt.addOutPort(p.PName, getPortType(p.PType))
+		nt.AddOutPort(p.PName, getPortType(p.PType))
 	}
 	nodeTypes[ntName] = nt
 	return nt
@@ -73,14 +86,13 @@ func (t *nodeType) doResolvePort(name string, dir PortDirection) *namedPortType 
 }
 
 func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
-	nt := newNodeType(n.TypeName, filename)
+	nt := NodeTypeNew(n.TypeName, filename)
 	for _, p := range n.InPort {
-		nt.addInPort(p.PName, getPortType(p.PType))
+		nt.AddInPort(p.PName, getPortType(p.PType))
 	}
 	for _, p := range n.OutPort {
-		nt.addOutPort(p.PName, getPortType(p.PType))
+		nt.AddOutPort(p.PName, getPortType(p.PType))
 	}
-	nodeTypes[n.TypeName] = nt
 	if len(n.Implementation) > 0 {
 		for _, i := range n.Implementation {
 			var iType ImplementationType
@@ -89,8 +101,8 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 			} else {
 				iType = NodeTypeElement
 			}
-			nt.implementation = newImplementation(iType)
-			impl := nt.implementation.(*implementation)
+			impl := ImplementationNew(i.Name, iType)
+			nt.implementation = append(nt.implementation, impl)
 			switch iType {
 			case NodeTypeElement:
 				impl.elementName = i.Name

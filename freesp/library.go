@@ -8,7 +8,9 @@ import (
 )
 
 func LibraryNew(filename string) *library {
-	return &library{filename, nil, nil}
+	ret := &library{filename, nil, nil}
+	libraries[filename] = ret
+	return ret
 }
 
 type library struct {

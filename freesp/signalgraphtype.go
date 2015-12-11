@@ -58,7 +58,32 @@ func (t *signalGraphType) ProcessingNodes() []Node {
 	return t.processingNodes
 }
 
+func (t *signalGraphType) containsLibRef(libname string) bool {
+	for _, l := range t.libraries {
+		if l.Filename() == libname {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *signalGraphType) AddNode(n Node) error {
+	nType := n.ItsType()
+	libname := nType.DefinedAt()
+	if len(libname) == 0 {
+		return fmt.Errorf("signalGraphType.AddNode error: node type %s has no DefinedAt...", nType.TypeName())
+	}
+	if !t.containsLibRef(libname) {
+		lib := libraries[libname]
+		if lib == nil {
+			return fmt.Errorf("signalGraphType.AddNode error: library %s not registered", libname)
+		}
+		t.libraries = append(t.libraries, lib)
+	}
+	return t.addNode(n)
+}
+
+func (t *signalGraphType) addNode(n Node) error {
 	if len(n.InPorts()) > 0 {
 		if len(n.OutPorts()) > 0 {
 			t.processingNodes = append(t.processingNodes, n.(*node))
@@ -85,6 +110,7 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 			libraries[ref.Name] = l
 			fmt.Println("createSignalGraphTypeFromXml: loading library", ref.Name)
 			for _, try := range backend.XmlSearchPaths() {
+				fmt.Printf("createSignalGraphTypeFromXml: try %s/%s\n", try, ref.Name)
 				err = l.ReadFile(fmt.Sprintf("%s/%s", try, ref.Name))
 				if err == nil {
 					break

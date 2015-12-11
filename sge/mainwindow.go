@@ -106,7 +106,7 @@ func main() {
 				continue
 			}
 			var lib freesp.Library
-			lib = freesp.LibraryNew(filepath)
+			lib = freesp.LibraryNew(p)
 			err2 := lib.ReadFile(filepath)
 			if err2 == nil {
 				log.Println("Loading library file", filepath)

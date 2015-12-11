@@ -1,6 +1,7 @@
 package freesp
 
 import (
+	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"log"
 )
@@ -34,6 +35,50 @@ func (t *nodeType) AddOutPort(name string, pType PortType) {
 }
 
 func (t *nodeType) AddImplementation(imp Implementation) {
+	if imp.ImplementationType() == NodeTypeGraph {
+		if imp.Graph() == nil {
+			log.Fatal("nodeType.AddImplementation: missing graph")
+		}
+		g := imp.Graph().(*signalGraphType)
+		for _, p := range t.inPorts {
+			st := p.SignalType()
+			ntName := createInputNodeTypeName(st.TypeName())
+			nt, ok := nodeTypes[ntName]
+			if !ok {
+				nt = NodeTypeNew(ntName, "")
+				nt.AddOutPort("", getPortType(st.TypeName()))
+				nodeTypes[ntName] = nt
+			}
+			if len(nt.outPorts) == 0 {
+				log.Fatal("nodeType.AddImplementation: invalid input node type")
+			}
+			n := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, imp.Graph())
+			n.portlink = p
+			err := g.addNode(n)
+			if err != nil {
+				log.Fatal("nodeType.AddImplementation: AddNode failed:", err)
+			}
+		}
+		for _, p := range t.outPorts {
+			st := p.SignalType()
+			ntName := createOutputNodeTypeName(st.TypeName())
+			nt, ok := nodeTypes[ntName]
+			if !ok {
+				nt = NodeTypeNew(ntName, "")
+				nt.AddInPort("", getPortType(st.TypeName()))
+				nodeTypes[ntName] = nt
+			}
+			if len(nt.inPorts) == 0 {
+				log.Fatal("nodeType.AddImplementation: invalid input node type")
+			}
+			n := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, imp.Graph())
+			n.portlink = p
+			err := g.addNode(n)
+			if err != nil {
+				log.Fatal("nodeType.AddImplementation: AddNode failed:", err)
+			}
+		}
+	}
 	t.implementation = append(t.implementation, imp)
 }
 

@@ -6,10 +6,11 @@ type node struct {
 	nodetype NodeType
 	inPort   []Port
 	outPort  []Port
+	portlink NamedPortType
 }
 
 func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
-	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), nil, nil}
+	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), nil, nil, nil}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p.(*namedPortType))
 	}

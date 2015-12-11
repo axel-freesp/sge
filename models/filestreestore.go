@@ -214,7 +214,7 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 	}
 	err = doAddFreespObject(parent, obj)
 	if err != nil {
-		err = fmt.Errorf("FilesTreeStore.AddNewObject: doAddFreespObject failed:", err)
+		err = fmt.Errorf("FilesTreeStore.AddNewObject: doAddFreespObject failed: %v", err)
 		return
 	}
 
@@ -222,7 +222,7 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 
 	err = s.doAddTreeObject(iter, obj, parent)
 	if err != nil {
-		err = fmt.Errorf("FilesTreeStore.AddNewObject: doAddTreeObject failed:", err)
+		err = fmt.Errorf("FilesTreeStore.AddNewObject: doAddTreeObject failed: %v", err)
 		return
 	}
 
@@ -253,7 +253,6 @@ func (s *FilesTreeStore) getIdFromIter(iter *gtk.TreeIter) (newId string, err er
 }
 
 func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
-	err = nil
 	switch obj.(type) {
 	case freesp.Implementation:
 		parent.(freesp.NodeType).AddImplementation(obj.(freesp.Implementation))
@@ -264,12 +263,14 @@ func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
 	case freesp.NodeType:
 		parent.(freesp.Library).AddNodeType(obj.(freesp.NodeType))
 	case freesp.Node:
+		var theGraph freesp.SignalGraphType
 		switch parent.(type) {
 		case freesp.SignalGraph:
-			err = parent.(freesp.SignalGraph).ItsType().AddNode(obj.(freesp.Node))
+			theGraph = parent.(freesp.SignalGraph).ItsType()
 		case freesp.SignalGraphType:
-			err = parent.(freesp.SignalGraphType).AddNode(obj.(freesp.Node))
+			theGraph = parent.(freesp.SignalGraphType)
 		}
+		err = theGraph.AddNode(obj.(freesp.Node))
 	case freesp.Port:
 		err = parent.(freesp.Port).AddConnection(obj.(freesp.Port))
 		if err != nil {

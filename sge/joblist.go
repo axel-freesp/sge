@@ -65,6 +65,8 @@ func (j *jobList) Apply(job interface{}) (ok bool) {
 	j.redoStack = j.redoStack[:0]
 	if err == nil {
 		j.undoStack = append(j.undoStack, job)
+	} else {
+		log.Println("jobList.Apply error: ", err)
 	}
 	return err == nil
 }

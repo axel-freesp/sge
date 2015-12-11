@@ -17,6 +17,7 @@ type SignalGraph interface {
 	ReadFile(filepath string) error
 	Write() (data []byte, err error)
 	WriteFile(filepath string) error
+	SetFilename(string)
 }
 
 type Library interface {
@@ -29,6 +30,7 @@ type Library interface {
 	WriteFile(filepath string) error
 	AddNodeType(NodeType) error
 	AddSignalType(SignalType) error
+	SetFilename(string)
 }
 
 type NodeType interface {
@@ -37,8 +39,6 @@ type NodeType interface {
 	InPorts() []NamedPortType
 	OutPorts() []NamedPortType
 	Implementation() []Implementation
-	//AddInPort(name string, pType PortType)
-	//AddOutPort(name string, pType PortType)
 	AddNamedPortType(NamedPortType)
 	AddImplementation(Implementation)
 }

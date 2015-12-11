@@ -79,15 +79,22 @@ func (s *library) ReadFile(filepath string) error {
 }
 
 func (s *library) Write() (data []byte, err error) {
-	// TODO
-	data = nil
-	err = fmt.Errorf("library.Write() interface not implemented")
+	xmllib := CreateXmlLibrary(s)
+	data, err = xmllib.Write()
 	return
 }
 
 func (s *library) WriteFile(filepath string) error {
-	// TODO
-	return fmt.Errorf("library.WriteFile() interface not implemented")
+	data, err := s.Write()
+	if err != nil {
+		return err
+	}
+	err = tool.WriteFile(filepath, data)
+	return nil
+}
+
+func (s *library) SetFilename(filename string) {
+	s.filename = filename
 }
 
 func (s *library) AddNodeType(t NodeType) error {

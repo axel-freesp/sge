@@ -7,6 +7,14 @@ import (
 	"log"
 )
 
+func MenuEditInit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
+	menu.editUndo.Connect("activate", func() { editUndo(fts) })
+	menu.editRedo.Connect("activate", func() { editRedo(fts) })
+	menu.editNew.Connect("activate", func() { editNew(fts, jl, ftv) })
+	menu.editCopy.Connect("activate", func() { editCopy(fts) })
+	menu.editDelete.Connect("activate", func() { editDelete(fts) })
+}
+
 func editUndo(fts *models.FilesTreeStore) {
 	log.Println("editUndo")
 }
@@ -25,12 +33,13 @@ func editNew(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) 
 	job, ok := dialog.Run(fts)
 	if ok {
 		if jl.Apply(job) {
-			id, err := gtk.TreePathNewFromString(job.newElement.newId)
+			path, err := gtk.TreePathNewFromString(job.newElement.newId)
 			if err != nil {
 				log.Println("editNew error: TreePathNewFromString failed:", err)
 				return
 			}
-			ftv.TreeView().SetCursor(id, ftv.TreeView().GetExpanderColumn(), false)
+			ftv.TreeView().ExpandToPath(path)
+			ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
 		}
 	}
 	log.Println("editNew finished")
@@ -42,12 +51,4 @@ func editCopy(fts *models.FilesTreeStore) {
 
 func editDelete(fts *models.FilesTreeStore) {
 	log.Println("editDelete")
-}
-
-func MenuEditInit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	menu.editUndo.Connect("activate", func() { editUndo(fts) })
-	menu.editRedo.Connect("activate", func() { editRedo(fts) })
-	menu.editNew.Connect("activate", func() { editNew(fts, jl, ftv) })
-	menu.editCopy.Connect("activate", func() { editCopy(fts) })
-	menu.editDelete.Connect("activate", func() { editDelete(fts) })
 }

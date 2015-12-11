@@ -60,10 +60,60 @@ func ReadFile(filepath string) (data []byte, err error) {
 	return
 }
 
+func WriteFile(filepath string, data []byte) (err error) {
+	var file *os.File
+	if Debug {
+		fmt.Println("Writing to ", filepath)
+	}
+	file, err = os.Create(filepath)
+	if err != nil {
+		if VerboseErr {
+			fmt.Println("Failed to create file ", filepath)
+		}
+		return
+	}
+	defer file.Close()
+	_, err = file.Write(data)
+	if err != nil {
+		if VerboseErr {
+			fmt.Println("Failed to write ", len(data), " bytes to ", filepath)
+		}
+		return
+	}
+	return
+}
+
 func Basename(path string) string {
 	idx := strings.LastIndex(path, "/")
 	if idx < 0 {
 		return path
 	}
-	return path[idx+1 : len(path)]
+	return path[idx+1:]
+}
+
+func Dirname(path string) string {
+	idx := strings.LastIndex(path, "/")
+	if idx < 0 {
+		return "."
+	}
+	return path[:idx]
+}
+
+func IsSubPath(short, long string) bool {
+	return short == long[:len(short)]
+}
+
+func RelPath(short, long string) string {
+	if !IsSubPath(short, long) {
+		return long
+	}
+	return long[len(short)+1:]
+}
+
+func Suffix(path string) string {
+	idx := strings.LastIndex(path, ".")
+	if idx < 0 {
+		return path
+	}
+	return path[idx+1:]
 }

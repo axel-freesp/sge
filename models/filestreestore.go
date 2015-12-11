@@ -139,6 +139,16 @@ func (s *FilesTreeStore) GetValueById(id string) (ret string, err error) {
 	return
 }
 
+func (s *FilesTreeStore) SetValueById(id, value string) (err error) {
+	iter, err := s.treestore.GetIterFromString(id)
+	if err != nil {
+		err = gtkErr("FilesTreeStore.GetValueById", "GetIterFromString()", err)
+		return
+	}
+	err = s.setValue(value, iter)
+	return
+}
+
 // Returns the string shown in textCol
 func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 	v, err := s.treestore.GetValue(iter, textCol)
@@ -167,18 +177,30 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err err
 	return
 }
 
-func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.SignalGraph) error {
+func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.SignalGraph) (newId string, err error) {
 	ts := s.treestore
 	iter := ts.Append(nil)
-	err := s.addEntry(iter, imageSignalGraph, filename, graph)
+	err = s.addEntry(iter, imageSignalGraph, filename, graph)
 	if err != nil {
-		return gtkErr("FilesTreeStore.AddSignalGraphFile", "ts.addEntry(filename)", err)
+		err = gtkErr("FilesTreeStore.AddSignalGraphFile", "ts.addEntry(filename)", err)
+		return
 	}
-	return s.addSignalGraph(iter, graph)
+	err = s.addSignalGraph(iter, graph)
+	if err != nil {
+		return
+	}
+	newId, err = s.getIdFromIter(iter)
+	return
 }
 
-func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) error {
-	return s.addLibrary(s.treestore.Append(nil), lib)
+func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (newId string, err error) {
+	iter := s.treestore.Append(nil)
+	err = s.addLibrary(iter, lib)
+	if err != nil {
+		return
+	}
+	newId, err = s.getIdFromIter(iter)
+	return
 }
 
 func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId string, err error) {
@@ -204,6 +226,24 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 		return
 	}
 
+	newId, err = s.getIdFromIter(iter)
+	return
+}
+
+/*
+ *      Local functions
+ */
+
+func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) {
+	err = s.treestore.SetValue(iter, textCol, value)
+	if err != nil {
+		err = gtkErr("FilesTreeStore.setValue", "setValue", err)
+		return
+	}
+	return
+}
+
+func (s *FilesTreeStore) getIdFromIter(iter *gtk.TreeIter) (newId string, err error) {
 	newP, err := s.treestore.GetPath(iter)
 	if err != nil {
 		return
@@ -211,10 +251,6 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 	newId = newP.String()
 	return
 }
-
-/*
- *      Local functions
- */
 
 func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
 	err = nil
@@ -228,7 +264,12 @@ func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
 	case freesp.NodeType:
 		parent.(freesp.Library).AddNodeType(obj.(freesp.NodeType))
 	case freesp.Node:
-		err = parent.(freesp.SignalGraphType).AddNode(obj.(freesp.Node))
+		switch parent.(type) {
+		case freesp.SignalGraph:
+			err = parent.(freesp.SignalGraph).ItsType().AddNode(obj.(freesp.Node))
+		case freesp.SignalGraphType:
+			err = parent.(freesp.SignalGraphType).AddNode(obj.(freesp.Node))
+		}
 	case freesp.Port:
 		err = parent.(freesp.Port).AddConnection(obj.(freesp.Port))
 		if err != nil {
@@ -328,7 +369,7 @@ func checkParentType(obj interface{}, parent interface{}) bool {
 		}
 	case freesp.Node:
 		switch parent.(type) {
-		case freesp.SignalGraphType:
+		case freesp.SignalGraphType, freesp.SignalGraph:
 			return true
 		default:
 			return false

@@ -47,15 +47,22 @@ func (s *signalGraph) ReadFile(filepath string) error {
 }
 
 func (s *signalGraph) Write() (data []byte, err error) {
-	// TODO
-	data = nil
-	err = newSignalGraphError("Write() interface not implemented")
+	xmlsignalgraph := CreateXmlSignalGraph(s)
+	data, err = xmlsignalgraph.Write()
 	return
 }
 
 func (s *signalGraph) WriteFile(filepath string) error {
-	// TODO
-	return newSignalGraphError("WriteFile() interface not implemented")
+	data, err := s.Write()
+	if err != nil {
+		return err
+	}
+	err = tool.WriteFile(filepath, data)
+	return nil
+}
+
+func (s *signalGraph) SetFilename(filename string) {
+	s.filename = filename
 }
 
 //------------------------------

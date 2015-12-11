@@ -88,7 +88,7 @@ func main() {
 	selection.Connect("changed", treeSelectionChangedCB, arg)
 
 	if len(unhandledArgs) < 2 {
-		err := fts.AddSignalGraphFile("new-file.sml", freesp.SignalGraphNew("new-file.sml"))
+		_, err := fts.AddSignalGraphFile("new-file.sml", freesp.SignalGraphNew("new-file.sml"))
 		if err != nil {
 			log.Fatal("ftv.AddSignalGraphFile('new-file.sml') failed.")
 		}
@@ -122,7 +122,7 @@ func main() {
 	japp := jobApplierNew(fts)
 	jl = jobListNew(japp)
 
-	MenuFileInit(menu, fts)
+	MenuFileInit(menu, fts, ftv)
 	MenuEditInit(menu, fts, jl, ftv)
 	MenuAboutInit(menu)
 

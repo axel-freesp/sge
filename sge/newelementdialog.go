@@ -6,7 +6,6 @@ import (
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
-	"strings"
 )
 
 type inputElement string
@@ -65,6 +64,7 @@ var inputElementMap = map[elementType][]inputElement{
 
 type NewElementDialog struct {
 	dialog   *gtk.Dialog
+	fts      *models.FilesTreeStore
 	selector *gtk.ComboBoxText
 	stack    *gtk.Stack
 
@@ -90,7 +90,7 @@ func NewElementDialogNew(fts *models.FilesTreeStore) (dialog *NewElementDialog, 
 	if err != nil {
 		return
 	}
-	dialog = &NewElementDialog{d, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+	dialog = &NewElementDialog{d, fts, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 	err = dialog.init(fts)
 	return
 }
@@ -166,151 +166,172 @@ func getMatchingPorts(fts *models.FilesTreeStore) (ret []freesp.Port) {
 	return
 }
 
-// Construct input element (some depending on fts).
-func (dialog *NewElementDialog) createInputElement(i inputElement, fts *models.FilesTreeStore) (widget *gtk.Widget, err error) {
-	var label string
-	var obj *gtk.Widget
-	switch i {
-	case iNodeName:
-		label = "Name:"
-		dialog.nodeNameEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.nodeNameEntry.Widget
-	case iTypeName:
-		label = "Name:"
-		dialog.typeNameEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.typeNameEntry.Widget
-	case iPortName:
-		label = "Name:"
-		dialog.portNameEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.portNameEntry.Widget
-	case iImplName:
-		label = "Name:"
-		dialog.implNameEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.implNameEntry.Widget
-	case iSignalTypeName:
-		label = "Name:"
-		dialog.signalTypeNameEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.signalTypeNameEntry.Widget
-	case iNodeTypeSelect:
-		label = "Select node type:"
-		registeredTypes := freesp.GetRegisteredNodeTypes()
-		dialog.nodeTypeSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range registeredTypes {
-			dialog.nodeTypeSelector.AppendText(s)
-		}
-		dialog.nodeTypeSelector.SetActive(0)
-		obj = &dialog.nodeTypeSelector.Widget
-	case iSignalTypeSelect:
-		label = "Select signal type:"
-		registeredTypes := freesp.GetRegisteredSignalTypes()
-		dialog.signalTypeSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range registeredTypes {
-			dialog.signalTypeSelector.AppendText(s)
-		}
-		dialog.signalTypeSelector.SetActive(0)
-		obj = &dialog.signalTypeSelector.Widget
-	case iImplementationType:
-		label = "Implementation type:"
-		dialog.implementationSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range []string{"Elementary Type", "Signal Graph"} {
-			dialog.implementationSelector.AppendText(s)
-		}
-		dialog.implementationSelector.SetActive(0)
-		obj = &dialog.implementationSelector.Widget
-	case iPortSelect:
-		label = "Select port to connect:"
-		ports := getMatchingPorts(fts)
-		dialog.portSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, p := range ports {
-			s := fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName())
-			dialog.portSelector.AppendText(s)
-		}
-		dialog.portSelector.SetActive(0)
-		obj = &dialog.portSelector.Widget
-	case iCType:
-		label = "C type:"
-		dialog.cTypeEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.cTypeEntry.Widget
-	case iChannelId:
-		label = "Channel id:"
-		dialog.channelIdEntry, err = gtk.EntryNew()
-		if err != nil {
-			return
-		}
-		obj = &dialog.channelIdEntry.Widget
-	case iScope:
-		label = "Scope:"
-		dialog.scopeSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range []string{"Global", "Local"} {
-			dialog.scopeSelector.AppendText(s)
-		}
-		dialog.scopeSelector.SetActive(0)
-		obj = &dialog.scopeSelector.Widget
-	case iSignalMode:
-		label = "Transfer mode:"
-		dialog.modeSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range []string{"Asynchronous", "Isochronous"} {
-			dialog.modeSelector.AppendText(s)
-		}
-		dialog.modeSelector.SetActive(0)
-		obj = &dialog.modeSelector.Widget
-	case iDirection:
-		label = "Direction:"
-		dialog.directionSelector, err = gtk.ComboBoxTextNew()
-		if err != nil {
-			return
-		}
-		for _, s := range []string{"InPort", "OutPort"} {
-			dialog.directionSelector.AppendText(s)
-		}
-		dialog.directionSelector.SetActive(0)
-		obj = &dialog.directionSelector.Widget
-	default:
-		err = fmt.Errorf("createInputElement invalid input element")
+type inputElementHandling struct {
+	label         string
+	readOut       func(dialog *NewElementDialog) string
+	createElement func(dialog *NewElementDialog) (obj *gtk.Widget, err error)
+}
+
+func getText(entry *gtk.Entry) string {
+	text, _ := entry.GetText()
+	return text
+}
+
+func newEntry(entryP **gtk.Entry) (obj *gtk.Widget, err error) {
+	*entryP, err = gtk.EntryNew()
+	if err != nil {
 		return
 	}
-	row, err := createLabeledRow(label, obj)
+	obj = &(*entryP).Widget
+	return
+}
+
+func newComboBox(comboBoxP **gtk.ComboBoxText, choices []string) (obj *gtk.Widget, err error) {
+	*comboBoxP, err = gtk.ComboBoxTextNew()
+	if err != nil {
+		return
+	}
+	for _, s := range choices {
+		(*comboBoxP).AppendText(s)
+	}
+	(*comboBoxP).SetActive(0)
+	obj = &(*comboBoxP).Widget
+	return
+}
+
+var inputHandling = map[inputElement]inputElementHandling{
+	iNodeName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.nodeNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.nodeNameEntry)
+		},
+	},
+	iTypeName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.typeNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.typeNameEntry)
+		},
+	},
+	iPortName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.portNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.portNameEntry)
+		},
+	},
+	iImplName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.implNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.implNameEntry)
+		},
+	},
+	iSignalTypeName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.signalTypeNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.signalTypeNameEntry)
+		},
+	},
+	iNodeTypeSelect: {"Select node type:",
+		func(dialog *NewElementDialog) string {
+			return dialog.nodeTypeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.nodeTypeSelector, freesp.GetRegisteredNodeTypes())
+		},
+	},
+	iSignalTypeSelect: {"Select signal type:",
+		func(dialog *NewElementDialog) string {
+			return dialog.signalTypeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.signalTypeSelector, freesp.GetRegisteredSignalTypes())
+		},
+	},
+	iImplementationType: {"Implementation type:",
+		func(dialog *NewElementDialog) string {
+			return dialog.implementationSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.implementationSelector, []string{"Elementary Type", "Signal Graph"})
+		},
+	},
+	iPortSelect: {"Select port to connect:",
+		func(dialog *NewElementDialog) string {
+			return dialog.portSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			var choices []string
+			for _, p := range getMatchingPorts(dialog.fts) {
+				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName()))
+			}
+			return newComboBox(&dialog.portSelector, choices)
+		},
+	},
+	iCType: {"C type:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.cTypeEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.cTypeEntry)
+		},
+	},
+	iChannelId: {"Channel id:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.channelIdEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.channelIdEntry)
+		},
+	},
+	iScope: {"Scope:",
+		func(dialog *NewElementDialog) string {
+			return dialog.scopeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.scopeSelector, []string{"Global", "Local"})
+		},
+	},
+	iSignalMode: {"Transfer mode:",
+		func(dialog *NewElementDialog) string {
+			return dialog.modeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.modeSelector, []string{"Asynchronous", "Isochronous"})
+		},
+	},
+	iDirection: {"Direction:",
+		func(dialog *NewElementDialog) string {
+			return dialog.directionSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.directionSelector, []string{"InPort", "OutPort"})
+		},
+	},
+}
+
+// Construct input element (some depending on fts).
+func (dialog *NewElementDialog) createInputElement(i inputElement, fts *models.FilesTreeStore) (widget *gtk.Widget, err error) {
+	obj, err := inputHandling[i].createElement(dialog)
+	row, err := createLabeledRow(inputHandling[i].label, obj)
 	if err != nil {
 		return
 	}
 	widget = &row.Widget
 	return
+}
+
+// Read out value from input element
+func (dialog *NewElementDialog) readOut(i inputElement) string {
+	return inputHandling[i].readOut(dialog)
 }
 
 // Collect all input elements to be constructed.
@@ -412,47 +433,6 @@ func (dialog *NewElementDialog) init(fts *models.FilesTreeStore) (err error) {
 	return
 }
 
-func (dialog *NewElementDialog) readOut(i inputElement) string {
-	switch i {
-	case iNodeName:
-		text, _ := dialog.nodeNameEntry.GetText()
-		return text
-	case iTypeName:
-		text, _ := dialog.typeNameEntry.GetText()
-		return text
-	case iPortName:
-		text, _ := dialog.portNameEntry.GetText()
-		return text
-	case iImplName:
-		text, _ := dialog.implNameEntry.GetText()
-		return text
-	case iSignalTypeName:
-		text, _ := dialog.signalTypeNameEntry.GetText()
-		return text
-	case iNodeTypeSelect:
-		return dialog.nodeTypeSelector.GetActiveText()
-	case iSignalTypeSelect:
-		return dialog.signalTypeSelector.GetActiveText()
-	case iImplementationType:
-		return dialog.implementationSelector.GetActiveText()
-	case iPortSelect:
-		return dialog.portSelector.GetActiveText()
-	case iCType:
-		text, _ := dialog.cTypeEntry.GetText()
-		return text
-	case iChannelId:
-		text, _ := dialog.channelIdEntry.GetText()
-		return text
-	case iScope:
-		return dialog.scopeSelector.GetActiveText()
-	case iSignalMode:
-		return dialog.modeSelector.GetActiveText()
-	case iDirection:
-		return dialog.directionSelector.GetActiveText()
-	}
-	return ""
-}
-
 func (dialog *NewElementDialog) collectJob(context string) *EditorJob {
 	log.Println("Selector =", dialog.selector.GetActiveText())
 	job := NewElementJobNew(context, elementType(dialog.selector.GetActiveText()))
@@ -475,133 +455,4 @@ func (dialog *NewElementDialog) Run(fts *models.FilesTreeStore) (job *EditorJob,
 	}
 	dialog.dialog.Destroy()
 	return
-}
-
-// TODO: should go to separate module
-type NewElementJob struct {
-	parentId, newId string
-	elemType        elementType
-	input           map[inputElement]string
-}
-
-func NewElementJobNew(context string, t elementType) *NewElementJob {
-	return &NewElementJob{context, "", t, make(map[inputElement]string)}
-}
-
-func (j *NewElementJob) String() string {
-	ret := fmt.Sprintf("%s (context=%s, newPath=%s)", j.elemType, j.parentId, j.newId)
-	for _, i := range inputElementMap[j.elemType] {
-		ret = fmt.Sprintf("%s, %s=%s", ret, i, j.input[i])
-	}
-	return ret
-}
-
-func getParentId(id string) string {
-	split := strings.Split(id, ":")
-	return strings.Join(split[:len(split)-1], ":")
-}
-
-func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) interface{} {
-	parentObject, err := fts.GetObjectById(j.parentId)
-	if err != nil {
-		log.Fatal("NewElementJob.CreateObject error: referenced parentObject run away...")
-	}
-	switch j.elemType {
-	case eNode:
-		var context freesp.SignalGraphType
-		switch parentObject.(type) {
-		case freesp.Node:
-			context = parentObject.(freesp.Node).Context()
-			j.parentId = getParentId(j.parentId)
-		case freesp.SignalGraph:
-			context = parentObject.(freesp.SignalGraph).ItsType()
-		case freesp.SignalGraphType:
-			context = parentObject.(freesp.SignalGraphType)
-		default:
-			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject wrong type...")
-		}
-		ntype, ok := freesp.GetNodeTypeByName(j.input[iNodeTypeSelect])
-		if !ok {
-			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject type wrong...")
-		}
-		return freesp.NodeNew(j.input[iNodeName], ntype, context)
-
-	case eNodeType:
-		var context string
-		switch parentObject.(type) {
-		case freesp.NodeType:
-			context = parentObject.(freesp.NodeType).DefinedAt()
-			j.parentId = getParentId(j.parentId)
-		case freesp.Library:
-			context = parentObject.(freesp.Library).Filename()
-		default:
-			log.Fatal("NewElementJob.CreateObject(eNodeType) error: referenced parentObject wrong type...")
-		}
-		return freesp.NodeTypeNew(j.input[iTypeName], context)
-
-	case eConnection:
-		switch parentObject.(type) {
-		case freesp.Port:
-		default:
-			log.Fatal("NewElementJob.CreateObject(eConnection) error: referenced parentObject wrong type...")
-		}
-		ports := getMatchingPorts(fts)
-		for _, p := range ports {
-			s := fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName())
-			if j.input[iPortSelect] == s {
-				return p
-			}
-		}
-
-	case eNamedPortType:
-		switch parentObject.(type) {
-		case freesp.NamedPortType:
-			j.parentId = getParentId(j.parentId)
-		case freesp.NodeType:
-		default:
-			log.Fatal("NewElementJob.CreateObject(eNamedPortType) error: referenced parentObject wrong type...")
-		}
-		_, ok := freesp.GetSignalTypeByName(j.input[iSignalTypeSelect])
-		if !ok {
-			log.Fatal("NewElementJob.CreateObject(eNamedPortType) error: referenced signal type wrong...")
-		}
-		var dir freesp.PortDirection
-		if j.input[iDirection] == "InPort" {
-			dir = freesp.InPort
-		} else {
-			dir = freesp.OutPort
-		}
-		return freesp.NamedPortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
-
-	case eSignalType:
-		name := j.input[iSignalTypeName]
-		cType := j.input[iCType]
-		channelId := j.input[iChannelId]
-		var scope freesp.Scope
-		if j.input[iScope] == "Local" {
-			scope = freesp.Local
-		} else {
-			scope = freesp.Global
-		}
-		var mode freesp.Mode
-		if j.input[iSignalMode] == "Asynchronous" {
-			mode = freesp.Asynchronous
-		} else {
-			mode = freesp.Synchronous
-		}
-		return freesp.SignalTypeNew(name, cType, channelId, scope, mode)
-
-	case eImplementation:
-		var implType freesp.ImplementationType
-		if j.input[iImplementationType] == "Elementary Type" {
-			implType = freesp.NodeTypeElement
-		} else {
-			implType = freesp.NodeTypeGraph
-		}
-		return freesp.ImplementationNew(j.input[iImplName], implType)
-
-	default:
-		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)
-	}
-	return nil
 }

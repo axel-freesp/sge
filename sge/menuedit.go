@@ -8,19 +8,21 @@ import (
 )
 
 func MenuEditInit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	menu.editUndo.Connect("activate", func() { editUndo(fts) })
-	menu.editRedo.Connect("activate", func() { editRedo(fts) })
+	menu.editUndo.Connect("activate", func() { editUndo(fts, jl) })
+	menu.editRedo.Connect("activate", func() { editRedo(fts, jl) })
 	menu.editNew.Connect("activate", func() { editNew(fts, jl, ftv) })
 	menu.editCopy.Connect("activate", func() { editCopy(fts) })
-	menu.editDelete.Connect("activate", func() { editDelete(fts) })
+	menu.editDelete.Connect("activate", func() { editDelete(fts, jl, ftv) })
 }
 
-func editUndo(fts *models.FilesTreeStore) {
+func editUndo(fts *models.FilesTreeStore, jl IJobList) {
 	log.Println("editUndo")
+	jl.Undo()
 }
 
-func editRedo(fts *models.FilesTreeStore) {
+func editRedo(fts *models.FilesTreeStore, jl IJobList) {
 	log.Println("editRedo")
+	jl.Redo()
 }
 
 func editNew(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
@@ -49,6 +51,19 @@ func editCopy(fts *models.FilesTreeStore) {
 	log.Println("editCopy")
 }
 
-func editDelete(fts *models.FilesTreeStore) {
+func editDelete(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
 	log.Println("editDelete")
+	job := DeleteObjectJobNew(fts.GetCurrentId())
+	if jl.Apply(EditorJobNew(JobDeleteObject, job)) {
+		log.Printf("Deleted %d objects\n", len(job.deletedObjects))
+		for _, d := range job.deletedObjects {
+			log.Println(d)
+		}
+		path, err := gtk.TreePathNewFromString("0")
+		if err != nil {
+			log.Println("editNew error: TreePathNewFromString failed:", err)
+			return
+		}
+		ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
+	}
 }

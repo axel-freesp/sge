@@ -45,6 +45,16 @@ func (g *XmlSignalGraph) ReadFile(filepath string) error {
 }
 
 func (g *XmlSignalGraph) WriteFile(filepath string) error {
-	// TODO
-	return fmt.Errorf("XmlSignalGraph.WriteFile() interface not implemented")
+	data, err := g.Write()
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, len(data)+len(xmlHeader))
+	for i := 0; i < len(xmlHeader); i++ {
+		buf[i] = xmlHeader[i]
+	}
+	for i := 0; i < len(data); i++ {
+		buf[i+len(xmlHeader)] = data[i]
+	}
+	return tool.WriteFile(filepath, buf)
 }

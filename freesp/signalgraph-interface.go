@@ -1,5 +1,7 @@
 package freesp
 
+import "fmt"
+
 type SignalGraphType interface {
 	Libraries() []Library
 	Nodes() []Node
@@ -8,6 +10,7 @@ type SignalGraphType interface {
 	OutputNodes() []Node
 	ProcessingNodes() []Node
 	AddNode(Node) error
+	RemoveNode(n Node)
 }
 
 type SignalGraph interface {
@@ -29,7 +32,9 @@ type Library interface {
 	Write() (data []byte, err error)
 	WriteFile(filepath string) error
 	AddNodeType(NodeType) error
+	RemoveNodeType(t NodeType)
 	AddSignalType(SignalType) error
+	RemoveSignalType(t SignalType)
 	SetFilename(string)
 }
 
@@ -39,8 +44,11 @@ type NodeType interface {
 	InPorts() []NamedPortType
 	OutPorts() []NamedPortType
 	Implementation() []Implementation
+	Instances() []Node
 	AddNamedPortType(NamedPortType)
+	RemoveNamedPortType(NamedPortType)
 	AddImplementation(Implementation)
+	RemoveImplementation(Implementation)
 }
 
 type Implementation interface {
@@ -104,6 +112,7 @@ type Port interface {
 	Connections() []Port
 	Node() Node
 	AddConnection(Port) error
+	RemoveConnection(c Port)
 }
 
 type PortDirection bool
@@ -113,8 +122,24 @@ const (
 	OutPort PortDirection = true
 )
 
+func (d PortDirection) String() (s string) {
+	if d == InPort {
+		s = "Input"
+	} else {
+		s = "Output"
+	}
+	return
+}
+
 type Connection struct {
 	From, To Port
+}
+
+func (c Connection) String() (s string) {
+	s = fmt.Sprintf("Connection(%s/%s -> %s/%s)",
+		c.From.Node().NodeName(), c.From.PortName(),
+		c.To.Node().NodeName(), c.To.PortName())
+	return
 }
 
 func GetRegisteredNodeTypes() []string {

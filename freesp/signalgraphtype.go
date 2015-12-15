@@ -25,6 +25,8 @@ type signalGraphType struct {
 	nodes, inputNodes, outputNodes, processingNodes []Node
 }
 
+var _ SignalGraphType = (*signalGraphType)(nil)
+
 func SignalGraphTypeNew() *signalGraphType {
 	return &signalGraphType{nil, nil, nil, nil, nil}
 }
@@ -81,6 +83,39 @@ func (t *signalGraphType) AddNode(n Node) error {
 		t.libraries = append(t.libraries, lib)
 	}
 	return t.addNode(n)
+}
+
+func FindNode(list []Node, elem Node) (index int, ok bool) {
+	for index = 0; index < len(list); index++ {
+		if elem == list[index] {
+			break
+		}
+	}
+	ok = (index < len(list))
+	return
+}
+
+func RemNode(list *[]Node, elem Node) {
+	index, ok := FindNode(*list, elem)
+	if !ok {
+		return
+	}
+	for j := index + 1; j < len(*list); j++ {
+		(*list)[j-1] = (*list)[j]
+	}
+	(*list) = (*list)[:len(*list)-1]
+}
+
+func (t *signalGraphType) RemoveNode(n Node) {
+	for _, p := range n.(*node).inPort {
+		for _, c := range p.(*port).connections {
+			c.RemoveConnection(p)
+		}
+	}
+	RemNode(&t.nodes, n.(*node))
+	RemNode(&t.inputNodes, n.(*node))
+	RemNode(&t.outputNodes, n.(*node))
+	RemNode(&t.processingNodes, n.(*node))
 }
 
 func (t *signalGraphType) addNode(n Node) error {
@@ -198,7 +233,7 @@ func getPortType(name string) *portType {
 	return pt
 }
 
-func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) *node {
+func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 	nName := n.NName
 	ntName := n.NType
 	if len(ntName) == 0 {
@@ -208,7 +243,8 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) *node {
 	if nt == nil {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
-	return NodeNew(nName, nt, t)
+	nd = NodeNew(nName, nt, t)
+	return
 }
 
 func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolvePort func(portname string, dir PortDirection) *namedPortType) *node {

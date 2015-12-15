@@ -8,6 +8,8 @@ type signalType struct {
 	mode               Mode
 }
 
+var _ SignalType = (*signalType)(nil)
+
 func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) *signalType {
 	return &signalType{name, ctype, msgid, scope, mode}
 }

@@ -35,7 +35,11 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
 	if selection.GetSelected(&model, &iter) {
 		obj, err := treeStore.GetObject(&iter)
 		if err != nil {
-			log.Fatal("treeSelectionChangedCB: Could not get object from model", err)
+			log.Println("treeSelectionChangedCB: Could not get object from model", err)
+			obj, err = treeStore.GetObjectById("0")
+			if err != nil {
+				log.Fatal("treeSelectionChangedCB: Can't show root element")
+			}
 		}
 		xmlview.Set(obj)
 	}

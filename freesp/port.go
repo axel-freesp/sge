@@ -13,6 +13,8 @@ type port struct {
 	node        Node
 }
 
+var _ Port = (*port)(nil)
+
 func newPort(name string, pt *portType, dir PortDirection, n *node) *port {
 	return &port{name, pt, dir, nil, n}
 }
@@ -41,6 +43,12 @@ func (p *port) Node() Node {
 	return p.node
 }
 
+func (p *port) String() (s string) {
+	s = fmt.Sprintf("%sPort of node %s(%s, %d connections)",
+		p.direction, p.Node().NodeName(), p.name, len(p.connections))
+	return
+}
+
 func findPort(list []Port, prt *port) bool {
 	for _, p := range list {
 		if unsafe.Pointer(p.(*port)) == unsafe.Pointer(prt) {
@@ -52,6 +60,26 @@ func findPort(list []Port, prt *port) bool {
 
 func (p *port) AddConnection(c Port) error {
 	return PortConnect(p, c)
+}
+
+func (p *port) indexOfConnection(c Port) (index int, ok bool) {
+	for index = 0; index < len(p.connections); index++ {
+		if c == p.connections[index] {
+			break
+		}
+	}
+	ok = (index < len(p.connections))
+	return
+}
+
+func (p *port) RemoveConnection(c Port) {
+	i, ok := p.indexOfConnection(c)
+	if ok {
+		for j := i + 1; j < len(p.connections); j++ {
+			p.connections[j-1] = p.connections[j]
+		}
+		p.connections = p.connections[:len(p.connections)-1]
+	}
 }
 
 func PortConnect(port1, port2 Port) error {

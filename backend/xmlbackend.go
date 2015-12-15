@@ -10,6 +10,8 @@ const envPathKey = "FREESP_PATH"
 const envSearchPathKey = "FREESP_SEARCH_PATH"
 const envSearchPathSep = ":"
 const freespNamespace = "http://www.freesp.de/xml/freeSP"
+const xmlHeader = `<?xml version="1.0" encoding="UTF-8"?>
+`
 
 var xmlRoot string
 var xmlSearchPaths []string

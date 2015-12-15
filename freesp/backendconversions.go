@@ -30,9 +30,9 @@ func CreateXmlInputNode(n Node) *backend.XmlInputNode {
 		tName = ""
 	}
 	ret := backend.XmlInputNodeNew(n.NodeName(), tName)
-	for _, p := range n.OutPorts() {
-		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
-	}
+	//for _, p := range n.OutPorts() {
+	//	ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+	//}
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -45,9 +45,9 @@ func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
 		tName = ""
 	}
 	ret := backend.XmlOutputNodeNew(n.NodeName(), tName)
-	for _, p := range n.InPorts() {
-		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
-	}
+	//for _, p := range n.InPorts() {
+	//	ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
+	//}
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}

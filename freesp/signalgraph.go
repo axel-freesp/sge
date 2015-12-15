@@ -3,7 +3,6 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/tool"
 )
 
 func SignalGraphNew(filename string) *signalGraph {
@@ -14,6 +13,8 @@ type signalGraph struct {
 	filename string
 	itsType  SignalGraphType
 }
+
+var _ SignalGraph = (*signalGraph)(nil)
 
 func (s *signalGraph) Filename() string {
 	return s.filename
@@ -29,20 +30,20 @@ func (s *signalGraph) Read(data []byte) error {
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
 	}
+	fmt.Println("signalGraph.Read: call createSignalGraphTypeFromXml")
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
 		func(_ string, _ PortDirection) *namedPortType { return nil })
 	return err
 }
 
 func (s *signalGraph) ReadFile(filepath string) error {
-	data, err := tool.ReadFile(filepath)
+	g := backend.XmlSignalGraphNew()
+	err := g.ReadFile(filepath)
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.ReadFile: %v", err))
 	}
-	err = s.Read(data)
-	if err != nil {
-		return newSignalGraphError(fmt.Sprintf("signalgraph.ReadFile: %v", err))
-	}
+	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
+		func(_ string, _ PortDirection) *namedPortType { return nil })
 	return err
 }
 
@@ -53,12 +54,8 @@ func (s *signalGraph) Write() (data []byte, err error) {
 }
 
 func (s *signalGraph) WriteFile(filepath string) error {
-	data, err := s.Write()
-	if err != nil {
-		return err
-	}
-	err = tool.WriteFile(filepath, data)
-	return nil
+	xmlsignalgraph := CreateXmlSignalGraph(s)
+	return xmlsignalgraph.WriteFile(filepath)
 }
 
 func (s *signalGraph) SetFilename(filename string) {

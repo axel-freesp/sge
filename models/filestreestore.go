@@ -8,6 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
+	"strings"
 )
 
 const envIconPathKey = "SGE_ICON_PATH"
@@ -203,7 +204,7 @@ func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (ne
 	return
 }
 
-func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId string, err error) {
+func (s *FilesTreeStore) AddNewObject(parentId string, position int, obj interface{}) (newId string, err error) {
 	parent, parentIter, err := s.getObjAndIterById(parentId)
 	if err != nil {
 		return
@@ -218,7 +219,7 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 		return
 	}
 
-	iter := s.treestore.Append(parentIter)
+	iter := s.treestore.Insert(parentIter, position)
 
 	err = s.doAddTreeObject(iter, obj, parent)
 	if err != nil {
@@ -230,9 +231,326 @@ func (s *FilesTreeStore) AddNewObject(parentId string, obj interface{}) (newId s
 	return
 }
 
+type IdWithObject struct {
+	ParentId string
+	Position int
+	Object   interface{}
+}
+
+// Root elements cannot be deleted. They need to be removed (e.g file->close)
+func (s *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err error) {
+	fmt.Printf("FilesTreeStore.DeleteObject: %s\n", id)
+	obj, _, err := s.getObjAndIterById(id)
+	if err != nil {
+		return
+	}
+	fmt.Printf("FilesTreeStore.DeleteObject(1): %T\n", obj)
+	li := strings.LastIndex(id, ":")
+	if li < 0 {
+		err = fmt.Errorf("Try to delete root element")
+		return
+	}
+	parentId := id[:li]
+	parent, err := s.GetObjectById(parentId)
+	if err != nil {
+		return
+	}
+	var position int
+	fmt.Sscanf(id[li+1:], "%d", &position)
+	toDelete := IdWithObject{parentId, position, obj}
+	fmt.Printf("FilesTreeStore.DeleteObject id=%s, id[li+1:]=%s: %v\n", id, id[li+1:], toDelete)
+
+	switch obj.(type) {
+	case freesp.Implementation:
+		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
+		parent.(freesp.NodeType).RemoveImplementation(obj.(freesp.Implementation))
+
+	case freesp.SignalGraphType:
+		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
+		deleted, err = s.deleteSignalGraphType(parentId, parent.(freesp.NodeType), obj.(freesp.SignalGraphType))
+
+	case freesp.SignalType:
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
+		return
+	case freesp.NamedPortType:
+		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
+
+		for _, n := range parent.(freesp.NodeType).Instances() {
+			var nodeId string
+			nodeId, err = s.getIdFromObject(n)
+			if err != nil {
+				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced node:", err)
+				return
+			}
+			fmt.Printf("Look at node %s: %s\n", nodeId, n)
+			var portlist []freesp.Port
+			var refPortTypeList []freesp.NamedPortType
+			if obj.(freesp.NamedPortType).Direction() == freesp.InPort {
+				portlist = n.InPorts()
+				refPortTypeList = parent.(freesp.NodeType).InPorts()
+			} else {
+				portlist = n.OutPorts()
+				refPortTypeList = parent.(freesp.NodeType).OutPorts()
+			}
+			var portToDelete freesp.Port
+			for _, p := range portlist {
+				if p.PortName() == obj.(freesp.NamedPortType).Name() {
+					portToDelete = p
+					break
+				}
+			}
+			if portToDelete == nil {
+				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: port not found to remove with named port type.")
+				return
+			}
+			var portTypeToDelete freesp.NamedPortType
+			for _, p := range refPortTypeList {
+				if p.Name() == obj.(freesp.NamedPortType).Name() {
+					portTypeToDelete = p
+					break
+				}
+			}
+			if portTypeToDelete == nil {
+				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: referenced port type not found to remove with named port type.")
+				return
+			}
+			var portId string
+			var ok bool
+			portId, ok = s.getIdFromObjectRecursive(nodeId, portToDelete)
+			if !ok {
+				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port.")
+				return
+			}
+			fmt.Printf("portToDelete %s: %s\n", portId, portToDelete)
+			var portTypeId string
+			portTypeId, ok = s.getIdFromObjectRecursive(nodeId, portTypeToDelete)
+			if !ok {
+				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port type.")
+				return
+			}
+			//deleted = append(deleted, IdWithObject{portTypeId, portTypeToDelete})
+			s.deleteElement(portTypeId)
+			var del []IdWithObject
+			del, err = s.deletePort(portId, nodeId, n, portToDelete)
+			for _, i := range del {
+				deleted = append(deleted, i)
+			}
+		}
+		parent.(freesp.NodeType).RemoveNamedPortType(obj.(freesp.NamedPortType))
+
+	case freesp.NodeType:
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
+		return
+	case freesp.Node:
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
+		return
+	case freesp.Connection:
+		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
+		deleted, err = s.deleteConnection(id, parentId, obj.(freesp.Connection))
+
+	default:
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: invalid type %T\n", obj)
+		return
+	}
+
+	s.deleteElement(id)
+
+	deleted = append(deleted, toDelete)
+	return
+}
+
 /*
  *      Local functions
  */
+
+func (s *FilesTreeStore) deletePortOfNode(n freesp.Node, pt freesp.NamedPortType, parent freesp.NodeType) (deleted []IdWithObject, err error) {
+	var nodeId string
+	nodeId, err = s.getIdFromObject(n)
+	if err != nil {
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced node:", err)
+		return
+	}
+	fmt.Printf("Look at node %s: %s\n", nodeId, n)
+	var portlist []freesp.Port
+	var refPortTypeList []freesp.NamedPortType
+	if pt.Direction() == freesp.InPort {
+		portlist = n.InPorts()
+		refPortTypeList = parent.InPorts()
+	} else {
+		portlist = n.OutPorts()
+		refPortTypeList = parent.OutPorts()
+	}
+	var portToDelete freesp.Port
+	for _, p := range portlist {
+		if p.PortName() == pt.Name() {
+			portToDelete = p
+			break
+		}
+	}
+	if portToDelete == nil {
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: error: port not found to remove with named port type.")
+		return
+	}
+	var portTypeToDelete freesp.NamedPortType
+	for _, p := range refPortTypeList {
+		if p.Name() == pt.Name() {
+			portTypeToDelete = p
+			break
+		}
+	}
+	if portTypeToDelete == nil {
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: error: referenced port type not found to remove with named port type.")
+		return
+	}
+	var portId string
+	var ok bool
+	portId, ok = s.getIdFromObjectRecursive(nodeId, portToDelete)
+	if !ok {
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port.")
+		return
+	}
+	fmt.Printf("portToDelete %s: %s\n", portId, portToDelete)
+	var portTypeId string
+	portTypeId, ok = s.getIdFromObjectRecursive(nodeId, portTypeToDelete)
+	if !ok {
+		err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port type.")
+		return
+	}
+	//deleted = append(deleted, IdWithObject{portTypeId, portTypeToDelete})
+	s.deleteElement(portTypeId)
+	var del []IdWithObject
+	del, err = s.deletePort(portId, nodeId, n, portToDelete)
+	for _, i := range del {
+		deleted = append(deleted, i)
+	}
+	return
+}
+
+func (s *FilesTreeStore) deletePort(id, parentId string, parent freesp.Node, port freesp.Port) (deleted []IdWithObject, err error) {
+	for _, c := range port.Connections() {
+		var connId string
+		var ok bool
+		conn := freesp.Connection{port, c}
+		connId, ok = s.getIdFromObjectRecursive(id, conn)
+		if !ok {
+			err = fmt.Errorf("FilesTreeStore.deletePort error: cannot find connection: ", err)
+			return
+		}
+		_, err = s.deleteConnection(connId, id, conn)
+		if err != nil {
+			return
+		}
+		var position int
+		fmt.Sscanf(connId[len(id)+1:], "%d", &position)
+		deleted = append(deleted, IdWithObject{id, position, conn})
+		s.deleteElement(connId)
+	}
+	s.deleteElement(id)
+	return
+}
+
+func (s *FilesTreeStore) deleteSignalGraphType(parentId string, parent freesp.NodeType, obj freesp.SignalGraphType) (deleted []IdWithObject, err error) {
+	var imp freesp.Implementation
+	for _, i := range parent.Implementation() {
+		if i.ImplementationType() == freesp.NodeTypeGraph && i.Graph() == obj {
+			imp = i
+		}
+	}
+	if imp == nil {
+		return
+	}
+	for _, n := range imp.Graph().ProcessingNodes() {
+		nid, ok := s.getIdFromObjectRecursive(parentId, n)
+		if ok {
+			var position int
+			fmt.Sscanf(nid[len(parentId)+1:], "%d", &position)
+			deleted = append(deleted, IdWithObject{parentId, position, n})
+		}
+	}
+	parent.RemoveImplementation(imp)
+	return
+}
+
+func (s *FilesTreeStore) deleteConnection(id, parentId string, obj freesp.Connection) (deleted []IdWithObject, err error) {
+	from, to := obj.From, obj.To
+	from.RemoveConnection(to)
+	to.RemoveConnection(from)
+	var fromId, toId string
+	fromId, err = s.getIdFromObject(from)
+	if err != nil {
+		return
+	}
+	toId, err = s.getIdFromObject(to)
+	if err != nil {
+		return
+	}
+	var otherId string
+	if fromId == parentId {
+		otherId = toId
+	} else {
+		otherId = fromId
+	}
+	otherObj := s.lookup[otherId]
+	ok := true
+	var i int
+	for i = 0; ok; i++ {
+		e, ok := s.lookup[fmt.Sprintf("%s:%d", otherId, i)]
+		if ok {
+			if e == obj {
+				break
+			}
+		}
+	}
+	if !ok {
+		fmt.Println("FilesTreeStore.DeleteObject error: Could not find remote connection object")
+	} else {
+		s.deleteElement(fmt.Sprintf("%s:%d", otherId, i))
+	}
+	deleted = append(deleted, IdWithObject{otherId, i, otherObj})
+	return
+}
+
+func (s *FilesTreeStore) deleteElement(id string) {
+	s.deleteSubtree(id)
+	prefix := id[:strings.LastIndex(id, ":")]
+	suffix := id[strings.LastIndex(id, ":")+1:]
+	var index int
+	fmt.Sscanf(suffix, "%d", &index)
+	for ok := true; ok; index++ {
+		ok = s.shiftLookup(prefix, fmt.Sprintf("%d", index+1), fmt.Sprintf("%d", index))
+	}
+}
+
+func (s *FilesTreeStore) deleteSubtree(id string) {
+	_, iter, err := s.getObjAndIterById(id)
+	if err != nil {
+		return
+	}
+	ok := true
+	for i := 0; ok; i++ {
+		child := fmt.Sprintf("%s:%d", id, i)
+		_, ok = s.lookup[child]
+		if ok {
+			s.deleteSubtree(child)
+		}
+	}
+	s.treestore.Remove(iter)
+}
+
+func (s *FilesTreeStore) shiftLookup(parent, from, to string) (ok bool) {
+	fromId, toId := fmt.Sprintf("%s:%s", parent, from), fmt.Sprintf("%s:%s", parent, to)
+	obj, ok := s.lookup[fromId]
+	if ok {
+		s.lookup[toId] = obj
+		ok2 := true
+		for i := 0; ok2; i++ {
+			ok2 = s.shiftLookup(parent, fmt.Sprintf("%s:%d", from, i), fmt.Sprintf("%s:%d", to, i))
+		}
+	} else {
+		delete(s.lookup, toId)
+	}
+	return
+}
 
 func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) {
 	err = s.treestore.SetValue(iter, textCol, value)
@@ -271,6 +589,37 @@ func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
 			theGraph = parent.(freesp.SignalGraphType)
 		}
 		err = theGraph.AddNode(obj.(freesp.Node))
+	case freesp.Connection:
+		var port1, port2 freesp.Port
+		var node1, node2 freesp.Node
+		node1 = obj.(freesp.Connection).To.Node()
+		for _, p := range node1.InPorts() {
+			if p.PortName() == obj.(freesp.Connection).To.PortName() {
+				port1 = p
+				break
+			}
+		}
+		node2 = obj.(freesp.Connection).From.Node()
+		for _, p := range node2.OutPorts() {
+			if p.PortName() == obj.(freesp.Connection).From.PortName() {
+				port2 = p
+				break
+			}
+		}
+		if port1 == nil || port2 == nil {
+			err = fmt.Errorf("FilesTreeStore.doAddFreespObject error: one of referenced ports (%s) not found\n", obj.(freesp.Connection))
+			return
+		}
+		err = port1.AddConnection(port2)
+		if err != nil {
+			err = fmt.Errorf("FilesTreeStore.doAddFreespObject(1): %v", err)
+			return
+		}
+		err = port2.AddConnection(port1)
+		if err != nil {
+			err = fmt.Errorf("FilesTreeStore.doAddFreespObject(2): %v", err)
+			return
+		}
 	case freesp.Port:
 		err = parent.(freesp.Port).AddConnection(obj.(freesp.Port))
 		if err != nil {
@@ -304,6 +653,49 @@ func (s *FilesTreeStore) doAddTreeObject(iter *gtk.TreeIter, obj interface{}, pa
 			icon = imageOutputPort
 		}
 		err = s.addNamedPortType(iter, obj.(freesp.NamedPortType), icon)
+		if err != nil {
+			return
+		}
+		for _, n := range parent.(freesp.NodeType).Instances() {
+			var i *gtk.TreeIter
+			i, err = s.getIterFromObject(n)
+			if err != nil {
+				return
+			}
+			var p freesp.Port
+			var plist []freesp.Port
+			if obj.(freesp.NamedPortType).Direction() == freesp.InPort {
+				plist = n.InPorts()
+			} else {
+				plist = n.OutPorts()
+			}
+			for _, p = range plist {
+				if p.PortName() == obj.(freesp.NamedPortType).Name() {
+					break
+				}
+			}
+			fmt.Println("Adding port ", p)
+			i = s.treestore.Append(i)
+			err = s.addPort(i, p, icon)
+			var nodeId string
+			nodeId, err = s.getIdFromObject(n)
+			if err != nil {
+				return
+			}
+			id, ok := s.getIdFromObjectRecursive(nodeId, parent.(freesp.NodeType))
+			if !ok {
+				return
+			}
+			i, err = s.treestore.GetIterFromString(id)
+			if err != nil {
+				return
+			}
+			j := s.treestore.Append(i)
+			err = s.addNamedPortType(j, obj.(freesp.NamedPortType), icon)
+			if err != nil {
+				return
+			}
+		}
 	case freesp.NodeType:
 		err = s.addNodeType(iter, obj.(freesp.NodeType))
 	case freesp.Node:
@@ -317,6 +709,47 @@ func (s *FilesTreeStore) doAddTreeObject(iter *gtk.TreeIter, obj interface{}, pa
 			icon = imageInputNode
 		}
 		err = s.addNode(iter, obj.(freesp.Node), icon)
+	case freesp.Connection:
+		fmt.Println("Adding ", obj.(freesp.Connection))
+		var port1, port2 freesp.Port
+		var node1, node2 freesp.Node
+		node1 = obj.(freesp.Connection).To.Node()
+		for _, port1 = range node1.InPorts() {
+			if port1.PortName() == obj.(freesp.Connection).To.PortName() {
+				break
+			}
+		}
+		node2 = obj.(freesp.Connection).From.Node()
+		for _, port2 = range node2.OutPorts() {
+			if port2.PortName() == obj.(freesp.Connection).From.PortName() {
+				break
+			}
+		}
+		fmt.Println("node1 =", node1)
+		fmt.Println("port1 =", port1)
+		fmt.Println("node2 =", node2)
+		fmt.Println("port2 =", port2)
+		var iter1, iter2 *gtk.TreeIter
+		iter1, err = s.getIterFromObject(port1)
+		if err != nil {
+			return
+		}
+		iter2, err = s.getIterFromObject(port2)
+		if err != nil {
+			return
+		}
+		iter = s.treestore.Append(iter1)
+		err = s.addConnection(iter, port1, port2)
+		if err != nil {
+			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(3) failed")
+			return
+		}
+		iter = s.treestore.Append(iter2)
+		err = s.addConnection(iter, port2, port1)
+		if err != nil {
+			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(4) failed")
+			return
+		}
 	case freesp.Port:
 		err = s.addConnection(iter, parent.(freesp.Port), obj.(freesp.Port))
 		if err != nil {
@@ -375,7 +808,7 @@ func checkParentType(obj interface{}, parent interface{}) bool {
 		default:
 			return false
 		}
-	case freesp.Port:
+	case freesp.Port, freesp.Connection:
 		switch parent.(type) {
 		case freesp.Port:
 			return true
@@ -418,6 +851,19 @@ func (s *FilesTreeStore) getIterFromObject(obj interface{}) (iter *gtk.TreeIter,
 	return
 }
 
+func (s *FilesTreeStore) getIdFromObject(obj interface{}) (id string, err error) {
+	iter, err := s.getIterFromObject(obj)
+	if err != nil {
+		return
+	}
+	path, err := s.treestore.GetPath(iter)
+	if err != nil {
+		return
+	}
+	id = path.String()
+	return
+}
+
 func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj interface{}) (id string, ok bool) {
 	ok = false
 	var o interface{}
@@ -428,8 +874,6 @@ func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj interface{}
 			break
 		} else if o != obj {
 			id, ok = s.getIdFromObjectRecursive(id, obj)
-		} else {
-			fmt.Println("match: ", id)
 		}
 	}
 	return
@@ -662,20 +1106,25 @@ func (s *FilesTreeStore) addConnection(iter *gtk.TreeIter, thisPort, p freesp.Po
 	return
 }
 
-func (s *FilesTreeStore) addPorts(iter *gtk.TreeIter, ports []freesp.Port, kind *gdk.Pixbuf) error {
+func (s *FilesTreeStore) addPorts(iter *gtk.TreeIter, ports []freesp.Port, kind *gdk.Pixbuf) (err error) {
 	ts := s.treestore
 	for _, p := range ports {
 		i := ts.Append(iter)
-		err := s.addEntry(i, kind, p.PortName(), p)
+		err = s.addPort(i, p, kind)
 		if err != nil {
-			return gtkErr("FilesTreeStore.addPorts", "s.addEntry()", err)
-		}
-		err = s.addPortDetails(i, p)
-		if err != nil {
-			return err
+			return
 		}
 	}
-	return nil
+	return
+}
+
+func (s *FilesTreeStore) addPort(iter *gtk.TreeIter, p freesp.Port, kind *gdk.Pixbuf) (err error) {
+	err = s.addEntry(iter, kind, p.PortName(), p)
+	if err != nil {
+		err = gtkErr("FilesTreeStore.addPorts", "s.addEntry()", err)
+	}
+	err = s.addPortDetails(iter, p)
+	return
 }
 
 func (s *FilesTreeStore) addPortDetails(iter *gtk.TreeIter, port freesp.Port) error {

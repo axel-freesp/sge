@@ -1,11 +1,15 @@
 package freesp
 
+import "fmt"
+
 // portType
 
 type portType struct {
 	name string
 	ref  *signalType
 }
+
+var _ PortType = (*portType)(nil)
 
 func PortTypeNew(name string, st SignalType) *portType {
 	return &portType{name, st.(*signalType)}
@@ -27,6 +31,8 @@ type namedPortType struct {
 	direction PortDirection
 }
 
+var _ NamedPortType = (*namedPortType)(nil)
+
 func NamedPortTypeNew(name string, pTypeName string, dir PortDirection) *namedPortType {
 	pt := getPortType(pTypeName)
 	return &namedPortType{name, pt, dir}
@@ -46,4 +52,9 @@ func (t *namedPortType) Direction() PortDirection {
 
 func (t *namedPortType) SignalType() SignalType {
 	return t.pType.SignalType()
+}
+
+func (t *namedPortType) String() (s string) {
+	s = fmt.Sprintf("NamedPortType(%s, %s, %s)", t.name, t.direction, t.SignalType())
+	return
 }

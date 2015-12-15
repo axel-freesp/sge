@@ -3,7 +3,6 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/tool"
 	"log"
 )
 
@@ -19,6 +18,8 @@ type library struct {
 	nodeTypes   []NodeType
 }
 
+var _ Library = (*library)(nil)
+
 func (l *library) Filename() string {
 	return l.filename
 }
@@ -31,13 +32,8 @@ func (l *library) NodeTypes() []NodeType {
 	return l.nodeTypes
 }
 
-func (s *library) Read(data []byte) error {
-	l := backend.XmlLibraryNew()
-	err := l.Read(data)
-	if err != nil {
-		return fmt.Errorf("library.Read: %v", err)
-	}
-	for _, st := range l.SignalTypes {
+func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
+	for _, st := range xmlLib.SignalTypes {
 		var scope Scope
 		var mode Mode
 		switch st.Scope {
@@ -53,14 +49,14 @@ func (s *library) Read(data []byte) error {
 			mode = Asynchronous
 		}
 		sType := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
-		err := s.AddSignalType(sType)
+		err := l.AddSignalType(sType)
 		if err != nil {
 			log.Println("library.Read warning:", err)
 		}
 	}
-	for _, n := range l.NodeTypes {
-		nType := createNodeTypeFromXml(n, s.Filename())
-		err := s.AddNodeType(nType)
+	for _, n := range xmlLib.NodeTypes {
+		nType := createNodeTypeFromXml(n, l.Filename())
+		err := l.AddNodeType(nType)
 		if err != nil {
 			log.Println("library.Read warning:", err)
 		}
@@ -68,16 +64,22 @@ func (s *library) Read(data []byte) error {
 	return nil
 }
 
+func (s *library) Read(data []byte) error {
+	l := backend.XmlLibraryNew()
+	err := l.Read(data)
+	if err != nil {
+		return fmt.Errorf("library.Read: %v", err)
+	}
+	return s.createLibFromXml(l)
+}
+
 func (s *library) ReadFile(filepath string) error {
-	data, err := tool.ReadFile(filepath)
+	l := backend.XmlLibraryNew()
+	err := l.ReadFile(filepath)
 	if err != nil {
-		return fmt.Errorf("library.ReadFile: %v", err)
+		return fmt.Errorf("library.Read: %v", err)
 	}
-	err = s.Read(data)
-	if err != nil {
-		return fmt.Errorf("library.ReadFile: %v", err)
-	}
-	return err
+	return s.createLibFromXml(l)
 }
 
 func (s *library) Write() (data []byte, err error) {
@@ -87,12 +89,8 @@ func (s *library) Write() (data []byte, err error) {
 }
 
 func (s *library) WriteFile(filepath string) error {
-	data, err := s.Write()
-	if err != nil {
-		return err
-	}
-	err = tool.WriteFile(filepath, data)
-	return nil
+	xmllib := CreateXmlLibrary(s)
+	return xmllib.WriteFile(filepath)
 }
 
 func (s *library) SetFilename(filename string) {
@@ -118,6 +116,34 @@ func (s *library) AddNodeType(t NodeType) error {
 	return nil
 }
 
+func FindNodeType(list []NodeType, elem NodeType) (index int, ok bool) {
+	for index = 0; index < len(list); index++ {
+		if elem == list[index] {
+			break
+		}
+	}
+	ok = (index < len(list))
+	return
+}
+
+func RemoveNodeType(list []NodeType, elem NodeType) {
+	index, ok := FindNodeType(list, elem)
+	if !ok {
+		return
+	}
+	for j := index + 1; j < len(list); j++ {
+		list[j-1] = list[j]
+	}
+	list = list[:len(list)-1]
+}
+
+func (l *library) RemoveNodeType(t NodeType) {
+	for _, n := range t.(*nodeType).instances {
+		n.(*node).context.RemoveNode(n)
+	}
+	RemoveNodeType(l.nodeTypes, t)
+}
+
 func (l *library) AddSignalType(s SignalType) error {
 	sType := signalTypes[s.TypeName()]
 	if sType != nil {
@@ -134,4 +160,7 @@ func (l *library) AddSignalType(s SignalType) error {
 	}
 	l.signalTypes = append(l.signalTypes, sType)
 	return nil
+}
+
+func (l *library) RemoveSignalType(s SignalType) {
 }

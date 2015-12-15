@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	//"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"log"
 )
@@ -11,19 +11,23 @@ type JobType int
 
 const (
 	JobNewElement JobType = iota
+	JobDeleteObject
 )
 
 type EditorJob struct {
-	jobType    JobType
-	jobDetail  fmt.Stringer
-	newElement *NewElementJob
+	jobType      JobType
+	jobDetail    fmt.Stringer
+	newElement   *NewElementJob
+	deleteObject *DeleteObjectJob
 }
 
 func EditorJobNew(jobType JobType, jobDetail fmt.Stringer) *EditorJob {
-	ret := &EditorJob{jobType, jobDetail, nil}
+	ret := &EditorJob{jobType, jobDetail, nil, nil}
 	switch jobType {
 	case JobNewElement:
 		ret.newElement = jobDetail.(*NewElementJob)
+	case JobDeleteObject:
+		ret.deleteObject = jobDetail.(*DeleteObjectJob)
 	}
 	return ret
 }
@@ -33,6 +37,8 @@ func (e *EditorJob) String() string {
 	switch e.jobType {
 	case JobNewElement:
 		kind = "NewElement"
+	case JobDeleteObject:
+		kind = "DeleteObject"
 	}
 	return fmt.Sprintf("EditorJob( %s( %v ) )", kind, e.jobDetail)
 }
@@ -53,16 +59,28 @@ func (a *jobApplier) Apply(jobI interface{}) (err error) {
 	switch job.jobType {
 	case JobNewElement:
 		object := job.newElement.CreateObject(a.fts)
-		switch object.(type) {
-		case freesp.Implementation, freesp.SignalType, freesp.NamedPortType, freesp.NodeType, freesp.Node, freesp.Port:
-			job.newElement.newId, err = a.fts.AddNewObject(job.newElement.parentId, object)
-		default:
-			log.Println("jobApplier.Apply(JobNewElement): invalid data type")
-		}
+		job.newElement.newId, err = a.fts.AddNewObject(job.newElement.parentId, -1, object)
+	case JobDeleteObject:
+		job.deleteObject.deletedObjects, err = a.fts.DeleteObject(job.deleteObject.id)
 	}
 	return
 }
 
-func (j *jobApplier) Revert(jobI interface{}) error {
-	return nil
+func (a *jobApplier) Revert(jobI interface{}) (err error) {
+	job := jobI.(*EditorJob)
+	switch job.jobType {
+	case JobNewElement:
+		a.fts.DeleteObject(job.newElement.newId)
+	case JobDeleteObject:
+		var i int
+		for i = len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {
+			d := job.deleteObject.deletedObjects[i]
+			fmt.Println("adding deleted object ", d.Object, " at ", d.ParentId)
+			_, err = a.fts.AddNewObject(d.ParentId, d.Position, d.Object)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+	return
 }

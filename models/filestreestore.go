@@ -3,9 +3,12 @@ package models
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
+	//"github.com/axel-freesp/sge/tool"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"image"
+	_ "image/png"
 	"log"
 	"os"
 	"strings"
@@ -37,13 +40,37 @@ func Init() error {
 		log.Fatal("Missing Environment variable ", iconPath)
 	}
 	var err error
-	imageSignalGraph, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/test1.png", iconPath))
+	file, err := os.Open(fmt.Sprintf("%s/test1.png", iconPath))
 	if err != nil {
-		return gtkErr("FilesTreeStore.Init", "test1.png", err)
+		return err
+	}
+	defer file.Close()
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return gtkErr("FilesTreeStore.Init", "Decode", err)
+	}
+	bounds := img.Bounds()
+	width := bounds.Max.X - bounds.Min.X
+	height := bounds.Max.Y - bounds.Min.Y
+	data := make([]byte, width*height*4)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		j := width * 4 * y
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			r, g, b, a := img.At(x, y).RGBA()
+			data[j+4*x+0] = byte(r)
+			data[j+4*x+1] = byte(g)
+			data[j+4*x+2] = byte(b)
+			data[j+4*x+3] = byte(a)
+		}
+	}
+
+	imageSignalGraph, err = gdk.PixbufNewFromBytes(data, gdk.COLORSPACE_RGB, true, 8, width, height, width*4)
+	if err != nil {
+		return gtkErr("FilesTreeStore.Init", "PixbufNewFromXpmData", err)
 	}
 	imageInputNode, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/input.png", iconPath))
 	if err != nil {
-		return gtkErr("FilesTreeStore.Init", "test0.png", err)
+		return gtkErr("FilesTreeStore.Init", "PixbufNewFromFile", err)
 	}
 	imageOutputNode, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/output.png", iconPath))
 	if err != nil {
@@ -219,7 +246,13 @@ func (s *FilesTreeStore) AddNewObject(parentId string, position int, obj interfa
 		return
 	}
 
-	iter := s.treestore.Insert(parentIter, position)
+	var iter *gtk.TreeIter
+	if insertAtPosition(obj) {
+		iter = s.treestore.Insert(parentIter, position)
+		id, _ := s.getIdFromIter(iter)
+		fmt.Printf("Iter: %s\n", id)
+		s.insertElement(parentId, position)
+	}
 
 	err = s.doAddTreeObject(iter, obj, parent)
 	if err != nil {
@@ -227,7 +260,9 @@ func (s *FilesTreeStore) AddNewObject(parentId string, position int, obj interfa
 		return
 	}
 
-	newId, err = s.getIdFromIter(iter)
+	if insertAtPosition(obj) {
+		newId, err = s.getIdFromIter(iter)
+	}
 	return
 }
 
@@ -239,12 +274,10 @@ type IdWithObject struct {
 
 // Root elements cannot be deleted. They need to be removed (e.g file->close)
 func (s *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err error) {
-	fmt.Printf("FilesTreeStore.DeleteObject: %s\n", id)
 	obj, _, err := s.getObjAndIterById(id)
 	if err != nil {
 		return
 	}
-	fmt.Printf("FilesTreeStore.DeleteObject(1): %T\n", obj)
 	li := strings.LastIndex(id, ":")
 	if li < 0 {
 		err = fmt.Errorf("Try to delete root element")
@@ -258,102 +291,82 @@ func (s *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err er
 	var position int
 	fmt.Sscanf(id[li+1:], "%d", &position)
 	toDelete := IdWithObject{parentId, position, obj}
-	fmt.Printf("FilesTreeStore.DeleteObject id=%s, id[li+1:]=%s: %v\n", id, id[li+1:], toDelete)
 
 	switch obj.(type) {
 	case freesp.Implementation:
 		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
 		parent.(freesp.NodeType).RemoveImplementation(obj.(freesp.Implementation))
+		s.deleteElement(id)
 
 	case freesp.SignalGraphType:
 		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
 		deleted, err = s.deleteSignalGraphType(parentId, parent.(freesp.NodeType), obj.(freesp.SignalGraphType))
+		s.deleteElement(id)
 
 	case freesp.SignalType:
 		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
 		return
 	case freesp.NamedPortType:
 		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
-
 		for _, n := range parent.(freesp.NodeType).Instances() {
-			var nodeId string
-			nodeId, err = s.getIdFromObject(n)
-			if err != nil {
-				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced node:", err)
-				return
-			}
-			fmt.Printf("Look at node %s: %s\n", nodeId, n)
-			var portlist []freesp.Port
-			var refPortTypeList []freesp.NamedPortType
-			if obj.(freesp.NamedPortType).Direction() == freesp.InPort {
-				portlist = n.InPorts()
-				refPortTypeList = parent.(freesp.NodeType).InPorts()
-			} else {
-				portlist = n.OutPorts()
-				refPortTypeList = parent.(freesp.NodeType).OutPorts()
-			}
-			var portToDelete freesp.Port
-			for _, p := range portlist {
-				if p.PortName() == obj.(freesp.NamedPortType).Name() {
-					portToDelete = p
-					break
-				}
-			}
-			if portToDelete == nil {
-				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: port not found to remove with named port type.")
-				return
-			}
-			var portTypeToDelete freesp.NamedPortType
-			for _, p := range refPortTypeList {
-				if p.Name() == obj.(freesp.NamedPortType).Name() {
-					portTypeToDelete = p
-					break
-				}
-			}
-			if portTypeToDelete == nil {
-				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: referenced port type not found to remove with named port type.")
-				return
-			}
-			var portId string
-			var ok bool
-			portId, ok = s.getIdFromObjectRecursive(nodeId, portToDelete)
-			if !ok {
-				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port.")
-				return
-			}
-			fmt.Printf("portToDelete %s: %s\n", portId, portToDelete)
-			var portTypeId string
-			portTypeId, ok = s.getIdFromObjectRecursive(nodeId, portTypeToDelete)
-			if !ok {
-				err = fmt.Errorf("FilesTreeStore.DeleteObject: error: no id for referenced port type.")
-				return
-			}
-			//deleted = append(deleted, IdWithObject{portTypeId, portTypeToDelete})
-			s.deleteElement(portTypeId)
 			var del []IdWithObject
-			del, err = s.deletePort(portId, nodeId, n, portToDelete)
+			del, err = s.deletePortOfNode(n, obj.(freesp.NamedPortType), parent.(freesp.NodeType))
+			if err != nil {
+				return
+			}
 			for _, i := range del {
 				deleted = append(deleted, i)
 			}
 		}
 		parent.(freesp.NodeType).RemoveNamedPortType(obj.(freesp.NamedPortType))
+		s.deleteElement(id)
 
 	case freesp.NodeType:
 		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
 		return
 	case freesp.Node:
-		err = fmt.Errorf("FilesTreeStore.DeleteObject: not yet implemented: %T\n", obj)
-		return
+		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
+		for _, p := range obj.(freesp.Node).InPorts() {
+			portId, ok := s.getIdFromObjectRecursive(id, p)
+			if !ok {
+				err = fmt.Errorf("Invalid port!")
+				return
+			}
+			for _, c := range p.Connections() {
+				conn := freesp.Connection{c, p}
+				err = s.deleteConnection(portId, conn)
+				if err != nil {
+					return
+				}
+				deleted = append(deleted, IdWithObject{portId, -1, conn})
+			}
+		}
+		for _, p := range obj.(freesp.Node).OutPorts() {
+			portId, ok := s.getIdFromObjectRecursive(id, p)
+			if !ok {
+				err = fmt.Errorf("Invalid port!")
+				return
+			}
+			for _, c := range p.Connections() {
+				conn := freesp.Connection{p, c}
+				err = s.deleteConnection(portId, conn)
+				if err != nil {
+					return
+				}
+				deleted = append(deleted, IdWithObject{portId, -1, conn})
+			}
+		}
+		parent.(freesp.SignalGraph).ItsType().RemoveNode(obj.(freesp.Node))
+		s.deleteElement(id)
+
 	case freesp.Connection:
 		fmt.Printf("FilesTreeStore.DeleteObject: %T\n", obj)
-		deleted, err = s.deleteConnection(id, parentId, obj.(freesp.Connection))
+		err = s.deleteConnection(parentId, obj.(freesp.Connection))
 
 	default:
 		err = fmt.Errorf("FilesTreeStore.DeleteObject: invalid type %T\n", obj)
 		return
 	}
-
-	s.deleteElement(id)
 
 	deleted = append(deleted, toDelete)
 	return
@@ -436,13 +449,11 @@ func (s *FilesTreeStore) deletePort(id, parentId string, parent freesp.Node, por
 			err = fmt.Errorf("FilesTreeStore.deletePort error: cannot find connection: ", err)
 			return
 		}
-		_, err = s.deleteConnection(connId, id, conn)
+		err = s.deleteConnection(id, conn)
 		if err != nil {
 			return
 		}
-		var position int
-		fmt.Sscanf(connId[len(id)+1:], "%d", &position)
-		deleted = append(deleted, IdWithObject{id, position, conn})
+		deleted = append(deleted, IdWithObject{id, -1, conn})
 		s.deleteElement(connId)
 	}
 	s.deleteElement(id)
@@ -471,10 +482,8 @@ func (s *FilesTreeStore) deleteSignalGraphType(parentId string, parent freesp.No
 	return
 }
 
-func (s *FilesTreeStore) deleteConnection(id, parentId string, obj freesp.Connection) (deleted []IdWithObject, err error) {
+func (s *FilesTreeStore) deleteConnection(parentId string, obj freesp.Connection) (err error) {
 	from, to := obj.From, obj.To
-	from.RemoveConnection(to)
-	to.RemoveConnection(from)
 	var fromId, toId string
 	fromId, err = s.getIdFromObject(from)
 	if err != nil {
@@ -487,10 +496,13 @@ func (s *FilesTreeStore) deleteConnection(id, parentId string, obj freesp.Connec
 	var otherId string
 	if fromId == parentId {
 		otherId = toId
-	} else {
+	} else if toId == parentId {
 		otherId = fromId
+	} else {
+		err = fmt.Errorf("FilesTreeStore.deleteConnection: wrong parent id.")
+		return
 	}
-	otherObj := s.lookup[otherId]
+	//otherObj := s.lookup[otherId]
 	ok := true
 	var i int
 	for i = 0; ok; i++ {
@@ -502,11 +514,30 @@ func (s *FilesTreeStore) deleteConnection(id, parentId string, obj freesp.Connec
 		}
 	}
 	if !ok {
-		fmt.Println("FilesTreeStore.DeleteObject error: Could not find remote connection object")
+		fmt.Println("FilesTreeStore.deleteConnection error: Could not find remote connection object")
+		return
 	} else {
+		fmt.Printf("FilesTreeStore.deleteConnection: delete %s\n", fmt.Sprintf("%s:%d", otherId, i))
 		s.deleteElement(fmt.Sprintf("%s:%d", otherId, i))
 	}
-	deleted = append(deleted, IdWithObject{otherId, i, otherObj})
+	ok = true
+	for i = 0; ok; i++ {
+		e, ok := s.lookup[fmt.Sprintf("%s:%d", parentId, i)]
+		if ok {
+			if e == obj {
+				break
+			}
+		}
+	}
+	if !ok {
+		fmt.Println("FilesTreeStore.deleteConnection error: Could not find remote connection object")
+		return
+	} else {
+		fmt.Printf("FilesTreeStore.deleteConnection: delete %s\n", fmt.Sprintf("%s:%d", parentId, i))
+		s.deleteElement(fmt.Sprintf("%s:%d", parentId, i))
+	}
+	from.RemoveConnection(to)
+	to.RemoveConnection(from)
 	return
 }
 
@@ -518,6 +549,20 @@ func (s *FilesTreeStore) deleteElement(id string) {
 	fmt.Sscanf(suffix, "%d", &index)
 	for ok := true; ok; index++ {
 		ok = s.shiftLookup(prefix, fmt.Sprintf("%d", index+1), fmt.Sprintf("%d", index))
+	}
+}
+
+func (s *FilesTreeStore) insertElement(prefix string, position int) {
+	if position < 0 {
+		return
+	}
+	index := 0
+	for ok := true; ok; index++ {
+		_, ok = s.lookup[fmt.Sprintf("%s:%d", prefix, index+1)]
+	}
+	fmt.Printf("FilesTreeStore.insertElement(%d): last element: %s:%d\n", position, prefix, index)
+	for ; index >= position; index-- {
+		s.shiftLookup(prefix, fmt.Sprintf("%d", index), fmt.Sprintf("%d", index+1))
 	}
 }
 
@@ -552,6 +597,24 @@ func (s *FilesTreeStore) shiftLookup(parent, from, to string) (ok bool) {
 	return
 }
 
+func insertAtPosition(obj interface{}) bool {
+	switch obj.(type) {
+	case freesp.Implementation:
+		return true
+	case freesp.SignalType:
+		return true
+	case freesp.NamedPortType:
+		return true
+	case freesp.NodeType:
+		return true
+	case freesp.Node:
+		return true
+	case freesp.Connection:
+		return false
+	}
+	return false
+}
+
 func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) {
 	err = s.treestore.SetValue(iter, textCol, value)
 	if err != nil {
@@ -562,6 +625,10 @@ func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) 
 }
 
 func (s *FilesTreeStore) getIdFromIter(iter *gtk.TreeIter) (newId string, err error) {
+	if iter == nil {
+		err = fmt.Errorf("FilesTreeStore.getIdFromIter: zero iter")
+		return
+	}
 	newP, err := s.treestore.GetPath(iter)
 	if err != nil {
 		return
@@ -616,17 +683,6 @@ func doAddFreespObject(parent interface{}, obj interface{}) (err error) {
 			return
 		}
 		err = port2.AddConnection(port1)
-		if err != nil {
-			err = fmt.Errorf("FilesTreeStore.doAddFreespObject(2): %v", err)
-			return
-		}
-	case freesp.Port:
-		err = parent.(freesp.Port).AddConnection(obj.(freesp.Port))
-		if err != nil {
-			err = fmt.Errorf("FilesTreeStore.doAddFreespObject(1): %v", err)
-			return
-		}
-		err = obj.(freesp.Port).AddConnection(parent.(freesp.Port))
 		if err != nil {
 			err = fmt.Errorf("FilesTreeStore.doAddFreespObject(2): %v", err)
 			return
@@ -710,7 +766,6 @@ func (s *FilesTreeStore) doAddTreeObject(iter *gtk.TreeIter, obj interface{}, pa
 		}
 		err = s.addNode(iter, obj.(freesp.Node), icon)
 	case freesp.Connection:
-		fmt.Println("Adding ", obj.(freesp.Connection))
 		var port1, port2 freesp.Port
 		var node1, node2 freesp.Node
 		node1 = obj.(freesp.Connection).To.Node()
@@ -725,10 +780,10 @@ func (s *FilesTreeStore) doAddTreeObject(iter *gtk.TreeIter, obj interface{}, pa
 				break
 			}
 		}
-		fmt.Println("node1 =", node1)
-		fmt.Println("port1 =", port1)
-		fmt.Println("node2 =", node2)
-		fmt.Println("port2 =", port2)
+		if node1 == nil || node2 == nil || port1 == nil || port2 == nil {
+			err = fmt.Errorf("FilesTreeStore.doAddTreeObject error: invalid Connection object")
+			return
+		}
 		var iter1, iter2 *gtk.TreeIter
 		iter1, err = s.getIterFromObject(port1)
 		if err != nil {
@@ -738,31 +793,14 @@ func (s *FilesTreeStore) doAddTreeObject(iter *gtk.TreeIter, obj interface{}, pa
 		if err != nil {
 			return
 		}
-		iter = s.treestore.Append(iter1)
-		err = s.addConnection(iter, port1, port2)
-		if err != nil {
-			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(3) failed")
-			return
-		}
-		iter = s.treestore.Append(iter2)
-		err = s.addConnection(iter, port2, port1)
-		if err != nil {
-			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(4) failed")
-			return
-		}
-	case freesp.Port:
-		err = s.addConnection(iter, parent.(freesp.Port), obj.(freesp.Port))
+		iter1 = s.treestore.Append(iter1)
+		err = s.addConnection(iter1, port1, port2)
 		if err != nil {
 			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(1) failed")
 			return
 		}
-		var parentIter2 *gtk.TreeIter
-		parentIter2, err = s.getIterFromObject(obj.(freesp.Port))
-		if err != nil {
-			return
-		}
-		iter = s.treestore.Append(parentIter2)
-		err = s.addConnection(iter, obj.(freesp.Port), parent.(freesp.Port))
+		iter2 = s.treestore.Append(iter2)
+		err = s.addConnection(iter2, port2, port1)
 		if err != nil {
 			err = fmt.Errorf("FilesTreeStore.doAddTreeObject: addConnection(2) failed")
 			return
@@ -808,7 +846,7 @@ func checkParentType(obj interface{}, parent interface{}) bool {
 		default:
 			return false
 		}
-	case freesp.Port, freesp.Connection:
+	case freesp.Connection:
 		switch parent.(type) {
 		case freesp.Port:
 			return true
@@ -856,6 +894,10 @@ func (s *FilesTreeStore) getIdFromObject(obj interface{}) (id string, err error)
 	if err != nil {
 		return
 	}
+	if iter == nil {
+		err = fmt.Errorf("FilesTreeStore.getIdFromObject: zero iter")
+		return
+	}
 	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		return
@@ -881,6 +923,10 @@ func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj interface{}
 
 func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj interface{}, ok bool) {
 	ok = false
+	if iter == nil {
+		fmt.Println("FilesTreeStore.getObject: zero iter")
+		return
+	}
 	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		return
@@ -889,20 +935,26 @@ func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj interface{}, ok bool
 	return
 }
 
-func (s *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text string, data interface{}) error {
+func (s *FilesTreeStore) addEntry(iter *gtk.TreeIter, icon *gdk.Pixbuf, text string, data interface{}) (err error) {
+	if iter == nil {
+		err = fmt.Errorf("FilesTreeStore.addEntry: zero iter")
+		return
+	}
 	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "GetPath", err)
-		return err
+		return
 	}
 	s.lookup[path.String()] = data
 	err = s.treestore.SetValue(iter, iconCol, icon)
 	if err != nil {
-		return gtkErr("FilesTreeStore.addEntry", "SetValue(iconCol)", err)
+		err = gtkErr("FilesTreeStore.addEntry", "SetValue(iconCol)", err)
+		return
 	}
 	err = s.treestore.SetValue(iter, textCol, text)
 	if err != nil {
-		return gtkErr("FilesTreeStore.addEntry", "SetValue(textCol)", err)
+		err = gtkErr("FilesTreeStore.addEntry", "SetValue(textCol)", err)
+		return
 	}
 	return nil
 }

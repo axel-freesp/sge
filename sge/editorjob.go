@@ -70,7 +70,11 @@ func (a *jobApplier) Revert(jobI interface{}) (err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		a.fts.DeleteObject(job.newElement.newId)
+		fmt.Println("delete added object at ", job.newElement.newId)
+		_, err = a.fts.DeleteObject(job.newElement.newId)
+		if err != nil {
+			log.Println(err)
+		}
 	case JobDeleteObject:
 		var i int
 		for i = len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {

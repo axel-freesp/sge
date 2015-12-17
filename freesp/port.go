@@ -79,6 +79,8 @@ func (p *port) RemoveConnection(c Port) {
 			p.connections[j-1] = p.connections[j]
 		}
 		p.connections = p.connections[:len(p.connections)-1]
+	} else {
+		fmt.Printf("port(%s).RemoveConnection error: could not find port %s\n", p, c)
 	}
 }
 

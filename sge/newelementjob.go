@@ -32,7 +32,7 @@ func getParentId(id string) string {
 	return strings.Join(split[:len(split)-1], ":")
 }
 
-func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) interface{} {
+func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElement {
 	parentObject, err := fts.GetObjectById(j.parentId)
 	if err != nil {
 		log.Fatal("NewElementJob.CreateObject error: referenced parentObject run away...")

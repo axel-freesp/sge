@@ -1,5 +1,9 @@
 package freesp
 
+import (
+	"log"
+)
+
 // signalType
 
 type signalType struct {
@@ -32,4 +36,27 @@ func (t *signalType) Scope() Scope {
 
 func (t *signalType) Mode() Mode {
 	return t.mode
+}
+
+/*
+ *  TreeElement API
+ */
+
+var _ TreeElement = (*signalType)(nil)
+
+func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
+	err := tree.AddEntry(cursor, SymbolSignalType, t.TypeName(), t)
+	if err != nil {
+		log.Fatal("SignalType.AddToTree error: AddEntry failed: %s", err)
+	}
+}
+
+func (t *signalType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	log.Fatal("SignalType.AddNewObject - nothing to add.")
+	return
+}
+
+func (t *signalType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatal("SignalType.AddNewObject - nothing to remove.")
+	return
 }

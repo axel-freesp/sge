@@ -3,6 +3,7 @@ package freesp
 import "fmt"
 
 type SignalGraphType interface {
+	TreeElement
 	Libraries() []Library
 	Nodes() []Node
 	NodeByName(string) Node
@@ -14,6 +15,7 @@ type SignalGraphType interface {
 }
 
 type SignalGraph interface {
+	TreeElement
 	Filename() string
 	ItsType() SignalGraphType
 	Read(data []byte) error
@@ -24,6 +26,7 @@ type SignalGraph interface {
 }
 
 type Library interface {
+	TreeElement
 	Filename() string
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
@@ -39,6 +42,7 @@ type Library interface {
 }
 
 type NodeType interface {
+	TreeElement
 	TypeName() string
 	DefinedAt() string
 	InPorts() []NamedPortType
@@ -52,6 +56,7 @@ type NodeType interface {
 }
 
 type Implementation interface {
+	TreeElement
 	ImplementationType() ImplementationType
 	ElementName() string
 	Graph() SignalGraphType
@@ -66,6 +71,7 @@ const (
 )
 
 type Node interface {
+	TreeElement
 	NodeName() string
 	ItsType() NodeType
 	Context() SignalGraphType
@@ -87,6 +93,7 @@ const (
 )
 
 type SignalType interface {
+	TreeElement
 	TypeName() string
 	CType() string
 	ChannelId() string
@@ -100,12 +107,14 @@ type PortType interface {
 }
 
 type NamedPortType interface {
+	TreeElement
 	PortType
 	Name() string
 	Direction() PortDirection
 }
 
 type Port interface {
+	TreeElement
 	PortName() string
 	ItsType() PortType
 	Direction() PortDirection

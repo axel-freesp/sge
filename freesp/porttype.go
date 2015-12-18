@@ -1,6 +1,9 @@
 package freesp
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 // portType
 
@@ -56,5 +59,32 @@ func (t *namedPortType) SignalType() SignalType {
 
 func (t *namedPortType) String() (s string) {
 	s = fmt.Sprintf("NamedPortType(%s, %s, %s)", t.name, t.direction, t.SignalType())
+	return
+}
+
+var _ TreeElement = (*namedPortType)(nil)
+
+func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {
+	var kind Symbol
+	if p.Direction() == InPort {
+		kind = SymbolInputPortType
+	} else {
+		kind = SymbolOutputPortType
+	}
+	err := tree.AddEntry(cursor, kind, p.Name(), p)
+	if err != nil {
+		log.Fatal("NamedPortType.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
+	}
+	child := tree.Append(cursor)
+	p.SignalType().AddToTree(tree, child)
+}
+
+func (p *namedPortType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	log.Fatal("NamedPortType.AddNewObject - nothing to add.")
+	return
+}
+
+func (p *namedPortType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatal("NamedPortType.AddNewObject - nothing to remove.")
 	return
 }

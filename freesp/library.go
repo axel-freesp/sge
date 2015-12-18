@@ -164,3 +164,51 @@ func (l *library) AddSignalType(s SignalType) error {
 
 func (l *library) RemoveSignalType(s SignalType) {
 }
+
+var _ TreeElement = (*library)(nil)
+
+func (l *library) AddToTree(tree Tree, cursor Cursor) {
+	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l)
+	if err != nil {
+		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
+	}
+	for _, t := range l.SignalTypes() {
+		child := tree.Append(cursor)
+		t.AddToTree(tree, child)
+	}
+	for _, t := range l.NodeTypes() {
+		child := tree.Append(cursor)
+		t.AddToTree(tree, child)
+	}
+}
+
+func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	switch obj.(type) {
+	case SignalType:
+		t := obj.(SignalType)
+		err := l.AddSignalType(t)
+		if err != nil {
+			log.Fatal("Library.AddNewObject error: AddSignalType failed: %s", err)
+		}
+		newCursor = tree.Insert(cursor)
+		t.AddToTree(tree, newCursor)
+
+	case NodeType:
+		t := obj.(NodeType)
+		err := l.AddNodeType(t)
+		if err != nil {
+			log.Fatal("Library.AddNewObject error: AddNodeType failed: %s", err)
+		}
+		newCursor = tree.Insert(cursor)
+		t.AddToTree(tree, newCursor)
+
+	default:
+		log.Fatal("Library.AddNewObject error: invalid type %T", obj)
+	}
+	return
+}
+
+func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	// TODO
+	return
+}

@@ -272,3 +272,84 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	}
 	return ret
 }
+
+var _ TreeElement = (*signalGraphType)(nil)
+
+func (t *signalGraphType) AddToTree(tree Tree, cursor Cursor) {
+	for _, n := range t.InputNodes() {
+		child := tree.Append(cursor)
+		n.AddToTree(tree, child)
+	}
+	for _, n := range t.OutputNodes() {
+		child := tree.Append(cursor)
+		n.AddToTree(tree, child)
+	}
+	for _, n := range t.ProcessingNodes() {
+		child := tree.Append(cursor)
+		n.AddToTree(tree, child)
+	}
+}
+
+func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	log.Printf("SignalGraphType.AddNewObject %T, %v\n", obj, obj)
+	switch obj.(type) {
+	case Node:
+		n := obj.(Node)
+		err := t.AddNode(n)
+		if err != nil {
+			log.Fatal("SignalGraphType.AddNewObject error: %s", err)
+		}
+		newCursor = tree.Insert(cursor)
+		n.AddToTree(tree, newCursor)
+
+	default:
+		log.Fatal("SignalGraphType.AddNewObject error: wrong type %t: %v", obj, obj)
+	}
+	return
+}
+
+func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Println("SignalGraphType.RemoveObject ", cursor)
+	parent := tree.Parent(cursor)
+	if t != tree.Object(parent) {
+		log.Fatal("SignalGraphType.RemoveObject error: not removing child of mine.")
+	}
+	obj := tree.Object(cursor)
+	switch obj.(type) {
+	case Node:
+		n := obj.(Node)
+		log.Println("SignalGraphType.RemoveObject remove node ", n)
+		// Remove all connections first
+		for _, p := range n.OutPorts() {
+			//pCursor := tree.CursorAt(cursor, p)
+			for _, c := range p.Connections() {
+				conn := Connection{p, c}
+				cCursor := tree.CursorAt(cursor, conn)
+				del := p.RemoveObject(tree, cCursor)
+				//removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+				for _, d := range del {
+					removed = append(removed, d)
+				}
+			}
+		}
+		for _, p := range n.InPorts() {
+			//pCursor := tree.CursorAt(cursor, p)
+			for _, c := range p.Connections() {
+				conn := Connection{c, p}
+				cCursor := tree.CursorAt(cursor, conn)
+				del := p.RemoveObject(tree, cCursor)
+				//removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+				for _, d := range del {
+					removed = append(removed, d)
+				}
+			}
+		}
+		prefix, index := tree.Remove(cursor)
+		removed = append(removed, IdWithObject{prefix, index, obj})
+		t.RemoveNode(n)
+
+	default:
+		log.Fatal("SignalGraphType.RemoveObject error: wrong type %t: %v", obj, obj)
+	}
+	return
+}

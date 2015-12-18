@@ -13,18 +13,6 @@ import (
 	"strings"
 )
 
-type IdWithObject struct {
-	ParentId string
-	Position int
-	Object   interface{}
-}
-
-type TreeElement interface {
-	AddToTree(tree *FilesTreeStore, cursor Cursor)
-	AddNewObject(tree *FilesTreeStore, cursor Cursor, obj interface{}) (newCursor Cursor)
-	RemoveObject(tree *FilesTreeStore, cursor Cursor) (removed []IdWithObject)
-}
-
 const envIconPathKey = "SGE_ICON_PATH"
 const (
 	iconCol = 0
@@ -84,10 +72,12 @@ func Init() (err error) {
 
 type FilesTreeStore struct {
 	treestore        *gtk.TreeStore
-	lookup           map[string]interface{}
+	lookup           map[string]freesp.TreeElement
 	libs             map[string]freesp.Library
 	currentSelection *gtk.TreeIter
 }
+
+var _ freesp.Tree = (*FilesTreeStore)(nil)
 
 func (s *FilesTreeStore) TreeStore() *gtk.TreeStore {
 	return s.treestore
@@ -100,7 +90,7 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		ret = nil
 		return
 	}
-	ret = &FilesTreeStore{ts, make(map[string]interface{}),
+	ret = &FilesTreeStore{ts, make(map[string]freesp.TreeElement),
 		make(map[string]freesp.Library),
 		nil}
 	err = nil
@@ -117,7 +107,7 @@ func (s *FilesTreeStore) GetCurrentId() (id string) {
 	return
 }
 
-func (s *FilesTreeStore) GetObjectById(id string) (ret interface{}, err error) {
+func (s *FilesTreeStore) GetObjectById(id string) (ret freesp.TreeElement, err error) {
 	_, err = s.treestore.GetIterFromString(id)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.GetObjectById", "GetIterFromString()", err)
@@ -164,7 +154,7 @@ func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 }
 
 // Returns the object stored with the row
-func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err error) {
+func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret freesp.TreeElement, err error) {
 	var ok bool
 	ret, ok = s.getObject(iter)
 	if !ok {
@@ -177,44 +167,46 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret interface{}, err err
 
 func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.SignalGraph) (newId string, err error) {
 	cursor := s.Append(rootCursor)
-	SignalGraph{graph}.AddToTree(s, cursor)
+	graph.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
 
 func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (newId string, err error) {
 	cursor := s.Append(rootCursor)
-	Library{lib}.AddToTree(s, cursor)
+	lib.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
 
-func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj interface{}) (newId string, err error) {
+func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj freesp.TreeElement) (newId string, err error) {
 	//log.Printf("FilesTreeStore.AddNewObject %T, %v\n", obj, obj)
-	parent, parentIter, err := tree.getObjAndIterById(parentId)
+	parent, _, err := tree.getObjAndIterById(parentId)
 	if err != nil {
 		return
 	}
 	//log.Printf("FilesTreeStore.AddNewObject parent = %T, %v\n", parent, parent)
-	cursor := Cursor{parentIter, parentId, position}
+	cursor := freesp.Cursor{parentId, position}
+
+	// TODO: complete switch can be void
 	switch parent.(type) {
 	case freesp.NodeType:
-		cursor = NodeType{parent.(freesp.NodeType)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.NodeType).AddNewObject(tree, cursor, obj)
 
 	case freesp.SignalGraphType:
-		cursor = SignalGraphType{parent.(freesp.SignalGraphType)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.SignalGraphType).AddNewObject(tree, cursor, obj)
 
 	case freesp.SignalGraph:
-		cursor = SignalGraph{parent.(freesp.SignalGraph)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.SignalGraph).AddNewObject(tree, cursor, obj)
 
 	case freesp.Port:
-		cursor = Port{parent.(freesp.Port)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.Port).AddNewObject(tree, cursor, obj)
 
 	case freesp.Library:
-		cursor = Library{parent.(freesp.Library)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.Library).AddNewObject(tree, cursor, obj)
 
 	case freesp.Implementation:
-		cursor = Implementation{parent.(freesp.Implementation)}.AddNewObject(tree, cursor, obj)
+		cursor = parent.(freesp.Implementation).AddNewObject(tree, cursor, obj)
 
 	default:
 		err = fmt.Errorf("FilesTreeStore.AddNewObject: invalid parent type %T\n", parent)
@@ -226,12 +218,7 @@ func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj inte
 }
 
 // Root elements cannot be deleted. They need to be removed (e.g file->close)
-func (tree *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err error) {
-	_, iter, err := tree.getObjAndIterById(id)
-	if err != nil {
-		err = fmt.Errorf("FilesTreeStore.DeleteObject error: object not found, id:", id)
-		return
-	}
+func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObject, err error) {
 	li := strings.LastIndex(id, ":")
 	if li < 0 {
 		err = fmt.Errorf("FilesTreeStore.DeleteObject error: Try to delete root element")
@@ -246,27 +233,27 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err
 	var position int
 	fmt.Sscanf(id[li+1:], "%d", &position)
 
-	cursor := Cursor{iter, id, AppendCursor}
+	cursor := freesp.Cursor{id, freesp.AppendCursor}
 	log.Println("FilesTreeStore.DeleteObject cursor =", cursor)
 
 	switch parent.(type) {
 	case freesp.NodeType:
-		deleted = NodeType{parent.(freesp.NodeType)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.NodeType).RemoveObject(tree, cursor)
 
 	case freesp.SignalGraphType:
-		deleted = SignalGraphType{parent.(freesp.SignalGraphType)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.SignalGraphType).RemoveObject(tree, cursor)
 
 	case freesp.SignalGraph:
-		deleted = SignalGraph{parent.(freesp.SignalGraph)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.SignalGraph).RemoveObject(tree, cursor)
 
 	case freesp.Port:
-		deleted = Port{parent.(freesp.Port)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.Port).RemoveObject(tree, cursor)
 
 	case freesp.Library:
-		deleted = Library{parent.(freesp.Library)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.Library).RemoveObject(tree, cursor)
 
 	case freesp.Implementation:
-		deleted = Implementation{parent.(freesp.Implementation)}.RemoveObject(tree, cursor)
+		deleted = parent.(freesp.Implementation).RemoveObject(tree, cursor)
 
 	default:
 		err = fmt.Errorf("FilesTreeStore.DeleteObject: invalid parent type %T\n", parent)
@@ -279,32 +266,29 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []IdWithObject, err
  *      Tree Interface
  */
 
-type Cursor struct {
-	Iter     *gtk.TreeIter
-	Path     string
-	Position int
-}
+var rootCursor = freesp.Cursor{"", freesp.AppendCursor}
 
-const AppendCursor = -1
-
-var rootCursor = Cursor{nil, "", AppendCursor}
-
-func (s *FilesTreeStore) Append(c Cursor) Cursor {
-	iter := s.treestore.Append(c.Iter)
+func (s *FilesTreeStore) Append(c freesp.Cursor) freesp.Cursor {
+	var iter *gtk.TreeIter
+	var err error
+	if len(c.Path) > 0 {
+		iter, err = s.treestore.GetIterFromString(c.Path)
+		if err != nil {
+			log.Fatal("FilesTreeStore.Append: zero iter")
+		}
+	}
+	iter = s.treestore.Append(iter)
 	if iter == nil {
-		log.Fatal("FilesTreeStore.Append: zero iter")
+		log.Fatal("FilesTreeStore.Append: zero child")
 	}
 	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		log.Fatal("FilesTreeStore.Append: no path")
 	}
-	return Cursor{iter, path.String(), AppendCursor}
+	return freesp.Cursor{path.String(), freesp.AppendCursor}
 }
 
-func (s *FilesTreeStore) Insert(c Cursor) Cursor {
-	if c.Iter == nil {
-		log.Fatal("FilesTreeStore.Insert FIXME: zero c.Iiter")
-	}
+func (s *FilesTreeStore) Insert(c freesp.Cursor) freesp.Cursor {
 	if c.Position >= 0 {
 		index := 0
 		for ok := true; ok; index++ {
@@ -315,18 +299,26 @@ func (s *FilesTreeStore) Insert(c Cursor) Cursor {
 			s.shiftLookup(c.Path, fmt.Sprintf("%d", index), fmt.Sprintf("%d", index+1))
 		}
 	}
-	iter := s.treestore.Insert(c.Iter, c.Position)
+	var iter *gtk.TreeIter
+	var err error
+	if len(c.Path) > 0 {
+		iter, err = s.treestore.GetIterFromString(c.Path)
+		if err != nil {
+			log.Fatal("FilesTreeStore.Insert: zero iter")
+		}
+	}
+	iter = s.treestore.Insert(iter, c.Position)
 	if iter == nil {
-		log.Fatal("FilesTreeStore.Insert: zero iter")
+		log.Fatal("FilesTreeStore.Insert: zero child")
 	}
 	path, err := s.treestore.GetPath(iter)
 	if err != nil {
 		log.Fatal("FilesTreeStore.Insert: no path")
 	}
-	return Cursor{iter, path.String(), AppendCursor}
+	return freesp.Cursor{path.String(), freesp.AppendCursor}
 }
 
-func (s *FilesTreeStore) Remove(c Cursor) (prefix string, index int) {
+func (s *FilesTreeStore) Remove(c freesp.Cursor) (prefix string, index int) {
 	s.deleteSubtree(c.Path)
 	prefix = c.Path[:strings.LastIndex(c.Path, ":")]
 	suffix := c.Path[strings.LastIndex(c.Path, ":")+1:]
@@ -338,28 +330,21 @@ func (s *FilesTreeStore) Remove(c Cursor) (prefix string, index int) {
 	return
 }
 
-func (s *FilesTreeStore) Parent(c Cursor) Cursor {
-	if c.Iter == nil {
-		log.Fatal("FilesTreeStore.Parent: zero c.Iiter")
-	}
+func (s *FilesTreeStore) Parent(c freesp.Cursor) freesp.Cursor {
 	prefix := c.Path[:strings.LastIndex(c.Path, ":")]
 	suffix := c.Path[strings.LastIndex(c.Path, ":")+1:]
 	var index int
 	fmt.Sscanf(suffix, "%d", &index)
-	iter, err := s.treestore.GetIterFromString(prefix)
-	if err != nil {
-		log.Fatal("FilesTreeStore.Parent: no path")
-	}
-	return Cursor{iter, prefix, index}
+	return freesp.Cursor{prefix, index}
 }
 
-func (s *FilesTreeStore) Object(c Cursor) (obj interface{}) {
+func (s *FilesTreeStore) Object(c freesp.Cursor) (obj freesp.TreeElement) {
 	return s.lookup[c.Path]
 }
 
 // Toplevel search
-func (s *FilesTreeStore) getIterAndPathFromObject(obj interface{}) (iter *gtk.TreeIter, path string, err error) {
-	var o interface{}
+func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter *gtk.TreeIter, path string, err error) {
+	var o freesp.TreeElement
 	ok := false
 	for i := 0; !ok; i++ {
 		path = fmt.Sprintf("%d", i)
@@ -381,46 +366,41 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj interface{}) (iter *gtk.Tr
 }
 
 // Toplevel search
-func (s *FilesTreeStore) Cursor(obj interface{}) (cursor Cursor) {
-	iter, path, err := s.getIterAndPathFromObject(obj)
+func (s *FilesTreeStore) Cursor(obj freesp.TreeElement) (cursor freesp.Cursor) {
+	_, path, err := s.getIterAndPathFromObject(obj)
 	if err != nil {
 		log.Fatal("FilesTreeStore.Cursor: obj %T: %v not found.", obj, obj)
 	}
-	return Cursor{iter, path, AppendCursor}
+	return freesp.Cursor{path, freesp.AppendCursor}
 }
 
 // Subtree search
-func (s *FilesTreeStore) CursorAt(start Cursor, obj interface{}) (cursor Cursor) {
+func (s *FilesTreeStore) CursorAt(start freesp.Cursor, obj freesp.TreeElement) (cursor freesp.Cursor) {
 	path, ok := s.getIdFromObjectRecursive(start.Path, obj)
 	if !ok {
 		log.Println("FilesTreeStore.CursorAt: start =", start)
 		log.Fatalf("FilesTreeStore.CursorAt: obj %T: %v not found.", obj, obj)
 	}
-	iter, err := s.treestore.GetIterFromString(path)
-	if err != nil {
-		log.Fatal("FilesTreeStore.CursorAt: gtk.GetIterFromString failed: %s", err)
-	}
-	return Cursor{iter, path, AppendCursor}
+	return freesp.Cursor{path, freesp.AppendCursor}
 }
 
-func (s *FilesTreeStore) AddEntry(c Cursor, sym Symbol, text string, data interface{}) (err error) {
+func (s *FilesTreeStore) AddEntry(c freesp.Cursor, sym freesp.Symbol, text string, data freesp.TreeElement) (err error) {
 	icon := symbolPixbuf(sym)
-	if c.Iter == nil {
-		err = fmt.Errorf("FilesTreeStore.addEntry: zero iter")
-		return
+	iter, err := s.treestore.GetIterFromString(c.Path)
+	if err != nil {
+		log.Fatal("FilesTreeStore.AddEntry: gtk.GetIterFromString failed: %s", err)
 	}
-	path, err := s.treestore.GetPath(c.Iter)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "GetPath", err)
 		return
 	}
-	s.lookup[path.String()] = data
-	err = s.treestore.SetValue(c.Iter, iconCol, icon)
+	s.lookup[c.Path] = data
+	err = s.treestore.SetValue(iter, iconCol, icon)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "SetValue(iconCol)", err)
 		return
 	}
-	err = s.treestore.SetValue(c.Iter, textCol, text)
+	err = s.treestore.SetValue(iter, textCol, text)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "SetValue(textCol)", err)
 		return
@@ -432,7 +412,7 @@ func (s *FilesTreeStore) AddEntry(c Cursor, sym Symbol, text string, data interf
  *      Local functions
  */
 
-func (s *FilesTreeStore) getObjAndIterById(id string) (obj interface{}, iter *gtk.TreeIter, err error) {
+func (s *FilesTreeStore) getObjAndIterById(id string) (obj freesp.TreeElement, iter *gtk.TreeIter, err error) {
 	obj, err = s.GetObjectById(id)
 	if err != nil {
 		return
@@ -481,9 +461,9 @@ func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) 
 	return
 }
 
-func (s *FilesTreeStore) getIterFromObject(obj interface{}) (iter *gtk.TreeIter, err error) {
+func (s *FilesTreeStore) getIterFromObject(obj freesp.TreeElement) (iter *gtk.TreeIter, err error) {
 	var id string
-	var o interface{}
+	var o freesp.TreeElement
 	ok := false
 	for i := 0; !ok; i++ {
 		id = fmt.Sprintf("%d", i)
@@ -504,7 +484,7 @@ func (s *FilesTreeStore) getIterFromObject(obj interface{}) (iter *gtk.TreeIter,
 	return
 }
 
-func (s *FilesTreeStore) getIdFromObject(obj interface{}) (id string, err error) {
+func (s *FilesTreeStore) getIdFromObject(obj freesp.TreeElement) (id string, err error) {
 	iter, err := s.getIterFromObject(obj)
 	if err != nil {
 		return
@@ -521,9 +501,9 @@ func (s *FilesTreeStore) getIdFromObject(obj interface{}) (id string, err error)
 	return
 }
 
-func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj interface{}) (id string, ok bool) {
+func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj freesp.TreeElement) (id string, ok bool) {
 	ok = false
-	var o interface{}
+	var o freesp.TreeElement
 	for i := 0; !ok; i++ {
 		id = fmt.Sprintf("%s:%d", parent, i)
 		o, ok = s.lookup[id]
@@ -536,7 +516,7 @@ func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj interface{}
 	return
 }
 
-func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj interface{}, ok bool) {
+func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj freesp.TreeElement, ok bool) {
 	ok = false
 	if iter == nil {
 		fmt.Println("FilesTreeStore.getObject: zero iter")

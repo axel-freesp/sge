@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"log"
 )
 
 func SignalGraphNew(filename string) *signalGraph {
@@ -60,6 +61,30 @@ func (s *signalGraph) WriteFile(filepath string) error {
 
 func (s *signalGraph) SetFilename(filename string) {
 	s.filename = filename
+}
+
+/*
+ *  TreeElement API
+ */
+
+var _ TreeElement = (*signalGraph)(nil)
+
+func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
+	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t.ItsType())
+	if err != nil {
+		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
+	}
+	t.ItsType().AddToTree(tree, cursor)
+}
+
+func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	log.Fatal("signalGraph.AddNewObject - nothing to add.")
+	return
+}
+
+func (t *signalGraph) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatal("signalGraph.RemoveObject - nothing to remove.")
+	return
 }
 
 //------------------------------

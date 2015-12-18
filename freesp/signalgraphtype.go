@@ -25,6 +25,10 @@ type signalGraphType struct {
 	nodes, inputNodes, outputNodes, processingNodes []Node
 }
 
+/*
+ *  freesp.SignalGraphType API
+ */
+
 var _ SignalGraphType = (*signalGraphType)(nil)
 
 func SignalGraphTypeNew() *signalGraphType {
@@ -60,15 +64,6 @@ func (t *signalGraphType) ProcessingNodes() []Node {
 	return t.processingNodes
 }
 
-func (t *signalGraphType) containsLibRef(libname string) bool {
-	for _, l := range t.libraries {
-		if l.Filename() == libname {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *signalGraphType) AddNode(n Node) error {
 	nType := n.ItsType()
 	libname := nType.DefinedAt()
@@ -83,6 +78,27 @@ func (t *signalGraphType) AddNode(n Node) error {
 		t.libraries = append(t.libraries, lib)
 	}
 	return t.addNode(n)
+}
+
+func (t *signalGraphType) RemoveNode(n Node) {
+	for _, p := range n.(*node).inPort {
+		for _, c := range p.(*port).connections {
+			c.RemoveConnection(p)
+		}
+	}
+	RemNode(&t.nodes, n.(*node))
+	RemNode(&t.inputNodes, n.(*node))
+	RemNode(&t.outputNodes, n.(*node))
+	RemNode(&t.processingNodes, n.(*node))
+}
+
+func (t *signalGraphType) containsLibRef(libname string) bool {
+	for _, l := range t.libraries {
+		if l.Filename() == libname {
+			return true
+		}
+	}
+	return false
 }
 
 func FindNode(list []Node, elem Node) (index int, ok bool) {
@@ -104,18 +120,6 @@ func RemNode(list *[]Node, elem Node) {
 		(*list)[j-1] = (*list)[j]
 	}
 	(*list) = (*list)[:len(*list)-1]
-}
-
-func (t *signalGraphType) RemoveNode(n Node) {
-	for _, p := range n.(*node).inPort {
-		for _, c := range p.(*port).connections {
-			c.RemoveConnection(p)
-		}
-	}
-	RemNode(&t.nodes, n.(*node))
-	RemNode(&t.inputNodes, n.(*node))
-	RemNode(&t.outputNodes, n.(*node))
-	RemNode(&t.processingNodes, n.(*node))
 }
 
 func (t *signalGraphType) addNode(n Node) error {
@@ -272,6 +276,10 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	}
 	return ret
 }
+
+/*
+ *  TreeElement API
+ */
 
 var _ TreeElement = (*signalGraphType)(nil)
 

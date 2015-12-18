@@ -250,6 +250,10 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 	return nt
 }
 
+/*
+ *  TreeElement API
+ */
+
 var _ TreeElement = (*nodeType)(nil)
 
 func (t *nodeType) AddToTree(tree Tree, cursor Cursor) {

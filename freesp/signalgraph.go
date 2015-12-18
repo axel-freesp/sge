@@ -15,6 +15,9 @@ type signalGraph struct {
 	itsType  SignalGraphType
 }
 
+/*
+ *  freesp.SignalGraph API
+ */
 var _ SignalGraph = (*signalGraph)(nil)
 
 func (s *signalGraph) Filename() string {
@@ -87,7 +90,9 @@ func (t *signalGraph) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithOb
 	return
 }
 
-//------------------------------
+/*
+ *  freesp private functions
+ */
 
 type signalGraphError struct {
 	reason string

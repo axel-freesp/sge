@@ -62,6 +62,10 @@ func (t *namedPortType) String() (s string) {
 	return
 }
 
+/*
+ *  TreeElement API
+ */
+
 var _ TreeElement = (*namedPortType)(nil)
 
 func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {

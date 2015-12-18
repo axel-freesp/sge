@@ -32,6 +32,10 @@ func (n *implementation) Graph() SignalGraphType {
 	return n.graph
 }
 
+/*
+ *  TreeElement API
+ */
+
 var _ TreeElement = (*implementation)(nil)
 
 func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {

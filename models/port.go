@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,19 +12,19 @@ type Port struct {
 var _ TreeElement = Port{}
 
 func (p Port) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	var kind *gdk.Pixbuf
+	var kind Symbol
 	if p.Direction() == freesp.InPort {
-		kind = imageInputPort
+		kind = SymbolInputPort
 	} else {
-		kind = imageOutputPort
+		kind = SymbolOutputPort
 	}
 	err := tree.AddEntry(cursor, kind, p.PortName(), p.Port)
 	if err != nil {
 		log.Fatal("Port.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
-	t := SignalType{p.ItsType().SignalType()}
-	t.AddToTree(tree, child)
+	t := p.ItsType().SignalType()
+	SignalType{t}.AddToTree(tree, child)
 	for _, c := range p.Connections() {
 		child = tree.Append(cursor)
 		Connection{p.Connection(c)}.AddToTree(tree, child)
@@ -61,8 +59,7 @@ func (p Port) AddNewObject(tree *FilesTreeStore, cursor Cursor, obj interface{})
 		Connection{conn}.AddToTree(tree, cChild)
 
 	default:
-		fmt.Printf("Port.AddNewObject error: invalid type %T: %v", obj, obj)
-		log.Fatal()
+		log.Fatalf("Port.AddNewObject error: invalid type %T: %v", obj, obj)
 	}
 	return
 }
@@ -99,8 +96,7 @@ func (p Port) RemoveObject(tree *FilesTreeStore, cursor Cursor) (removed []IdWit
 		prefix, index = tree.Remove(otherCursor)
 
 	default:
-		fmt.Printf("Port.RemoveObject error: invalid type %T: %v", obj, obj)
-		log.Fatal()
+		log.Fatalf("Port.RemoveObject error: invalid type %T: %v", obj, obj)
 	}
 	return
 }
@@ -115,22 +111,4 @@ func (p Port) Connection(c freesp.Port) freesp.Connection {
 		to = c
 	}
 	return freesp.Connection{from, to}
-}
-
-var (
-	imageInputPort  *gdk.Pixbuf = nil
-	imageOutputPort *gdk.Pixbuf = nil
-)
-
-func init_port(iconPath string) (err error) {
-	imageInputPort, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/inport-green.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_port error loading inport-green.png: %s", err)
-		return
-	}
-	imageOutputPort, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/outport-red.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_port error loading outport-red.png: %s", err)
-	}
-	return
 }

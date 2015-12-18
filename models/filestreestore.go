@@ -35,31 +35,17 @@ var (
 	imageSignalGraphAlt *gdk.Pixbuf = nil
 )
 
-var modulesInit = []func(string) error{init_port,
-	init_signaltype,
-	init_connection,
-	init_node,
-	init_nodetype,
-	init_implementation,
-	init_namedporttype,
-	init_signalgraphtype,
-	init_library,
-	init_signalgraph,
-}
-
 func Init() (err error) {
 	iconPath := os.Getenv(envIconPathKey)
 	if len(iconPath) == 0 {
 		err = fmt.Errorf("Missing Environment variable %s", iconPath)
 		return
 	}
-
-	for _, init := range modulesInit {
-		err = init(iconPath)
-		if err != nil {
-			return
-		}
+	err = symbolInit(iconPath)
+	if err != nil {
+		fmt.Println("Warning: ", err)
 	}
+
 	return
 
 	file, err := os.Open(fmt.Sprintf("%s/test1.png", iconPath))
@@ -194,21 +180,6 @@ func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.Signal
 	SignalGraph{graph}.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
-	/*
-		ts := s.treestore
-		iter := ts.Append(nil)
-		err = s.addEntry(iter, imageSignalGraph, filename, graph)
-		if err != nil {
-			err = gtkErr("FilesTreeStore.AddSignalGraphFile", "ts.addEntry(filename)", err)
-			return
-		}
-		err = s.addSignalGraph(iter, graph)
-		if err != nil {
-			return
-		}
-		newId, err = s.getIdFromIter(iter)
-		return
-	*/
 }
 
 func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (newId string, err error) {
@@ -216,16 +187,6 @@ func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (ne
 	Library{lib}.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
-
-	/*
-		iter := s.treestore.Append(nil)
-		err = s.addLibrary(iter, lib)
-		if err != nil {
-			return
-		}
-		newId, err = s.getIdFromIter(iter)
-		return
-	*/
 }
 
 func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj interface{}) (newId string, err error) {
@@ -442,7 +403,8 @@ func (s *FilesTreeStore) CursorAt(start Cursor, obj interface{}) (cursor Cursor)
 	return Cursor{iter, path, AppendCursor}
 }
 
-func (s *FilesTreeStore) AddEntry(c Cursor, icon *gdk.Pixbuf, text string, data interface{}) (err error) {
+func (s *FilesTreeStore) AddEntry(c Cursor, sym Symbol, text string, data interface{}) (err error) {
+	icon := symbolPixbuf(sym)
 	if c.Iter == nil {
 		err = fmt.Errorf("FilesTreeStore.addEntry: zero iter")
 		return

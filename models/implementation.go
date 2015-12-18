@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,13 +12,13 @@ type Implementation struct {
 var _ TreeElement = Implementation{}
 
 func (impl Implementation) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	var image *gdk.Pixbuf
+	var image Symbol
 	var text string
 	if impl.ImplementationType() == freesp.NodeTypeGraph {
-		image = imageImplGraph
+		image = SymbolImplGraph
 		text = "Graph"
 	} else {
-		image = imageImplElement
+		image = SymbolImplElement
 		text = impl.ElementName()
 	}
 	err := tree.AddEntry(cursor, image, text, impl.Implementation)
@@ -85,24 +83,6 @@ func (impl Implementation) RemoveObject(tree *FilesTreeStore, cursor Cursor) (re
 
 	default:
 		log.Fatal("Implementation.RemoveObject error: invalid type %T", obj)
-	}
-	return
-}
-
-var (
-	imageImplElement *gdk.Pixbuf = nil
-	imageImplGraph   *gdk.Pixbuf = nil
-)
-
-func init_implementation(iconPath string) (err error) {
-	imageImplElement, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/test0.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading test0.png: %s", err)
-		return
-	}
-	imageImplGraph, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/test1.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading test0.png: %s", err)
 	}
 	return
 }

@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,11 +12,11 @@ type NamedPortType struct {
 var _ TreeElement = NamedPortType{}
 
 func (p NamedPortType) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	var kind *gdk.Pixbuf
+	var kind Symbol
 	if p.Direction() == freesp.InPort {
-		kind = imageInputPortType
+		kind = SymbolInputPortType
 	} else {
-		kind = imageOutputPortType
+		kind = SymbolOutputPortType
 	}
 	err := tree.AddEntry(cursor, kind, p.Name(), p.NamedPortType)
 	if err != nil {
@@ -35,23 +33,5 @@ func (p NamedPortType) AddNewObject(tree *FilesTreeStore, cursor Cursor, obj int
 
 func (p NamedPortType) RemoveObject(tree *FilesTreeStore, cursor Cursor) (removed []IdWithObject) {
 	log.Fatal("NamedPortType.AddNewObject - nothing to remove.")
-	return
-}
-
-var (
-	imageInputPortType  *gdk.Pixbuf = nil
-	imageOutputPortType *gdk.Pixbuf = nil
-)
-
-func init_namedporttype(iconPath string) (err error) {
-	imageInputPortType, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/inport-green.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_port error loading inport-green.png: %s", err)
-		return
-	}
-	imageOutputPortType, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/outport-red.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_port error loading outport-red.png: %s", err)
-	}
 	return
 }

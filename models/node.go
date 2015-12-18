@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,13 +12,13 @@ type Node struct {
 var _ TreeElement = Node{}
 
 func (n Node) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	var image *gdk.Pixbuf
+	var image Symbol
 	if len(n.InPorts()) == 0 {
-		image = imageOutputNode
+		image = SymbolOutputNode
 	} else if len(n.OutPorts()) == 0 {
-		image = imageInputNode
+		image = SymbolInputNode
 	} else {
-		image = imageProcessingNode
+		image = SymbolProcessingNode
 	}
 	err := tree.AddEntry(cursor, image, n.NodeName(), n.Node)
 	if err != nil {
@@ -83,31 +81,4 @@ func IsProcessingNode(n freesp.Node) bool {
 		return false
 	}
 	return true
-}
-
-// Images
-
-var (
-	imageInputNode      *gdk.Pixbuf = nil
-	imageOutputNode     *gdk.Pixbuf = nil
-	imageProcessingNode *gdk.Pixbuf = nil
-)
-
-func init_node(iconPath string) (err error) {
-	imageInputNode, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/input.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading signal-type.png: %s", err)
-		return
-	}
-	imageOutputNode, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/output.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading signal-type.png: %s", err)
-		return
-	}
-	imageProcessingNode, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/node.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading signal-type.png: %s", err)
-		return
-	}
-	return
 }

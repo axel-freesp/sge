@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,7 +12,7 @@ type NodeType struct {
 var _ TreeElement = NodeType{}
 
 func (t NodeType) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	err := tree.AddEntry(cursor, imageNodeType, t.TypeName(), t.NodeType)
+	err := tree.AddEntry(cursor, SymbolNodeType, t.TypeName(), t.NodeType)
 	if err != nil {
 		log.Fatal("SignalType.AddToTree error: AddEntry failed: %s", err)
 	}
@@ -138,21 +136,6 @@ func (t NodeType) RemoveObject(tree *FilesTreeStore, cursor Cursor) (removed []I
 
 	default:
 		log.Fatal("NodeType.RemoveObject error: invalid type %T", obj)
-	}
-	return
-}
-
-// Images:
-
-var (
-	imageNodeType *gdk.Pixbuf = nil
-	imageFilename string      = "node-type.png"
-)
-
-func init_nodetype(iconPath string) (err error) {
-	imageNodeType, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/%s", iconPath, imageFilename))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading %s: %s", imageFilename, err)
 	}
 	return
 }

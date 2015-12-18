@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/gdk"
 	"log"
 )
 
@@ -14,7 +12,7 @@ type Library struct {
 var _ TreeElement = Library{}
 
 func (l Library) AddToTree(tree *FilesTreeStore, cursor Cursor) {
-	err := tree.AddEntry(cursor, imageLibrary, l.Filename(), l.Library)
+	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l.Library)
 	if err != nil {
 		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
 	}
@@ -56,17 +54,5 @@ func (l Library) AddNewObject(tree *FilesTreeStore, cursor Cursor, obj interface
 
 func (l Library) RemoveObject(tree *FilesTreeStore, cursor Cursor) (removed []IdWithObject) {
 	// TODO
-	return
-}
-
-var (
-	imageLibrary *gdk.Pixbuf = nil
-)
-
-func init_library(iconPath string) (err error) {
-	imageLibrary, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/test0.png", iconPath))
-	if err != nil {
-		err = fmt.Errorf("init_signaltype error loading test0.png: %s", err)
-	}
 	return
 }

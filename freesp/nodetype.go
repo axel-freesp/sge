@@ -21,6 +21,7 @@ func NodeTypeNew(name, definedAt string) *nodeType {
 }
 
 func (t *nodeType) AddNamedPortType(p NamedPortType) {
+	// TODO: Check if type of node will change
 	pt := p.(*namedPortType)
 	if p.Direction() == InPort {
 		t.inPorts = append(t.inPorts, pt)

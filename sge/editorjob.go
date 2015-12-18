@@ -79,7 +79,7 @@ func (a *jobApplier) Revert(jobI interface{}) (err error) {
 		var i int
 		for i = len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {
 			d := job.deleteObject.deletedObjects[i]
-			fmt.Println("adding deleted object ", d.Object, " at ", d.ParentId)
+			fmt.Printf("adding deleted object %v at %s/%d\n", d.Object, d.ParentId, d.Position)
 			_, err = a.fts.AddNewObject(d.ParentId, d.Position, d.Object)
 			if err != nil {
 				log.Println(err)

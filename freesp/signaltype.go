@@ -1,6 +1,7 @@
 package freesp
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -40,6 +41,14 @@ func (t *signalType) Scope() Scope {
 
 func (t *signalType) Mode() Mode {
 	return t.mode
+}
+
+/*
+ *	fmt.Stringer API
+ */
+
+func (t *signalType) String() string {
+	return fmt.Sprintf("SignalType(%s, %s, %s, %v, %v)", t.name, t.ctype, t.msgid, t.scope, t.mode)
 }
 
 /*

@@ -162,7 +162,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 			thisPort = conn.From
 		}
 		if p != thisPort {
-			log.Println("p.Port =", p)
+			log.Println("p =", p)
 			log.Println("thisPort =", thisPort)
 			log.Fatal("Port.AddNewObject error: invalid connection ", conn)
 		}
@@ -248,5 +248,56 @@ func (p *port) indexOfConnection(c Port) (index int, ok bool) {
 		}
 	}
 	ok = (index < len(p.connections))
+	return
+}
+
+/*
+ *      portList
+ *
+ */
+
+type portList struct {
+	ports []Port
+}
+
+func portListInit() portList {
+	return portList{nil}
+}
+
+func (l *portList) Append(nt Port) {
+	l.ports = append(l.ports, nt)
+}
+
+func (l *portList) Remove(nt Port) {
+	var i int
+	for i = range l.ports {
+		if nt == l.ports[i] {
+			break
+		}
+	}
+	if i >= len(l.ports) {
+		for _, v := range l.ports {
+			log.Printf("portList.RemovePort have Port %v\n", v)
+		}
+		log.Fatalf("portList.RemovePort error: Port %v not in this list\n", nt)
+	}
+	for i++; i < len(l.ports); i++ {
+		l.ports[i-1] = l.ports[i]
+	}
+	l.ports = l.ports[:len(l.ports)-1]
+}
+
+func (l *portList) Ports() []Port {
+	return l.ports
+}
+
+func (l *portList) Find(name string) (p Port, ok bool) {
+	ok = false
+	for _, p = range l.ports {
+		if p.PortName() == name {
+			ok = true
+			return
+		}
+	}
 	return
 }

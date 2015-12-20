@@ -9,8 +9,8 @@ type node struct {
 	context  SignalGraphType
 	name     string
 	nodetype NodeType
-	inPort   []Port
-	outPort  []Port
+	inPort   portList
+	outPort  portList
 	portlink NamedPortType
 }
 
@@ -20,7 +20,7 @@ type node struct {
 var _ Node = (*node)(nil)
 
 func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
-	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), nil, nil, nil}
+	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), portListInit(), portListInit(), nil}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p.(*namedPortType))
 	}
@@ -44,11 +44,11 @@ func (n *node) Context() SignalGraphType {
 }
 
 func (n *node) InPorts() []Port {
-	return n.inPort
+	return n.inPort.Ports()
 }
 
 func (n *node) OutPorts() []Port {
-	return n.outPort
+	return n.outPort.Ports()
 }
 
 /*
@@ -58,7 +58,7 @@ var _ fmt.Stringer = (*node)(nil)
 
 func (n *node) String() (s string) {
 	s = fmt.Sprintf("Node(%s: %d inports, %d outports)",
-		n.name, len(n.inPort), len(n.outPort))
+		n.name, len(n.inPort.Ports()), len(n.outPort.Ports()))
 	return
 }
 
@@ -154,33 +154,40 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 }
 
 func (n *node) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
-	switch obj.(type) {
-	case NamedPortType:
-		// If this function is called, the freesp model if different from the tree model
-		// cursor points to n, cursor.Position may indicate where to insert.
-		// Add missing port entry to the tree, matching name and direction with obj.
-		newCursor = tree.Insert(cursor)
-		pt := obj.(NamedPortType)
-		var list []Port
-		if pt.Direction() == InPort {
-			list = n.InPorts()
-		} else {
-			list = n.OutPorts()
-		}
-		for _, p := range list {
-			if p.PortName() == pt.Name() {
-				p.AddToTree(tree, newCursor)
-				break
-			}
-		}
-	default:
-		log.Fatal("Node.AddNewObject error: invalid type %T", obj)
-	}
+	log.Fatal("node.AddNewObject - nothing to add.")
 	return
 }
 
 func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
-	// TODO
+	parentId := tree.Parent(cursor)
+	if n != tree.Object(parentId) {
+		log.Fatal("node.RemoveObject error: not removing child of mine.")
+	}
+	nt := n.ItsType()
+	obj := tree.Object(cursor)
+	switch obj.(type) {
+	case Port:
+		p := obj.(Port)
+		for index, c := range p.Connections() {
+			conn := Connection{c, p}
+			removed = append(removed, IdWithObject{cursor.Path, index, conn})
+		}
+		var list namedPortTypeList
+		if p.Direction() == InPort {
+			list = nt.(*nodeType).inPorts
+		} else {
+			list = nt.(*nodeType).outPorts
+		}
+		_, ok, index := list.Find(p.PortName())
+		if !ok {
+			log.Println("node.RemoveObject: saving removed port", p)
+			removed = append(removed, IdWithObject{parentId.Path, index, obj})
+		}
+		tree.Remove(cursor)
+
+	default:
+		log.Fatal("Node.RemoveObject error: invalid type %T", obj)
+	}
 	return
 }
 
@@ -205,11 +212,11 @@ func IsProcessingNode(n Node) bool {
  *  freesp private functions
  */
 func (n *node) inPortFromName(name string) (p Port, err error) {
-	return portFromName(n.inPort, name)
+	return portFromName(n.inPort.Ports(), name)
 }
 
 func (n *node) outPortFromName(name string) (p Port, err error) {
-	return portFromName(n.outPort, name)
+	return portFromName(n.outPort.Ports(), name)
 }
 
 func portFromName(list []Port, name string) (ret Port, err error) {
@@ -247,32 +254,69 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 }
 
 func (n *node) addInPort(pt *namedPortType) {
-	n.inPort = append(n.inPort, newPort(pt.name, pt.pType, InPort, n))
+	n.inPort.Append(newPort(pt.name, pt.pType, InPort, n))
 }
 
 func (n *node) addOutPort(pt *namedPortType) {
-	n.outPort = append(n.outPort, newPort(pt.name, pt.pType, OutPort, n))
+	n.outPort.Append(newPort(pt.name, pt.pType, OutPort, n))
 }
 
 func (n *node) removePort(pt *namedPortType) {
-	var list []Port
+	var list *portList
 	if pt.Direction() == InPort {
-		list = n.inPort
+		list = &n.inPort
 	} else {
-		list = n.outPort
+		list = &n.outPort
 	}
 	var i int
-	for i = 0; i < len(list); i++ {
-		if list[i].PortName() == pt.Name() {
+	for i = 0; i < len(list.Ports()); i++ {
+		if list.Ports()[i].PortName() == pt.Name() {
 			break
 		}
 	}
-	toRemove := list[i]
+	toRemove := list.Ports()[i]
 	for _, c := range toRemove.(*port).connections {
 		c.RemoveConnection(toRemove)
 	}
-	for j := i + 1; j < len(list); j++ {
-		list[j-1] = list[j]
+	list.Remove(toRemove)
+}
+
+/*
+ *      nodeList
+ *
+ */
+
+type nodeList struct {
+	nodes []Node
+}
+
+func nodeListInit() nodeList {
+	return nodeList{nil}
+}
+
+func (l *nodeList) Append(nt Node) {
+	l.nodes = append(l.nodes, nt)
+}
+
+func (l *nodeList) Remove(nt Node) {
+	var i int
+	for i = range l.nodes {
+		if nt == l.nodes[i] {
+			break
+		}
 	}
-	list = list[:len(list)-2]
+	if i >= len(l.nodes) {
+		for _, v := range l.nodes {
+			log.Printf("nodeList.RemoveNode have Node %v\n", v)
+		}
+		log.Fatalf("nodeList.RemoveNode error: Node %v not in this list\n", nt)
+	}
+	for i++; i < len(l.nodes); i++ {
+		l.nodes[i-1] = l.nodes[i]
+	}
+	l.nodes = l.nodes[:len(l.nodes)-1]
+}
+
+func (l *nodeList) Nodes() []Node {
+	return l.nodes
 }

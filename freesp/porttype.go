@@ -99,3 +99,54 @@ func (p *namedPortType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWith
 	log.Fatal("NamedPortType.AddNewObject - nothing to remove.")
 	return
 }
+
+/*
+ *      namedPortTypeList
+ *
+ */
+
+type namedPortTypeList struct {
+	namedPortTypes []NamedPortType
+}
+
+func namedPortTypeListInit() namedPortTypeList {
+	return namedPortTypeList{nil}
+}
+
+func (l *namedPortTypeList) Append(nt NamedPortType) {
+	l.namedPortTypes = append(l.namedPortTypes, nt)
+}
+
+func (l *namedPortTypeList) Remove(nt NamedPortType) {
+	var i int
+	for i = range l.namedPortTypes {
+		if nt == l.namedPortTypes[i] {
+			break
+		}
+	}
+	if i >= len(l.namedPortTypes) {
+		for _, v := range l.namedPortTypes {
+			log.Printf("namedPortTypeList.RemovePort have NamedPortType %v\n", v)
+		}
+		log.Fatalf("namedPortTypeList.RemovePort error: NamedPortType %v not in this list\n", nt)
+	}
+	for i++; i < len(l.namedPortTypes); i++ {
+		l.namedPortTypes[i-1] = l.namedPortTypes[i]
+	}
+	l.namedPortTypes = l.namedPortTypes[:len(l.namedPortTypes)-1]
+}
+
+func (l *namedPortTypeList) NamedPortTypes() []NamedPortType {
+	return l.namedPortTypes
+}
+
+func (l *namedPortTypeList) Find(name string) (p NamedPortType, ok bool, index int) {
+	ok = false
+	for index, p = range l.namedPortTypes {
+		if p.Name() == name {
+			ok = true
+			return
+		}
+	}
+	return
+}

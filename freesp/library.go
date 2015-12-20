@@ -116,7 +116,7 @@ func (l *library) AddNodeType(t NodeType) error {
 }
 
 func (l *library) RemoveNodeType(nt NodeType) {
-	for _, n := range nt.(*nodeType).instances {
+	for _, n := range nt.(*nodeType).instances.Nodes() {
 		n.(*node).context.RemoveNode(n)
 	}
 	delete(nodeTypes, nt.TypeName())

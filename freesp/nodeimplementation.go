@@ -75,6 +75,7 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
 	switch obj.(type) {
 	case Node:
+		log.Println("implementation) AddNewObject")
 		err := impl.Graph().AddNode(obj.(Node))
 		if err != nil {
 			log.Fatal("Implementation.AddNewObject error: AddNode failed: ", err)
@@ -127,4 +128,44 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 		log.Fatal("Implementation.RemoveObject error: invalid type %T", obj)
 	}
 	return
+}
+
+/*
+ *      implementationList
+ *
+ */
+
+type implementationList struct {
+	implementations []Implementation
+}
+
+func implementationListInit() implementationList {
+	return implementationList{nil}
+}
+
+func (l *implementationList) Append(nt Implementation) {
+	l.implementations = append(l.implementations, nt)
+}
+
+func (l *implementationList) Remove(nt Implementation) {
+	var i int
+	for i = range l.implementations {
+		if nt == l.implementations[i] {
+			break
+		}
+	}
+	if i >= len(l.implementations) {
+		for _, v := range l.implementations {
+			log.Printf("implementationList.RemoveImplementation have Implementation %v\n", v)
+		}
+		log.Fatalf("implementationList.RemoveImplementation error: Implementation %v not in this list\n", nt)
+	}
+	for i++; i < len(l.implementations); i++ {
+		l.implementations[i-1] = l.implementations[i]
+	}
+	l.implementations = l.implementations[:len(l.implementations)-1]
+}
+
+func (l *implementationList) Implementations() []Implementation {
+	return l.implementations
 }

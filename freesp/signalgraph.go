@@ -73,7 +73,7 @@ func (s *signalGraph) SetFilename(filename string) {
 var _ TreeElement = (*signalGraph)(nil)
 
 func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t.ItsType())
+	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t.ItsType(), mayAddObject)
 	if err != nil {
 		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
 	}

@@ -113,6 +113,13 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		return freesp.NamedPortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
 
 	case eSignalType:
+		switch parentObject.(type) {
+		case freesp.SignalType:
+			j.parentId = getParentId(j.parentId)
+		case freesp.Library:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
+		}
 		name := j.input[iSignalTypeName]
 		cType := j.input[iCType]
 		channelId := j.input[iChannelId]

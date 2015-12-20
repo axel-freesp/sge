@@ -49,18 +49,69 @@ func (t *signalType) Mode() Mode {
 var _ TreeElement = (*signalType)(nil)
 
 func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolSignalType, t.TypeName(), t)
+	var prop property
+	parentId := tree.Parent(cursor)
+	parent := tree.Object(parentId)
+	switch parent.(type) {
+	case Library:
+		prop = mayAddObject | mayEdit | mayRemove
+	case Port, NamedPortType:
+		prop = 0
+	default:
+		log.Fatalf("signalType.AddToTree error: invalid parent type %T\n", parent)
+	}
+	err := tree.AddEntry(cursor, SymbolSignalType, t.TypeName(), t, prop)
 	if err != nil {
-		log.Fatal("SignalType.AddToTree error: AddEntry failed: %s", err)
+		log.Fatal("signalType.AddToTree error: AddEntry failed: %s", err)
 	}
 }
 
 func (t *signalType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
-	log.Fatal("SignalType.AddNewObject - nothing to add.")
+	log.Fatal("signalType.AddNewObject - nothing to add.")
 	return
 }
 
 func (t *signalType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
-	log.Fatal("SignalType.AddNewObject - nothing to remove.")
+	log.Fatal("signalType.AddNewObject - nothing to remove.")
 	return
+}
+
+/*
+ *      signalTypeList
+ *
+ */
+
+type signalTypeList struct {
+	signalTypes []SignalType
+}
+
+func signalTypeListInit() signalTypeList {
+	return signalTypeList{nil}
+}
+
+func (l *signalTypeList) Append(st SignalType) {
+	l.signalTypes = append(l.signalTypes, st)
+}
+
+func (l *signalTypeList) Remove(st SignalType) {
+	var i int
+	for i = range l.signalTypes {
+		if st == l.signalTypes[i] {
+			break
+		}
+	}
+	if i >= len(l.signalTypes) {
+		for _, v := range l.signalTypes {
+			log.Printf("signalTypeList.RemoveNodeType have SignalType %v\n", v)
+		}
+		log.Fatalf("signalTypeList.RemoveNodeType error: SignalType %v not in this list\n", st)
+	}
+	for i++; i < len(l.signalTypes); i++ {
+		l.signalTypes[i-1] = l.signalTypes[i]
+	}
+	l.signalTypes = l.signalTypes[:len(l.signalTypes)-1]
+}
+
+func (l *signalTypeList) SignalTypes() []SignalType {
+	return l.signalTypes
 }

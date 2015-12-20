@@ -41,6 +41,21 @@ var _ TreeElement = (*implementation)(nil)
 func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 	var image Symbol
 	var text string
+	var prop property
+	parentId := tree.Parent(tree.Parent(cursor))
+	parent := tree.Object(parentId)
+	switch parent.(type) {
+	case Library:
+		if impl.ImplementationType() == NodeTypeGraph {
+			prop = mayAddObject | mayRemove
+		} else {
+			prop = mayEdit | mayRemove
+		}
+	case Node:
+		prop = 0
+	default:
+		log.Fatalf("implementation.AddToTree error: invalid parent type: %T\n", parent)
+	}
 	if impl.ImplementationType() == NodeTypeGraph {
 		image = SymbolImplGraph
 		text = "Graph"
@@ -48,9 +63,9 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 		image = SymbolImplElement
 		text = impl.ElementName()
 	}
-	err := tree.AddEntry(cursor, image, text, impl)
+	err := tree.AddEntry(cursor, image, text, impl, prop)
 	if err != nil {
-		log.Fatal("Implementation.AddToTree error: AddEntry failed: %s", err)
+		log.Fatalf("implementation.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	if impl.ImplementationType() == NodeTypeGraph {
 		impl.Graph().AddToTree(tree, cursor)

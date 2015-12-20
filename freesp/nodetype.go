@@ -257,9 +257,20 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 var _ TreeElement = (*nodeType)(nil)
 
 func (t *nodeType) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolNodeType, t.TypeName(), t)
+	var prop property
+	parentId := tree.Parent(cursor)
+	parent := tree.Object(parentId)
+	switch parent.(type) {
+	case Library:
+		prop = mayAddObject | mayEdit | mayRemove
+	case Node:
+		prop = 0
+	default:
+		log.Fatalf("nodeType.AddToTree error: invalid parent type %T\n", parent)
+	}
+	err := tree.AddEntry(cursor, SymbolNodeType, t.TypeName(), t, prop)
 	if err != nil {
-		log.Fatal("SignalType.AddToTree error: AddEntry failed: %s", err)
+		log.Fatalf("nodeType.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	for _, impl := range t.Implementation() {
 		child := tree.Append(cursor)
@@ -296,7 +307,7 @@ func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 		}
 
 	default:
-		log.Fatal("NodeType.AddNewObject error: invalid type %T", obj)
+		log.Fatal("nodeType.AddNewObject error: invalid type %T", obj)
 	}
 	return
 }
@@ -304,7 +315,7 @@ func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	parent := tree.Parent(cursor)
 	if t != tree.Object(parent) {
-		log.Fatal("NodeType.RemoveObject error: not removing child of mine.")
+		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
@@ -380,7 +391,47 @@ func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 		t.RemoveNamedPortType(nt)
 
 	default:
-		log.Fatal("NodeType.RemoveObject error: invalid type %T", obj)
+		log.Fatalf("nodeType.RemoveObject error: invalid type %T\n", obj)
 	}
 	return
+}
+
+/*
+ *      nodeTypeList
+ *
+ */
+
+type nodeTypeList struct {
+	nodeTypes []NodeType
+}
+
+func nodeTypeListInit() nodeTypeList {
+	return nodeTypeList{nil}
+}
+
+func (l *nodeTypeList) Append(nt NodeType) {
+	l.nodeTypes = append(l.nodeTypes, nt)
+}
+
+func (l *nodeTypeList) Remove(nt NodeType) {
+	var i int
+	for i = range l.nodeTypes {
+		if nt == l.nodeTypes[i] {
+			break
+		}
+	}
+	if i >= len(l.nodeTypes) {
+		for _, v := range l.nodeTypes {
+			log.Printf("nodeTypeList.RemoveNodeType have NodeType %v\n", v)
+		}
+		log.Fatalf("nodeTypeList.RemoveNodeType error: NodeType %v not in this library\n", nt)
+	}
+	for i++; i < len(l.nodeTypes); i++ {
+		l.nodeTypes[i-1] = l.nodeTypes[i]
+	}
+	l.nodeTypes = l.nodeTypes[:len(l.nodeTypes)-1]
+}
+
+func (l *nodeTypeList) NodeTypes() []NodeType {
+	return l.nodeTypes
 }

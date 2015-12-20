@@ -6,6 +6,19 @@ import (
 )
 
 /*
+ *  fmt.Stringer API
+ */
+
+var _ fmt.Stringer = Connection{}
+
+func (c Connection) String() (s string) {
+	s = fmt.Sprintf("Connection(%s/%s -> %s/%s)",
+		c.From.Node().NodeName(), c.From.PortName(),
+		c.To.Node().NodeName(), c.To.PortName())
+	return
+}
+
+/*
  *  TreeElement API
  */
 
@@ -14,7 +27,7 @@ var _ TreeElement = Connection{}
 func (c Connection) AddToTree(tree Tree, cursor Cursor) {
 	text := fmt.Sprintf("%s/%s -> %s/%s", c.From.Node().NodeName(), c.From.PortName(),
 		c.To.Node().NodeName(), c.To.PortName())
-	err := tree.AddEntry(cursor, SymbolConnection, text, c)
+	err := tree.AddEntry(cursor, SymbolConnection, text, c, mayRemove)
 	if err != nil {
 		log.Fatal("Connection.AddToTree error: AddEntry failed: %s", err)
 	}

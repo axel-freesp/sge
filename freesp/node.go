@@ -66,20 +66,80 @@ func (n *node) String() (s string) {
  *  TreeElement API
  */
 
+func IsParentReadOnly(tree Tree, cursor Cursor) bool {
+	parentId := tree.Parent(cursor)
+	return tree.Property(parentId).IsReadOnly()
+}
+
 var _ TreeElement = (*node)(nil)
 
 func (n *node) AddToTree(tree Tree, cursor Cursor) {
+	var prop property
+	if IsParentReadOnly(tree, cursor) {
+		prop = 0
+	} else {
+		prop = mayEdit | mayRemove
+	}
+	var isImplementation bool
+	var nodeType NodeType
+	parentId := tree.Parent(cursor)
+	parent := tree.Object(parentId)
+	switch parent.(type) {
+	case SignalGraphType:
+		isImplementation = false
+	case Implementation:
+		isImplementation = true
+		nodeType = tree.Object(tree.Parent(parentId)).(NodeType)
+	default:
+		log.Fatalf("node.AddToTree error: invalid parent type %T\n", parent)
+	}
 	var image Symbol
-	if len(n.InPorts()) == 0 {
+	if len(n.InPorts()) == 0 { // TODO: check if linked to parent port
 		image = SymbolOutputNode
 	} else if len(n.OutPorts()) == 0 {
 		image = SymbolInputNode
-	} else {
+	} else if !isImplementation {
 		image = SymbolProcessingNode
+	} else {
+		allInputPortsLinked := len(n.InPorts()) == 1
+		for _, p := range n.InPorts() {
+			found := false
+			for _, p2 := range nodeType.InPorts() {
+				if p.PortName() == p2.Name() && n.NodeName() == fmt.Sprintf("in-%s", p2.Name()) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allInputPortsLinked = false
+				break
+			}
+		}
+		allOutputPortsLinked := len(n.OutPorts()) == 1
+		for _, p := range n.OutPorts() {
+			found := false
+			for _, p2 := range nodeType.OutPorts() {
+				if p.PortName() == p2.Name() && n.NodeName() == fmt.Sprintf("out-%s", p2.Name()) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allOutputPortsLinked = false
+				break
+			}
+		}
+		if allInputPortsLinked {
+			image = SymbolInputNode
+		} else if allOutputPortsLinked {
+			image = SymbolOutputNode
+		} else {
+			image = SymbolProcessingNode
+		}
 	}
-	err := tree.AddEntry(cursor, image, n.NodeName(), n)
+	err := tree.AddEntry(cursor, image, n.NodeName(), n, prop)
 	if err != nil {
-		log.Fatal("Node.AddToTree error: AddEntry failed: %s", err)
+		log.Fatalf("node.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
 	n.ItsType().AddToTree(tree, child)

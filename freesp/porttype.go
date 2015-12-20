@@ -69,13 +69,20 @@ func (t *namedPortType) String() (s string) {
 var _ TreeElement = (*namedPortType)(nil)
 
 func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {
+	var prop property
+	parentId := tree.Parent(cursor)
+	if tree.Property(parentId).IsReadOnly() {
+		prop = 0
+	} else {
+		prop = mayEdit | mayRemove
+	}
 	var kind Symbol
 	if p.Direction() == InPort {
 		kind = SymbolInputPortType
 	} else {
 		kind = SymbolOutputPortType
 	}
-	err := tree.AddEntry(cursor, kind, p.Name(), p)
+	err := tree.AddEntry(cursor, kind, p.Name(), p, prop)
 	if err != nil {
 		log.Fatal("NamedPortType.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}

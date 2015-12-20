@@ -8,7 +8,8 @@ type Tree interface {
 	Object(c Cursor) (obj TreeElement)
 	Cursor(obj TreeElement) (cursor Cursor)
 	CursorAt(start Cursor, obj TreeElement) (cursor Cursor)
-	AddEntry(c Cursor, sym Symbol, text string, obj TreeElement) (err error)
+	AddEntry(c Cursor, sym Symbol, text string, obj TreeElement, prop Property) (err error)
+	Property(c Cursor) Property
 }
 
 type TreeElement interface {
@@ -48,3 +49,10 @@ const (
 	SymbolNodeType
 	SymbolSignalGraph
 )
+
+type Property interface {
+	IsReadOnly() bool
+	MayAddObject() bool
+	MayEdit() bool
+	MayRemove() bool
+}

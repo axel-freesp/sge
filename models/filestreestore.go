@@ -6,8 +6,6 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"image"
-	_ "image/png"
 	"log"
 	"os"
 	"strings"
@@ -35,44 +33,16 @@ func Init() (err error) {
 	}
 
 	return
+}
 
-	file, err := os.Open(fmt.Sprintf("%s/test1.png", iconPath))
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		err = fmt.Errorf("FilesTreeStore.Init error: image.Decode failed: %s", err)
-		return
-	}
-
-	bounds := img.Bounds()
-	width := bounds.Max.X - bounds.Min.X
-	height := bounds.Max.Y - bounds.Min.Y
-	data := make([]byte, width*height*4)
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		j := width * 4 * y
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			r, g, b, a := img.At(x, y).RGBA()
-			data[j+4*x+0] = byte(r)
-			data[j+4*x+1] = byte(g)
-			data[j+4*x+2] = byte(b)
-			data[j+4*x+3] = byte(a)
-		}
-	}
-
-	imageSignalGraphAlt, err = gdk.PixbufNewFromBytes(data, gdk.COLORSPACE_RGB, true, 8, width, height, width*4)
-	if err != nil {
-		err = fmt.Errorf("FilesTreeStore.Init error: PixbufNewFromXpmData failed: %s", err)
-	}
-	fmt.Println("models.Init: all icons intitialized")
-	return
+type Element struct {
+	prop freesp.Property
+	elem freesp.TreeElement
 }
 
 type FilesTreeStore struct {
 	treestore        *gtk.TreeStore
-	lookup           map[string]freesp.TreeElement
+	lookup           map[string]Element
 	libs             map[string]freesp.Library
 	currentSelection *gtk.TreeIter
 }
@@ -90,7 +60,7 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		ret = nil
 		return
 	}
-	ret = &FilesTreeStore{ts, make(map[string]freesp.TreeElement),
+	ret = &FilesTreeStore{ts, make(map[string]Element),
 		make(map[string]freesp.Library),
 		nil}
 	err = nil
@@ -113,7 +83,7 @@ func (s *FilesTreeStore) GetObjectById(id string) (ret freesp.TreeElement, err e
 		err = gtkErr("FilesTreeStore.GetObjectById", "GetIterFromString()", err)
 		return
 	}
-	ret = s.lookup[id]
+	ret = s.lookup[id].elem
 	return
 }
 
@@ -339,19 +309,19 @@ func (s *FilesTreeStore) Parent(c freesp.Cursor) freesp.Cursor {
 }
 
 func (s *FilesTreeStore) Object(c freesp.Cursor) (obj freesp.TreeElement) {
-	return s.lookup[c.Path]
+	return s.lookup[c.Path].elem
 }
 
 // Toplevel search
 func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter *gtk.TreeIter, path string, err error) {
-	var o freesp.TreeElement
+	var o Element
 	ok := false
 	for i := 0; !ok; i++ {
 		path = fmt.Sprintf("%d", i)
 		o, ok = s.lookup[path]
 		if !ok {
 			break
-		} else if o != obj {
+		} else if o.elem != obj {
 			path, ok = s.getIdFromObjectRecursive(path, obj)
 		} else {
 			fmt.Println("match: ", ok, path)
@@ -384,8 +354,13 @@ func (s *FilesTreeStore) CursorAt(start freesp.Cursor, obj freesp.TreeElement) (
 	return freesp.Cursor{path, freesp.AppendCursor}
 }
 
-func (s *FilesTreeStore) AddEntry(c freesp.Cursor, sym freesp.Symbol, text string, data freesp.TreeElement) (err error) {
-	icon := symbolPixbuf(sym)
+func (s *FilesTreeStore) AddEntry(c freesp.Cursor, sym freesp.Symbol, text string, data freesp.TreeElement, prop freesp.Property) (err error) {
+	var icon *gdk.Pixbuf
+	if prop.IsReadOnly() {
+		icon = readonlyPixbuf(sym)
+	} else {
+		icon = normalPixbuf(sym)
+	}
 	iter, err := s.treestore.GetIterFromString(c.Path)
 	if err != nil {
 		log.Fatal("FilesTreeStore.AddEntry: gtk.GetIterFromString failed: %s", err)
@@ -394,7 +369,7 @@ func (s *FilesTreeStore) AddEntry(c freesp.Cursor, sym freesp.Symbol, text strin
 		err = gtkErr("FilesTreeStore.addEntry", "GetPath", err)
 		return
 	}
-	s.lookup[c.Path] = data
+	s.lookup[c.Path] = Element{prop, data}
 	err = s.treestore.SetValue(iter, iconCol, icon)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.addEntry", "SetValue(iconCol)", err)
@@ -406,6 +381,10 @@ func (s *FilesTreeStore) AddEntry(c freesp.Cursor, sym freesp.Symbol, text strin
 		return
 	}
 	return nil
+}
+
+func (s *FilesTreeStore) Property(c freesp.Cursor) freesp.Property {
+	return s.lookup[c.Path].prop
 }
 
 /*
@@ -463,14 +442,14 @@ func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) 
 
 func (s *FilesTreeStore) getIterFromObject(obj freesp.TreeElement) (iter *gtk.TreeIter, err error) {
 	var id string
-	var o freesp.TreeElement
+	var o Element
 	ok := false
 	for i := 0; !ok; i++ {
 		id = fmt.Sprintf("%d", i)
 		o, ok = s.lookup[id]
 		if !ok {
 			break
-		} else if o != obj {
+		} else if o.elem != obj {
 			id, ok = s.getIdFromObjectRecursive(id, obj)
 		} else {
 			fmt.Println("match: ", ok, id)
@@ -503,13 +482,13 @@ func (s *FilesTreeStore) getIdFromObject(obj freesp.TreeElement) (id string, err
 
 func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj freesp.TreeElement) (id string, ok bool) {
 	ok = false
-	var o freesp.TreeElement
+	var o Element
 	for i := 0; !ok; i++ {
 		id = fmt.Sprintf("%s:%d", parent, i)
 		o, ok = s.lookup[id]
 		if !ok {
 			break
-		} else if o != obj {
+		} else if o.elem != obj {
 			id, ok = s.getIdFromObjectRecursive(id, obj)
 		}
 	}
@@ -526,6 +505,8 @@ func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj freesp.TreeElement, 
 	if err != nil {
 		return
 	}
-	obj, ok = s.lookup[path.String()]
+	var o Element
+	o, ok = s.lookup[path.String()]
+	obj = o.elem
 	return
 }

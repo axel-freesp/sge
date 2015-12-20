@@ -1,7 +1,5 @@
 package freesp
 
-import "fmt"
-
 type SignalGraphType interface {
 	TreeElement
 	Libraries() []Library
@@ -36,7 +34,7 @@ type Library interface {
 	WriteFile(filepath string) error
 	AddNodeType(NodeType) error
 	RemoveNodeType(t NodeType)
-	AddSignalType(SignalType) error
+	AddSignalType(SignalType)
 	RemoveSignalType(t SignalType)
 	SetFilename(string)
 }
@@ -131,32 +129,17 @@ const (
 	OutPort PortDirection = true
 )
 
-func (d PortDirection) String() (s string) {
-	if d == InPort {
-		s = "Input"
-	} else {
-		s = "Output"
-	}
-	return
-}
-
 type Connection struct {
 	From, To Port
 }
 
-func (c Connection) String() (s string) {
-	s = fmt.Sprintf("Connection(%s/%s -> %s/%s)",
-		c.From.Node().NodeName(), c.From.PortName(),
-		c.To.Node().NodeName(), c.To.PortName())
-	return
-}
-
+// TODO: Turn into interface
 func GetRegisteredNodeTypes() []string {
-	return registeredNodeTypes
+	return registeredNodeTypes.Strings()
 }
 
 func GetRegisteredSignalTypes() []string {
-	return registeredSignalTypes
+	return registeredSignalTypes.Strings()
 }
 
 func GetNodeTypeByName(typeName string) (nType NodeType, ok bool) {

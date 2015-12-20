@@ -103,6 +103,17 @@ func (p *port) String() (s string) {
 	return
 }
 
+var _ fmt.Stringer = PortDirection(false)
+
+func (d PortDirection) String() (s string) {
+	if d == InPort {
+		s = "Input"
+	} else {
+		s = "Output"
+	}
+	return
+}
+
 /*
  *  TreeElement API
  */
@@ -110,13 +121,20 @@ func (p *port) String() (s string) {
 var _ TreeElement = (*port)(nil)
 
 func (p *port) AddToTree(tree Tree, cursor Cursor) {
+	var prop property
+	parentId := tree.Parent(cursor)
+	if tree.Property(parentId).IsReadOnly() {
+		prop = 0
+	} else {
+		prop = mayAddObject
+	}
 	var kind Symbol
 	if p.Direction() == InPort {
 		kind = SymbolInputPort
 	} else {
 		kind = SymbolOutputPort
 	}
-	err := tree.AddEntry(cursor, kind, p.PortName(), p)
+	err := tree.AddEntry(cursor, kind, p.PortName(), p, prop)
 	if err != nil {
 		log.Fatal("Port.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}

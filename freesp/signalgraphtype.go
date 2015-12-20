@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/tool"
 	"log"
 )
 
@@ -10,14 +11,16 @@ var signalTypes map[string]*signalType
 var nodeTypes map[string]*nodeType
 var portTypes map[string]*portType
 var libraries map[string]*library
-var registeredNodeTypes []string
-var registeredSignalTypes []string
+var registeredNodeTypes tool.StringList
+var registeredSignalTypes tool.StringList
 
 func Init() {
 	signalTypes = make(map[string]*signalType)
 	nodeTypes = make(map[string]*nodeType)
 	portTypes = make(map[string]*portType)
 	libraries = make(map[string]*library)
+	registeredNodeTypes = tool.StringListInit()
+	registeredSignalTypes = tool.StringListInit()
 }
 
 type signalGraphType struct {

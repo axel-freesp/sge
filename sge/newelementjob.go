@@ -48,6 +48,12 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 			context = parentObject.(freesp.SignalGraph).ItsType()
 		case freesp.SignalGraphType:
 			context = parentObject.(freesp.SignalGraphType)
+		case freesp.Implementation:
+			if parentObject.(freesp.Implementation).ImplementationType() == freesp.NodeTypeGraph {
+				context = parentObject.(freesp.Implementation).Graph()
+			} else {
+				return nil
+			}
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject wrong type...")
 		}
@@ -138,6 +144,13 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		return freesp.SignalTypeNew(name, cType, channelId, scope, mode)
 
 	case eImplementation:
+		switch parentObject.(type) {
+		case freesp.Implementation:
+			j.parentId = getParentId(j.parentId)
+		case freesp.NodeType:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
+		}
 		var implType freesp.ImplementationType
 		if j.input[iImplementationType] == "Elementary Type" {
 			implType = freesp.NodeTypeElement

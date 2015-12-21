@@ -1,6 +1,7 @@
 package freesp
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -30,6 +31,19 @@ func (n *implementation) ElementName() string {
 
 func (n *implementation) Graph() SignalGraphType {
 	return n.graph
+}
+
+/*
+ *  fmt.Stringer API
+ */
+
+func (n *implementation) String() string {
+	if n.implementationType == NodeTypeGraph {
+		return fmt.Sprintf("Implementation graph {\n%v\n}", n.graph)
+	} else {
+		return fmt.Sprintf("Implementation module %s", n.elementName)
+	}
+
 }
 
 /*
@@ -75,16 +89,15 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
 	switch obj.(type) {
 	case Node:
-		log.Println("implementation) AddNewObject")
-		err := impl.Graph().AddNode(obj.(Node))
-		if err != nil {
-			log.Fatal("Implementation.AddNewObject error: AddNode failed: ", err)
+		if impl.ImplementationType() == NodeTypeGraph {
+			log.Println("implementation.AddNewObject: delegate to signalGraphType\n")
+			return impl.Graph().AddNewObject(tree, cursor, obj)
+		} else {
+			log.Fatalf("implementation.AddNewObject error: cannot add node to elementary implementation.\n")
 		}
-		newCursor = tree.Insert(cursor)
-		obj.(Node).AddToTree(tree, cursor)
 
 	default:
-		log.Fatal("Implementation.AddNewObject error: invalid type %T", obj)
+		log.Fatalf("implementation.AddNewObject error: invalid type %T\n", obj)
 	}
 	return
 }
@@ -92,11 +105,19 @@ func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeEleme
 func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	parent := tree.Parent(cursor)
 	if impl != tree.Object(parent) {
-		log.Fatal("NodeType.RemoveObject error: not removing child of mine.")
+		log.Fatal("implementation.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
 	case Node:
+		if impl.ImplementationType() == NodeTypeGraph {
+			log.Println("implementation.RemoveObject: delegate to signalGraphType\n")
+			return impl.Graph().RemoveObject(tree, cursor)
+		} else {
+			log.Fatalf("implementation.RemoveObject error: cannot remove node from elementary implementation.\n")
+		}
+		return
+
 		n := obj.(Node)
 		if !IsProcessingNode(n) {
 			// Removed Input- and Output nodes are NOT stored (they are
@@ -125,7 +146,7 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 		impl.Graph().RemoveNode(n)
 
 	default:
-		log.Fatal("Implementation.RemoveObject error: invalid type %T", obj)
+		log.Fatalf("implementation.RemoveObject error: invalid type %T", obj)
 	}
 	return
 }

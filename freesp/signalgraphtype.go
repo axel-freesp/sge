@@ -261,7 +261,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolve
 	ret := NodeNew(nName, nt, t)
 	pt := resolvePort(n.NPort, InPort)
 	if pt != nil {
-		ret.addInPort(pt)
+		//ret.addInPort(pt)
 		ret.addOutPort(pt)
 	}
 	return ret
@@ -275,7 +275,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	pt := resolvePort(n.NPort, OutPort) // matches also empty names
 	if pt != nil {
 		ret.addInPort(pt)
-		ret.addOutPort(pt)
+		//ret.addOutPort(pt)
 	}
 	return ret
 }
@@ -377,66 +377,95 @@ func (t *signalGraphType) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
+func (t *signalGraphType) treeAddNewObject(tree Tree, cursor Cursor, n Node) (newCursor Cursor) {
+	newCursor = tree.Insert(cursor)
+	n.AddToTree(tree, newCursor)
+	return
+}
+
 func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
-	log.Printf("SignalGraphType.AddNewObject %T, %v\n", obj, obj)
 	switch obj.(type) {
 	case Node:
 		n := obj.(Node)
 		err := t.AddNode(n)
 		if err != nil {
-			log.Fatal("SignalGraphType.AddNewObject error: %s", err)
+			log.Fatalf("signalGraphType.AddNewObject error: %s\n", err)
 		}
-		newCursor = tree.Insert(cursor)
-		n.AddToTree(tree, newCursor)
+		newCursor = t.treeAddNewObject(tree, cursor, n)
+
+		parent := tree.Object(cursor)
+		switch parent.(type) {
+		case SignalGraphType:
+		case Implementation:
+			// propagate new node to all instances of embracing type
+			pCursor := tree.Parent(cursor)
+			nt := tree.Object(pCursor)
+			for _, nn := range nt.(NodeType).Instances() {
+				nCursor := tree.Cursor(nn)
+				tCursor := tree.CursorAt(nCursor, parent)
+				tCursor.Position = cursor.Position
+				t.treeAddNewObject(tree, tCursor, n)
+			}
+
+		default:
+			log.Fatalf("signalGraphType.AddNewObject error: wrong parent type %t: %v\n", parent, parent)
+		}
 
 	default:
-		log.Fatal("SignalGraphType.AddNewObject error: wrong type %t: %v", obj, obj)
+		log.Fatalf("signalGraphType.AddNewObject error: wrong type %t: %v\n", obj, obj)
 	}
 	return
 }
 
 func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
-	log.Println("SignalGraphType.RemoveObject ", cursor)
-	parent := tree.Parent(cursor)
-	if t != tree.Object(parent) {
-		log.Fatal("SignalGraphType.RemoveObject error: not removing child of mine.")
-	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
 	case Node:
 		n := obj.(Node)
-		log.Println("SignalGraphType.RemoveObject remove node ", n)
 		// Remove all connections first
 		for _, p := range n.OutPorts() {
-			//pCursor := tree.CursorAt(cursor, p)
 			for _, c := range p.Connections() {
 				conn := Connection{p, c}
 				cCursor := tree.CursorAt(cursor, conn)
 				del := p.RemoveObject(tree, cCursor)
-				//removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 				for _, d := range del {
 					removed = append(removed, d)
 				}
 			}
 		}
 		for _, p := range n.InPorts() {
-			//pCursor := tree.CursorAt(cursor, p)
 			for _, c := range p.Connections() {
 				conn := Connection{c, p}
 				cCursor := tree.CursorAt(cursor, conn)
 				del := p.RemoveObject(tree, cCursor)
-				//removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 				for _, d := range del {
 					removed = append(removed, d)
 				}
 			}
+		}
+		parentCursor := tree.Parent(cursor)
+		parent := tree.Object(parentCursor)
+		switch parent.(type) {
+		case SignalGraphType:
+		case Implementation:
+			// propagate new node to all instances of embracing type
+			pCursor := tree.Parent(parentCursor)
+			nt := tree.Object(pCursor)
+			for _, nn := range nt.(NodeType).Instances() {
+				nCursor := tree.Cursor(nn)
+				tCursor := tree.CursorAt(nCursor, parent)
+				tree.Remove(tree.CursorAt(tCursor, n))
+			}
+
+		default:
+			log.Fatalf("signalGraphType.RemoveObject error: wrong parent type %t: %v\n", parent, parent)
 		}
 		prefix, index := tree.Remove(cursor)
 		removed = append(removed, IdWithObject{prefix, index, obj})
 		t.RemoveNode(n)
 
 	default:
-		log.Fatal("SignalGraphType.RemoveObject error: wrong type %t: %v", obj, obj)
+		log.Fatalf("signalGraphType.RemoveObject error: wrong type %t: %v", obj, obj)
 	}
 	return
 }

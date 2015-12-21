@@ -245,18 +245,18 @@ func (t *nodeType) AddToTree(tree Tree, cursor Cursor) {
 func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
 	switch obj.(type) {
 	case Implementation:
+		cursor.Position = len(t.Implementation()) - 1
 		newCursor = tree.Insert(cursor)
 		obj.(Implementation).AddToTree(tree, newCursor)
 
 	case NamedPortType:
 		pt := obj.(NamedPortType)
-		if pt.Direction() == InPort {
-			cursor.Position = len(t.InPorts())
-		}
+		// Port in original type
 		newCursor = tree.Insert(cursor)
 		pt.AddToTree(tree, newCursor)
 		for _, impl := range t.Implementation() {
 			if impl.ImplementationType() == NodeTypeGraph {
+				// Node linked to outer port
 				g := impl.Graph().(*signalGraphType)
 				var n Node
 				index := -len(t.Implementation())
@@ -292,9 +292,19 @@ func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (new
 func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
 	switch obj.(type) {
 	case Implementation:
+		impl := obj.(Implementation)
+		// update all instance nodes in the tree with new implementation
+		for _, n := range t.Instances() {
+			nCursor := tree.Cursor(n)
+			tCursor := tree.CursorAt(nCursor, t)
+			tCursor.Position = len(t.Implementation()) - 1
+			newICursor := tree.Insert(tCursor)
+			impl.AddToTree(tree, newICursor)
+		}
+
 	case NamedPortType:
 		pt := obj.(NamedPortType)
-		// update all instance nodes in the tree
+		// update all instance nodes in the tree with new port
 		for _, n := range t.Instances() {
 			var p Port
 			var ok bool
@@ -308,9 +318,10 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 			}
 			nCursor := tree.Cursor(n)
 			// Insert new port at the same position as in the type:
-			nCursor.Position = cursor.Position
+			nCursor.Position = cursor.Position - len(t.Implementation()) + 1
 			newNCursor := tree.Insert(nCursor)
 			p.AddToTree(tree, newNCursor)
+			// Update mirrored type in node:
 			tCursor := tree.CursorAt(nCursor, t)
 			tCursor.Position = cursor.Position
 			t.treeNewObject(tree, tCursor, obj)
@@ -349,10 +360,42 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 	log.Printf("nodeType) treeRemoveObject cursor=%v, obj=%v\n", cursor, obj)
 	switch obj.(type) {
 	case Implementation:
+		impl := obj.(Implementation)
+		if impl.ImplementationType() == NodeTypeGraph {
+			// TODO: This is redundant with implementation.go
+			// Simply remove all nodes?
+			// Return all removed edges and nodes
+			for _, n := range impl.Graph().InputNodes() {
+				nCursor := tree.Cursor(n)
+				for _, p := range n.OutPorts() {
+					pCursor := tree.CursorAt(nCursor, p)
+					for index, c := range p.Connections() {
+						conn := Connection{p, c}
+						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+					}
+				}
+				// Removed Input- and Output nodes are NOT stored (they are
+				// created automatically when adding the implementation graph).
+			}
+			for _, n := range impl.Graph().ProcessingNodes() {
+				nCursor := tree.Cursor(n)
+				for _, p := range n.OutPorts() {
+					pCursor := tree.CursorAt(nCursor, p)
+					for index, c := range p.Connections() {
+						conn := Connection{p, c}
+						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+					}
+				}
+				nIndex := IndexOfNodeInGraph(tree, n)
+				removed = append(removed, IdWithObject{nCursor.Path, nIndex, n})
+			}
+		}
+
 	case NamedPortType:
 		nt := obj.(NamedPortType)
 		for _, impl := range t.Implementation() {
 			if impl.ImplementationType() == NodeTypeGraph {
+				// Remove and store all edges connected to the nodes linked to the outer ports
 				g := impl.Graph().(*signalGraphType)
 				var n Node
 				if nt.Direction() == InPort {
@@ -380,6 +423,7 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
+				// Remove (but dont store) the nodes linked to the outer ports:
 				tree.Remove(nCursor)
 				//removed = append(removed, IdWithObject{prefix, index, n})
 			}
@@ -391,6 +435,7 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 	return
 }
 
+// Remove object mirrored in all instance node type
 func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	parentId := tree.Parent(cursor)
 	if t != tree.Object(parentId) {
@@ -400,6 +445,14 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 	log.Printf("nodeType) treeRemoveInstObject cursor=%v, obj=%v\n", cursor, obj)
 	switch obj.(type) {
 	case Implementation:
+		for _, n := range t.Instances() {
+			nCursor := tree.Cursor(n)
+			tCursor := tree.CursorAt(nCursor, t)
+			iCursor := tree.CursorAt(tCursor, obj)
+			iCursor.Position = cursor.Position
+			tree.Remove(iCursor)
+		}
+
 	case NamedPortType:
 		nt := obj.(NamedPortType)
 		for _, n := range t.Instances() {
@@ -448,54 +501,26 @@ func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 	}
 	obj := tree.Object(cursor)
 	log.Printf("nodeType) RemoveObject cursor=%v, obj=%v\n", cursor, obj)
+
+	del := t.treeRemoveObject(tree, cursor)
+	for _, d := range del {
+		removed = append(removed, d)
+	}
+	del = t.treeRemoveInstObject(tree, cursor)
+	for _, d := range del {
+		removed = append(removed, d)
+	}
+	prefix, index := tree.Remove(cursor)
+	removed = append(removed, IdWithObject{prefix, index, obj})
+
 	switch obj.(type) {
 	case Implementation:
-		// TODO: This is redundant with implementation.go
-		// Simply remove all nodes?
 		impl := obj.(Implementation)
-		// Return all removed edges and nodes
-		for _, n := range impl.Graph().InputNodes() {
-			nCursor := tree.Cursor(n)
-			for _, p := range n.OutPorts() {
-				pCursor := tree.CursorAt(nCursor, p)
-				for index, c := range p.Connections() {
-					conn := Connection{p, c}
-					removed = append(removed, IdWithObject{pCursor.Path, index, conn})
-				}
-			}
-			// Removed Input- and Output nodes are NOT stored (they are
-			// created automatically when adding the implementation graph).
-		}
-		for _, n := range impl.Graph().ProcessingNodes() {
-			nCursor := tree.Cursor(n)
-			for _, p := range n.OutPorts() {
-				pCursor := tree.CursorAt(nCursor, p)
-				for index, c := range p.Connections() {
-					conn := Connection{p, c}
-					removed = append(removed, IdWithObject{pCursor.Path, index, conn})
-				}
-			}
-			nIndex := IndexOfNodeInGraph(tree, n)
-			removed = append(removed, IdWithObject{nCursor.Path, nIndex, n})
-		}
-		// Return removed object
-		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, obj})
 		// Remove obj in freesp model
 		t.RemoveImplementation(impl)
 
 	case NamedPortType:
 		nt := obj.(NamedPortType)
-		del := t.treeRemoveObject(tree, cursor)
-		for _, d := range del {
-			removed = append(removed, d)
-		}
-		del = t.treeRemoveInstObject(tree, cursor)
-		for _, d := range del {
-			removed = append(removed, d)
-		}
-		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, obj})
 		t.RemoveNamedPortType(nt)
 
 	default:

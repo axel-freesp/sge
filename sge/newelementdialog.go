@@ -50,7 +50,7 @@ var choiceMap = map[elementType][]elementType{
 	eConnection:     {eConnection},
 	eSignalType:     {eSignalType},
 	eLibrary:        {eSignalType, eNodeType},
-	eImplementation: {eImplementation},
+	eImplementation: {eImplementation, eNode},
 }
 
 var inputElementMap = map[elementType][]inputElement{

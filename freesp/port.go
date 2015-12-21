@@ -148,11 +148,21 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 	return
 }
 
+func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, otherPort Port) (newCursor Cursor) {
+	newCursor = tree.Insert(cursor)
+	conn.AddToTree(tree, newCursor)
+	contextCursor := tree.Parent(tree.Parent(cursor))
+	cCursor := tree.CursorAt(contextCursor, otherPort)
+	cChild := tree.Append(cCursor)
+	conn.AddToTree(tree, cChild)
+	return
+}
+
 func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
 	switch obj.(type) {
 	case Connection:
 		conn := obj.(Connection)
-		log.Println("Port.AddNewObject: conn =", conn)
+		log.Println("port.AddNewObject: conn =", conn)
 		var thisPort, otherPort Port
 		if p.Direction() == InPort {
 			otherPort = conn.From
@@ -164,19 +174,50 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		if p != thisPort {
 			log.Println("p =", p)
 			log.Println("thisPort =", thisPort)
-			log.Fatal("Port.AddNewObject error: invalid connection ", conn)
+			log.Fatal("port.AddNewObject error: invalid connection ", conn)
 		}
+		sgt := thisPort.Node().Context()
+		if sgt != otherPort.Node().Context() {
+			log.Fatal("port.AddNewObject error: nodes have different context: ", conn)
+		}
+		contextCursor := tree.Parent(tree.Parent(cursor))
+
 		thisPort.AddConnection(otherPort)
 		otherPort.AddConnection(thisPort)
-		newCursor = tree.Insert(cursor)
-		conn.AddToTree(tree, newCursor)
-		cCursor := tree.Cursor(otherPort) // TODO: faster search!
-		cChild := tree.Append(cCursor)
-		conn.AddToTree(tree, cChild)
+		newCursor = p.treeAddNewObject(tree, cursor, conn, otherPort)
+
+		context := tree.Object(contextCursor)
+		switch context.(type) {
+		case SignalGraphType:
+		case Implementation:
+			// propagate new edge to all instances of embracing type
+			nt := tree.Object(tree.Parent(contextCursor))
+			for _, nn := range nt.(NodeType).Instances() {
+				nCursor := tree.Cursor(nn)
+				tCursor := tree.CursorAt(nCursor, context)
+				pCursor := tree.CursorAt(tCursor, p)
+				pCursor.Position = cursor.Position
+
+				p.treeAddNewObject(tree, pCursor, conn, otherPort)
+			}
+
+		default:
+			log.Fatalf("port.AddNewObject error: wrong context type %t: %v\n", contextCursor, contextCursor)
+		}
 
 	default:
 		log.Fatalf("Port.AddNewObject error: invalid type %T: %v", obj, obj)
 	}
+	return
+}
+
+func (p *port) treeRemoveObject(tree Tree, cursor Cursor, conn Connection, otherPort Port) (removed []IdWithObject) {
+	contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
+	pCursor := tree.CursorAt(contextCursor, otherPort)
+	otherCursor := tree.CursorAt(pCursor, conn)
+	prefix, index := tree.Remove(cursor)
+	removed = append(removed, IdWithObject{prefix, index, conn})
+	tree.Remove(otherCursor)
 	return
 }
 
@@ -203,13 +244,28 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 				log.Fatal("Port.AddNewObject error: invalid connection ", conn)
 			}
 		}
-		pCursor := tree.Cursor(otherPort)
-		otherCursor := tree.CursorAt(pCursor, conn)
-		thisPort.RemoveConnection(otherPort)
-		otherPort.RemoveConnection(thisPort)
-		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, conn})
-		prefix, index = tree.Remove(otherCursor)
+		contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
+		removed = p.treeRemoveObject(tree, cursor, conn, otherPort)
+		context := tree.Object(contextCursor)
+		switch context.(type) {
+		case SignalGraphType:
+		case Implementation:
+			// propagate removed edge to all instances of embracing type
+			nt := tree.Object(tree.Parent(contextCursor))
+			for _, nn := range nt.(NodeType).Instances() {
+				nCursor := tree.Cursor(nn)
+				tCursor := tree.CursorAt(nCursor, context)
+				pCursor := tree.CursorAt(tCursor, p)
+				pCursor.Position = cursor.Position
+
+				p.treeRemoveObject(tree, pCursor, conn, otherPort)
+			}
+
+		default:
+			log.Fatalf("port.AddNewObject error: wrong context type %t: %v\n", contextCursor, contextCursor)
+		}
+		p.RemoveConnection(otherPort)
+		otherPort.RemoveConnection(p)
 
 	default:
 		log.Fatalf("Port.RemoveObject error: invalid type %T: %v", obj, obj)

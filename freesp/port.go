@@ -153,6 +153,7 @@ func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, other
 	conn.AddToTree(tree, newCursor)
 	contextCursor := tree.Parent(tree.Parent(cursor))
 	cCursor := tree.CursorAt(contextCursor, otherPort)
+	log.Printf("port.treeAddNewObject: cursor=%v, cCursor=%v\n", cursor, cCursor)
 	cChild := tree.Append(cCursor)
 	conn.AddToTree(tree, cChild)
 	return
@@ -256,9 +257,8 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, context)
 				pCursor := tree.CursorAt(tCursor, p)
-				pCursor.Position = cursor.Position
-
-				p.treeRemoveObject(tree, pCursor, conn, otherPort)
+				cCursor := tree.CursorAt(pCursor, conn)
+				p.treeRemoveObject(tree, cCursor, conn, otherPort)
 			}
 
 		default:

@@ -100,6 +100,14 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 		return
 	}
 	obj := getCurrentTopObject(fts)
+	switch obj.(type) {
+	case freesp.SignalGraph:
+		obj.(freesp.SignalGraph).SetFilename(filename)
+	case freesp.Library:
+		obj.(freesp.Library).SetFilename(filename)
+	default:
+		log.Fatalf("fileSaveAs error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
+	}
 	err := doSave(fts, filename, obj)
 	if err != nil {
 		log.Println(err)
@@ -130,7 +138,7 @@ func fileSave(fts *models.FilesTreeStore) {
 			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
 		}
 	default:
-		log.Fatal("fileSave error: wrong type '%T' of toplevel object (%v)", obj, obj)
+		log.Fatalf("fileSave error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
 	}
 	if !ok {
 		return

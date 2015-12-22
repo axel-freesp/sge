@@ -56,10 +56,12 @@ func editDelete(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeVie
 	job := DeleteObjectJobNew(fts.GetCurrentId())
 	if jl.Apply(EditorJobNew(JobDeleteObject, job)) {
 		log.Printf("Deleted %d objects\n", len(job.deletedObjects))
+		var parentId string
 		for _, d := range job.deletedObjects {
 			log.Println(d)
+			parentId = d.ParentId
 		}
-		path, err := gtk.TreePathNewFromString("0")
+		path, err := gtk.TreePathNewFromString(parentId)
 		if err != nil {
 			log.Println("editNew error: TreePathNewFromString failed:", err)
 			return

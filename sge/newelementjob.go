@@ -82,7 +82,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		default:
 			log.Fatal("NewElementJob.CreateObject(eConnection) error: referenced parentObject wrong type...")
 		}
-		ports := getMatchingPorts(fts)
+		ports := getMatchingPorts(fts, parentObject)
 		for _, p := range ports {
 			s := fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName())
 			if j.input[iPortSelect] == s {

@@ -70,7 +70,7 @@ func (a *jobApplier) Revert(jobI interface{}) (err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		fmt.Println("delete added object at ", job.newElement.newId)
+		log.Println("jobApplier.Revert: delete added object at ", job.newElement.newId)
 		_, err = a.fts.DeleteObject(job.newElement.newId)
 		if err != nil {
 			log.Println(err)
@@ -79,7 +79,7 @@ func (a *jobApplier) Revert(jobI interface{}) (err error) {
 		var i int
 		for i = len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {
 			d := job.deleteObject.deletedObjects[i]
-			fmt.Printf("adding deleted object %v at %s/%d\n", d.Object, d.ParentId, d.Position)
+			log.Printf("jobApplier.Revert: adding deleted object %v at %s/%d\n", d.Object, d.ParentId, d.Position)
 			_, err = a.fts.AddNewObject(d.ParentId, d.Position, d.Object)
 			if err != nil {
 				log.Println(err)

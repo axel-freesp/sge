@@ -133,11 +133,7 @@ func comboSelectionChangedCB(dialog *NewElementDialog) {
 }
 
 // For connection only: lookup matching ports to connect.
-func getMatchingPorts(fts *models.FilesTreeStore) (ret []freesp.Port) {
-	object, err := fts.GetObjectById(fts.GetCurrentId())
-	if err != nil {
-		return []freesp.Port{}
-	}
+func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.Port) {
 	var thisPort freesp.Port
 	switch object.(type) {
 	case freesp.Port:
@@ -270,7 +266,11 @@ var inputHandling = map[inputElement]inputElementHandling{
 		},
 		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
 			var choices []string
-			for _, p := range getMatchingPorts(dialog.fts) {
+			object, err := dialog.fts.GetObjectById(dialog.fts.GetCurrentId())
+			if err != nil {
+				log.Fatalf("Internal error: FileTreeStore.GetObjectById(GetCurrentId()) failed\n")
+			}
+			for _, p := range getMatchingPorts(dialog.fts, object) {
 				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName()))
 			}
 			return newComboBox(&dialog.portSelector, choices)

@@ -244,7 +244,10 @@ func (s *FilesTreeStore) Append(c freesp.Cursor) freesp.Cursor {
 	if len(c.Path) > 0 {
 		iter, err = s.treestore.GetIterFromString(c.Path)
 		if err != nil {
-			log.Fatal("FilesTreeStore.Append: zero iter")
+			_, parentErr := s.treestore.GetIterFromString(s.Parent(c).Path)
+			log.Printf("FilesTreeStore.Append: (%v) parent error: %s\n", s.Parent(c), parentErr)
+			log.Printf("FilesTreeStore.Append: object = %T: %v\n", s.Object(c), s.Object(c))
+			log.Fatalf("FilesTreeStore.Append: GetIterFromString(%v) failed: %s\n", c.Path, err)
 		}
 	}
 	iter = s.treestore.Append(iter)
@@ -349,7 +352,7 @@ func (s *FilesTreeStore) CursorAt(start freesp.Cursor, obj freesp.TreeElement) (
 	path, ok := s.getIdFromObjectRecursive(start.Path, obj)
 	if !ok {
 		log.Println("FilesTreeStore.CursorAt: start =", start)
-		log.Fatalf("FilesTreeStore.CursorAt: obj %T: %v not found.", obj, obj)
+		log.Fatalf("FilesTreeStore.CursorAt: obj %T: %v not found.\n", obj, obj)
 	}
 	return freesp.Cursor{path, freesp.AppendCursor}
 }

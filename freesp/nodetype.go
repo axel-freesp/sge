@@ -314,11 +314,15 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 				p, ok = n.(*node).outPort.Find(pt.Name())
 			}
 			if !ok {
-				log.Fatalf("nodeType.AddNewObject error: port %s not found.\n", pt.Name())
+				log.Fatalf("nodeType.treeInstObject error: port %s not found.\n", pt.Name())
 			}
 			nCursor := tree.Cursor(n)
 			// Insert new port at the same position as in the type:
-			nCursor.Position = cursor.Position - len(t.Implementation()) + 1
+			// Need to deal with implementations in type VS type in node
+			if cursor.Position >= 0 {
+				nCursor.Position = cursor.Position - len(t.Implementation()) + 1
+			}
+			log.Printf("nodeType.treeInstObject: cursor=%v, nCursor=%v\n", cursor, nCursor)
 			newNCursor := tree.Insert(nCursor)
 			p.AddToTree(tree, newNCursor)
 			// Update mirrored type in node:
@@ -337,10 +341,17 @@ func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 	switch obj.(type) {
 	case Implementation:
 		t.AddImplementation(obj.(Implementation))
+		cursor.Position = len(t.Implementation()) - 1
 
 	case NamedPortType:
 		pt := obj.(NamedPortType)
 		t.AddNamedPortType(pt) // adds ports of all instances, linked io-nodes in graph implementation
+		// Adjust offset to insert:
+		if pt.Direction() == InPort {
+			cursor.Position = len(t.Implementation()) + len(t.InPorts()) - 1
+		} else {
+			cursor.Position = -1
+		}
 
 	default:
 		log.Fatalf("nodeType.AddNewObject error: invalid type %T\n", obj)

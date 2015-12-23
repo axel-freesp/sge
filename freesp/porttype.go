@@ -74,7 +74,7 @@ func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {
 	if tree.Property(parentId).IsReadOnly() {
 		prop = 0
 	} else {
-		prop = mayEdit | mayRemove
+		prop = mayEdit | mayRemove | mayAddObject
 	}
 	var kind Symbol
 	if p.Direction() == InPort {

@@ -97,27 +97,27 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create menuEdit:", err)
 	}
-	m.editmenu, err = gtk.MenuItemNewWithLabel("Edit")
+	m.editmenu, err = gtk.MenuItemNewWithMnemonic("_Edit")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editUndo, err = gtk.MenuItemNewWithLabel("Undo")
+	m.editUndo, err = gtk.MenuItemNewWithMnemonic("_Undo")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editRedo, err = gtk.MenuItemNewWithLabel("Redo")
+	m.editRedo, err = gtk.MenuItemNewWithMnemonic("_Redo")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editNew, err = gtk.MenuItemNewWithLabel("New Element")
+	m.editNew, err = gtk.MenuItemNewWithMnemonic("_New Element")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editCopy, err = gtk.MenuItemNewWithLabel("Copy")
+	m.editCopy, err = gtk.MenuItemNewWithMnemonic("_Copy")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
-	m.editDelete, err = gtk.MenuItemNewWithLabel("Delete")
+	m.editDelete, err = gtk.MenuItemNewWithMnemonic("_Delete")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}

@@ -1,80 +1,91 @@
 package main
 
 import (
+	"github.com/axel-freesp/sge/tool"
 	"log"
 )
 
 const jobListCapacity = 10
 
 type IJobApplier interface {
-	Apply(job interface{}) error
-	Revert(job interface{}) error
+	Apply(job interface{}) (state interface{}, err error)
+	Revert(job interface{}) (state interface{}, err error)
 }
 
 type IJobList interface {
-	Undo()
-	Redo()
+	Undo() (state interface{}, ok bool)
+	Redo() (state interface{}, ok bool)
 	CanUndo() bool
 	CanRedo() bool
-	Apply(job interface{}) (ok bool)
+	Apply(job interface{}) (state interface{}, ok bool)
 }
 
 type jobList struct {
-	// IJobList
-	undoStack, redoStack []interface{}
+	undoStack, redoStack *tool.Stack
 	system               IJobApplier
 }
 
+var _ IJobList = (*jobList)(nil)
+
 func jobListNew(system IJobApplier) *jobList {
-	j := &jobList{make([]interface{}, 0, jobListCapacity),
-		make([]interface{}, 0, jobListCapacity),
-		system}
+	j := &jobList{tool.StackNew(), tool.StackNew(), system}
 	return j
 }
 
-func (j *jobList) Undo() {
-	log.Println("jobList.Undo")
-	undoLen := len(j.undoStack)
-	if undoLen > 0 {
-		job := j.undoStack[undoLen-1]
-		j.redoStack = append(j.redoStack, job)
-		j.undoStack = j.undoStack[:undoLen-1]
-		j.system.Revert(job)
-	}
+func (j *jobList) reset() {
+	j.undoStack.Reset()
+	j.redoStack.Reset()
 }
 
-func (j *jobList) Redo() {
-	log.Println("jobList.Redo")
-	redoLen := len(j.redoStack)
-	if redoLen > 0 {
-		job := j.redoStack[redoLen-1]
-		err := j.system.Apply(job)
-		if err == nil {
-			j.undoStack = append(j.undoStack, job)
-			j.redoStack = j.redoStack[:redoLen-1]
-		} else {
-			j.undoStack = j.undoStack[:0]
-			j.redoStack = j.redoStack[:0]
+func (j *jobList) Undo() (state interface{}, ok bool) {
+	ok = false
+	if j.CanUndo() {
+		job := j.undoStack.Pop()
+		j.redoStack.Push(job)
+		var err error
+		state, err = j.system.Revert(job)
+		if err != nil {
+			log.Println("jobList.Undo error: ", err)
+			j.reset()
 		}
+		ok = true
 	}
+	return
 }
 
-func (j *jobList) Apply(job interface{}) (ok bool) {
-	log.Println("jobList.Apply", job)
-	err := j.system.Apply(job)
-	j.redoStack = j.redoStack[:0]
+func (j *jobList) Redo() (state interface{}, ok bool) {
+	ok = false
+	if j.CanRedo() {
+		job := j.redoStack.Pop()
+		j.undoStack.Push(job)
+		var err error
+		state, err = j.system.Apply(job)
+		if err != nil {
+			log.Println("jobList.Redo error: ", err)
+			j.reset()
+		}
+		ok = true
+	}
+	return
+}
+
+func (j *jobList) Apply(job interface{}) (state interface{}, ok bool) {
+	ok = false
+	state, err := j.system.Apply(job)
+	j.redoStack.Reset()
 	if err == nil {
-		j.undoStack = append(j.undoStack, job)
+		j.undoStack.Push(job)
+		ok = true
 	} else {
 		log.Println("jobList.Apply error: ", err)
 	}
-	return err == nil
+	return
 }
 
 func (j *jobList) CanUndo() bool {
-	return true
+	return !j.undoStack.IsEmpty()
 }
 
 func (j *jobList) CanRedo() bool {
-	return len(j.redoStack) > 0
+	return !j.redoStack.IsEmpty()
 }

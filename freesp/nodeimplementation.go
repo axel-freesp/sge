@@ -63,7 +63,7 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 		if impl.ImplementationType() == NodeTypeGraph {
 			prop = mayAddObject | mayRemove
 		} else {
-			prop = mayEdit | mayRemove
+			prop = mayEdit | mayRemove | mayAddObject
 		}
 	case Node:
 		prop = 0

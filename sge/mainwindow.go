@@ -25,6 +25,7 @@ var (
 type selectionArg struct {
 	treeStore *models.FilesTreeStore
 	xmlview   *views.XmlTextView
+	menu      *GoAppMenu
 }
 
 func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
@@ -41,6 +42,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
 				log.Fatal("treeSelectionChangedCB: Can't show root element")
 			}
 		}
+		MenuEditCurrent(arg.menu, treeStore, jl)
 		xmlview.Set(obj)
 	}
 }
@@ -88,7 +90,7 @@ func main() {
 		log.Fatal("Could not get tree selection object.")
 	}
 	selection.SetMode(gtk.SELECTION_SINGLE)
-	arg := &selectionArg{fts, xmlview}
+	arg := &selectionArg{fts, xmlview, menu}
 	selection.Connect("changed", treeSelectionChangedCB, arg)
 
 	if len(unhandledArgs) < 2 {

@@ -251,7 +251,6 @@ func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (new
 
 	case NamedPortType:
 		pt := obj.(NamedPortType)
-		// Port in original type
 		newCursor = tree.Insert(cursor)
 		pt.AddToTree(tree, newCursor)
 		for _, impl := range t.Implementation() {
@@ -322,7 +321,6 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 			if cursor.Position >= 0 {
 				nCursor.Position = cursor.Position - len(t.Implementation()) + 1
 			}
-			log.Printf("nodeType.treeInstObject: cursor=%v, nCursor=%v\n", cursor, nCursor)
 			newNCursor := tree.Insert(nCursor)
 			p.AddToTree(tree, newNCursor)
 			// Update mirrored type in node:
@@ -368,15 +366,16 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
-	log.Printf("nodeType) treeRemoveObject cursor=%v, obj=%v\n", cursor, obj)
 	switch obj.(type) {
 	case Implementation:
 		impl := obj.(Implementation)
 		if impl.ImplementationType() == NodeTypeGraph {
 			// TODO: This is redundant with implementation.go
-			// Simply remove all nodes?
-			// Return all removed edges and nodes
-			for _, n := range impl.Graph().InputNodes() {
+			// Simply remove all nodes? Do not traverse a modifying list...
+			// Removed Input- and Output nodes are NOT stored (they are
+			// created automatically when adding the implementation graph).
+			// Return all removed edges ...
+			for _, n := range impl.Graph().Nodes() {
 				nCursor := tree.Cursor(n)
 				for _, p := range n.OutPorts() {
 					pCursor := tree.CursorAt(nCursor, p)
@@ -385,19 +384,12 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 					}
 				}
-				// Removed Input- and Output nodes are NOT stored (they are
-				// created automatically when adding the implementation graph).
 			}
+			// ... and processing nodes
 			for _, n := range impl.Graph().ProcessingNodes() {
 				nCursor := tree.Cursor(n)
-				for _, p := range n.OutPorts() {
-					pCursor := tree.CursorAt(nCursor, p)
-					for index, c := range p.Connections() {
-						conn := Connection{p, c}
-						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
-					}
-				}
-				nIndex := IndexOfNodeInGraph(tree, n)
+				gCursor := tree.Parent(nCursor)
+				nIndex := gCursor.Position
 				removed = append(removed, IdWithObject{nCursor.Path, nIndex, n})
 			}
 		}
@@ -422,7 +414,6 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
 						conn := p.(*port).Connection(c.(*port))
-						log.Println("nodeType.treeRemoveObject: saving connection", conn)
 						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
@@ -430,13 +421,11 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
 						conn := p.(*port).Connection(c.(*port))
-						log.Println("nodeType.treeRemoveObject: saving connection", conn)
 						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
 				// Remove (but dont store) the nodes linked to the outer ports:
 				tree.Remove(nCursor)
-				//removed = append(removed, IdWithObject{prefix, index, n})
 			}
 		}
 
@@ -453,7 +442,6 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
-	log.Printf("nodeType) treeRemoveInstObject cursor=%v, obj=%v\n", cursor, obj)
 	switch obj.(type) {
 	case Implementation:
 		for _, n := range t.Instances() {
@@ -481,22 +469,15 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 				}
 			}
 			_ = p.(*port)
-			log.Printf("nodeType.RemoveObject p=%v - nt.Name()=%s\n", p, nt.Name())
 			pCursor := tree.CursorAt(nCursor, p)
-			//del := n.RemoveObject(tree, pCursor)
 			prefix, index := tree.Remove(pCursor)
 			removed = append(removed, IdWithObject{prefix, index, p})
-			//for _, d := range del {
-			//    removed = append(removed, d)
-			//}
 			tCursor := tree.CursorAt(nCursor, obj)
-			//tCursor.Position = cursor.Position
 			del := t.treeRemoveObject(tree, tCursor)
 			for _, d := range del {
 				removed = append(removed, d)
 			}
 			tree.Remove(tCursor)
-			//removed = append(removed, IdWithObject{prefix, index, obj})
 		}
 
 	default:
@@ -511,8 +492,6 @@ func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
-	log.Printf("nodeType) RemoveObject cursor=%v, obj=%v\n", cursor, obj)
-
 	del := t.treeRemoveObject(tree, cursor)
 	for _, d := range del {
 		removed = append(removed, d)

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	//"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"log"
 )
@@ -44,9 +44,10 @@ func (e *EditorJob) String() string {
 }
 
 type jobApplier struct {
-	// IJobApplier
 	fts *models.FilesTreeStore
 }
+
+var _ IJobApplier = (*jobApplier)(nil)
 
 func jobApplierNew(fts *models.FilesTreeStore) *jobApplier {
 	j := &jobApplier{fts}
@@ -54,35 +55,53 @@ func jobApplierNew(fts *models.FilesTreeStore) *jobApplier {
 	return j
 }
 
-func (a *jobApplier) Apply(jobI interface{}) (err error) {
+func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
 		object := job.newElement.CreateObject(a.fts)
 		job.newElement.newId, err = a.fts.AddNewObject(job.newElement.parentId, -1, object)
+		if err == nil {
+			state = job.newElement.newId
+		} else {
+			state = a.fts.GetCurrentId()
+			log.Printf("jobApplier.Apply: error: %s\n", err)
+		}
 	case JobDeleteObject:
 		job.deleteObject.deletedObjects, err = a.fts.DeleteObject(job.deleteObject.id)
+		if err == nil {
+			d := job.deleteObject.deletedObjects[len(job.deleteObject.deletedObjects)-1]
+			state = d.ParentId
+		} else {
+			state = a.fts.GetCurrentId()
+			log.Printf("jobApplier.Apply: error: %s\n", err)
+		}
 	}
 	return
 }
 
-func (a *jobApplier) Revert(jobI interface{}) (err error) {
+func (a *jobApplier) Revert(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		log.Println("jobApplier.Revert: delete added object at ", job.newElement.newId)
-		_, err = a.fts.DeleteObject(job.newElement.newId)
-		if err != nil {
-			log.Println(err)
+		var del []freesp.IdWithObject
+		del, err = a.fts.DeleteObject(job.newElement.newId)
+		if err == nil {
+			state = del[0].ParentId
+		} else {
+			state = a.fts.GetCurrentId()
+			log.Printf("jobApplier.Revert: error: %s\n", err)
 		}
 	case JobDeleteObject:
-		var i int
-		for i = len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {
-			d := job.deleteObject.deletedObjects[i]
-			log.Printf("jobApplier.Revert: adding deleted object %v at %s/%d\n", d.Object, d.ParentId, d.Position)
+		d := job.deleteObject.deletedObjects[len(job.deleteObject.deletedObjects)-1]
+		state = fmt.Sprintf("%s:%d", d.ParentId, d.Position)
+		for i := len(job.deleteObject.deletedObjects) - 1; i >= 0; i-- {
+			d = job.deleteObject.deletedObjects[i]
 			_, err = a.fts.AddNewObject(d.ParentId, d.Position, d.Object)
 			if err != nil {
-				log.Println(err)
+				state = a.fts.GetCurrentId()
+				log.Printf("jobApplier.Revert: error: %s\n", err)
+				return
 			}
 		}
 	}

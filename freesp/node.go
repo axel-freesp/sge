@@ -78,7 +78,7 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 	if IsParentReadOnly(tree, cursor) {
 		prop = 0
 	} else {
-		prop = mayEdit | mayRemove
+		prop = mayEdit | mayRemove | mayAddObject
 	}
 	var isImplementation bool
 	var nodeType NodeType
@@ -188,13 +188,6 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	default:
 		log.Fatal("Node.RemoveObject error: invalid type %T", obj)
 	}
-	return
-}
-
-func IndexOfNodeInGraph(tree Tree, n Node) (index int) {
-	nCursor := tree.Cursor(n)
-	gCursor := tree.Parent(nCursor)
-	index = gCursor.Position
 	return
 }
 

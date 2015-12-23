@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
@@ -8,25 +9,55 @@ import (
 )
 
 func MenuEditInit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	menu.editUndo.Connect("activate", func() { editUndo(fts, jl) })
-	menu.editRedo.Connect("activate", func() { editRedo(fts, jl) })
-	menu.editNew.Connect("activate", func() { editNew(fts, jl, ftv) })
+	menu.editUndo.Connect("activate", func() { editUndo(menu, fts, jl, ftv) })
+	menu.editRedo.Connect("activate", func() { editRedo(menu, fts, jl, ftv) })
+	menu.editNew.Connect("activate", func() { editNew(menu, fts, jl, ftv) })
 	menu.editCopy.Connect("activate", func() { editCopy(fts) })
-	menu.editDelete.Connect("activate", func() { editDelete(fts, jl, ftv) })
+	menu.editDelete.Connect("activate", func() { editDelete(menu, fts, jl, ftv) })
 }
 
-func editUndo(fts *models.FilesTreeStore, jl IJobList) {
+func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
+	cursor := freesp.Cursor{fts.GetCurrentId(), freesp.AppendCursor}
+	prop := fts.Property(cursor)
+	menu.editNew.SetSensitive(prop.MayAddObject())
+	menu.editDelete.SetSensitive(prop.MayRemove())
+	menu.editUndo.SetSensitive(jl.CanUndo())
+	menu.editRedo.SetSensitive(jl.CanRedo())
+}
+
+func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
 	log.Println("editUndo")
-	jl.Undo()
+	defer MenuEditCurrent(menu, fts, jl)
+	state, ok := jl.Undo()
+	if ok {
+		path, err := gtk.TreePathNewFromString(state.(string))
+		if err != nil {
+			log.Println("editNew error: TreePathNewFromString failed:", err)
+			return
+		}
+		ftv.TreeView().ExpandToPath(path)
+		ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
+	}
 }
 
-func editRedo(fts *models.FilesTreeStore, jl IJobList) {
+func editRedo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
 	log.Println("editRedo")
-	jl.Redo()
+	defer MenuEditCurrent(menu, fts, jl)
+	state, ok := jl.Redo()
+	if ok {
+		path, err := gtk.TreePathNewFromString(state.(string))
+		if err != nil {
+			log.Println("editNew error: TreePathNewFromString failed:", err)
+			return
+		}
+		ftv.TreeView().ExpandToPath(path)
+		ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
+	}
 }
 
-func editNew(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
+func editNew(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
 	log.Println("editNew")
+	defer MenuEditCurrent(menu, fts, jl)
 	dialog, err := NewElementDialogNew(fts)
 	if err != nil {
 		log.Println("editNew error: ", err)
@@ -34,8 +65,9 @@ func editNew(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) 
 	}
 	job, ok := dialog.Run(fts)
 	if ok {
-		if jl.Apply(job) {
-			path, err := gtk.TreePathNewFromString(job.newElement.newId)
+		state, ok := jl.Apply(job)
+		if ok {
+			path, err := gtk.TreePathNewFromString(state.(string))
 			if err != nil {
 				log.Println("editNew error: TreePathNewFromString failed:", err)
 				return
@@ -51,21 +83,18 @@ func editCopy(fts *models.FilesTreeStore) {
 	log.Println("editCopy")
 }
 
-func editDelete(fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
+func editDelete(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
 	log.Println("editDelete")
+	defer MenuEditCurrent(menu, fts, jl)
 	job := DeleteObjectJobNew(fts.GetCurrentId())
-	if jl.Apply(EditorJobNew(JobDeleteObject, job)) {
-		log.Printf("Deleted %d objects\n", len(job.deletedObjects))
-		var parentId string
-		for _, d := range job.deletedObjects {
-			log.Println(d)
-			parentId = d.ParentId
-		}
-		path, err := gtk.TreePathNewFromString(parentId)
+	state, ok := jl.Apply(EditorJobNew(JobDeleteObject, job))
+	if ok {
+		path, err := gtk.TreePathNewFromString(state.(string))
 		if err != nil {
 			log.Println("editNew error: TreePathNewFromString failed:", err)
 			return
 		}
+		ftv.TreeView().ExpandToPath(path)
 		ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
 	}
 }

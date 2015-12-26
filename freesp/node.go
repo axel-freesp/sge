@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"log"
+	"image"
 )
 
 type node struct {
@@ -12,6 +13,7 @@ type node struct {
 	inPort   portList
 	outPort  portList
 	portlink NamedPortType
+	position image.Point
 }
 
 /*
@@ -20,7 +22,7 @@ type node struct {
 var _ Node = (*node)(nil)
 
 func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
-	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), portListInit(), portListInit(), nil}
+	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), portListInit(), portListInit(), nil, image.Point{0, 0}}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p.(*namedPortType))
 	}
@@ -29,10 +31,6 @@ func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
 	}
 	ntype.(*nodeType).addInstance(ret)
 	return ret
-}
-
-func (n *node) NodeName() string {
-	return n.name
 }
 
 func (n *node) ItsType() NodeType {
@@ -66,16 +64,11 @@ func (n *node) String() (s string) {
  *  TreeElement API
  */
 
-func IsParentReadOnly(tree Tree, cursor Cursor) bool {
-	parentId := tree.Parent(cursor)
-	return tree.Property(parentId).IsReadOnly()
-}
-
 var _ TreeElement = (*node)(nil)
 
 func (n *node) AddToTree(tree Tree, cursor Cursor) {
 	var prop property
-	if IsParentReadOnly(tree, cursor) {
+	if isParentReadOnly(tree, cursor) {
 		prop = 0
 	} else {
 		prop = mayEdit | mayRemove | mayAddObject
@@ -85,13 +78,13 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case SignalGraphType:
+	case SignalGraph:
 		isImplementation = false
 	case Implementation:
 		isImplementation = true
 		nodeType = tree.Object(tree.Parent(parentId)).(NodeType)
 	default:
-		log.Fatalf("node.AddToTree error: invalid parent type %T\n", parent)
+		log.Panicf("node.AddToTree error: invalid parent type %T\n", parent)
 	}
 	var image Symbol
 	if len(n.InPorts()) == 0 { // TODO: check if linked to parent port
@@ -105,7 +98,7 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 		for _, p := range n.InPorts() {
 			found := false
 			for _, p2 := range nodeType.InPorts() {
-				if p.PortName() == p2.Name() && n.NodeName() == fmt.Sprintf("in-%s", p2.Name()) {
+				if p.PortName() == p2.Name() && n.Name() == fmt.Sprintf("in-%s", p2.Name()) {
 					found = true
 					break
 				}
@@ -119,7 +112,7 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 		for _, p := range n.OutPorts() {
 			found := false
 			for _, p2 := range nodeType.OutPorts() {
-				if p.PortName() == p2.Name() && n.NodeName() == fmt.Sprintf("out-%s", p2.Name()) {
+				if p.PortName() == p2.Name() && n.Name() == fmt.Sprintf("out-%s", p2.Name()) {
 					found = true
 					break
 				}
@@ -137,7 +130,7 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 			image = SymbolProcessingNode
 		}
 	}
-	err := tree.AddEntry(cursor, image, n.NodeName(), n, prop)
+	err := tree.AddEntry(cursor, image, n.Name(), n, prop)
 	if err != nil {
 		log.Fatalf("node.AddToTree error: AddEntry failed: %s\n", err)
 	}
@@ -189,16 +182,6 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		log.Fatal("Node.RemoveObject error: invalid type %T", obj)
 	}
 	return
-}
-
-func IsProcessingNode(n Node) bool {
-	if len(n.InPorts()) == 0 {
-		return false
-	}
-	if len(n.OutPorts()) == 0 {
-		return false
-	}
-	return true
 }
 
 /*
@@ -273,6 +256,59 @@ func (n *node) removePort(pt *namedPortType) {
 	}
 	list.Remove(toRemove)
 }
+
+func isParentReadOnly(tree Tree, cursor Cursor) bool {
+	parentId := tree.Parent(cursor)
+	return tree.Property(parentId).IsReadOnly()
+}
+
+func IsProcessingNode(n Node) bool {
+	if len(n.InPorts()) == 0 {
+		return false
+	}
+	if len(n.OutPorts()) == 0 {
+		return false
+	}
+	return true
+}
+
+/*
+ *      Positioner API
+ */
+
+func (n *node) Position() (p image.Point) {
+	return
+}
+
+func (n *node) SetPosition(image.Point) {
+}
+
+var _ Positioner = (*node)(nil)
+
+/*
+ *      Namer API
+ */
+
+func (n *node) Name() string {
+	return n.name
+}
+
+var _ Namer = (*node)(nil)
+
+/*
+ *      Porter API
+ */
+
+func (n *node) NumInPorts() int {
+	return len(n.InPorts())
+}
+
+func (n *node) NumOutPorts() int {
+	return len(n.OutPorts())
+}
+
+var _ Porter = (*node)(nil)
+
 
 /*
  *      nodeList

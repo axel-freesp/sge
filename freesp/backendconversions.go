@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// Conversions: freesp interface type -> backend XML type
-// TODO: move to freesp
-
 func CreateXmlInPort(p Port) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.PortName(), p.ItsType().TypeName())
 }
@@ -29,13 +26,14 @@ func CreateXmlInputNode(n Node) *backend.XmlInputNode {
 	if strings.HasPrefix(tName, "autoInputNodeType-") {
 		tName = ""
 	}
-	ret := backend.XmlInputNodeNew(n.NodeName(), tName)
-	//for _, p := range n.OutPorts() {
-	//	ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
-	//}
+	ret := backend.XmlInputNodeNew(n.Name(), tName)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
-	}
+	} else {
+        for _, p := range n.OutPorts() {
+        	ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+        }
+    }
 	return ret
 }
 
@@ -44,18 +42,19 @@ func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
 	if strings.HasPrefix(tName, "autoOutputNodeType-") {
 		tName = ""
 	}
-	ret := backend.XmlOutputNodeNew(n.NodeName(), tName)
-	//for _, p := range n.InPorts() {
-	//	ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
-	//}
+	ret := backend.XmlOutputNodeNew(n.Name(), tName)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
-	}
+	} else {
+        for _, p := range n.InPorts() {
+        	ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
+        }
+    }
 	return ret
 }
 
 func CreateXmlProcessingNode(n Node) *backend.XmlProcessingNode {
-	ret := backend.XmlProcessingNodeNew(n.NodeName(), n.ItsType().TypeName())
+	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName())
 	if len(n.ItsType().DefinedAt()) == 0 {
 		for _, p := range n.InPorts() {
 			ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
@@ -92,9 +91,9 @@ func CreateXmlImplementation(impl Implementation) *backend.XmlImplementation {
 func CreateXmlConnection(p Connection) *backend.XmlConnect {
 	switch p.From.Direction() {
 	case OutPort:
-		return backend.XmlConnectNew(p.From.Node().NodeName(), p.To.Node().NodeName(), p.From.PortName(), p.To.PortName())
+		return backend.XmlConnectNew(p.From.Node().Name(), p.To.Node().Name(), p.From.PortName(), p.To.PortName())
 	default:
-		return backend.XmlConnectNew(p.To.Node().NodeName(), p.From.Node().NodeName(), p.To.PortName(), p.From.PortName())
+		return backend.XmlConnectNew(p.To.Node().Name(), p.From.Node().Name(), p.To.PortName(), p.From.PortName())
 	}
 }
 

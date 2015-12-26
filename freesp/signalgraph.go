@@ -73,7 +73,7 @@ func (s *signalGraph) SetFilename(filename string) {
 var _ TreeElement = (*signalGraph)(nil)
 
 func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t.ItsType(), mayAddObject)
+	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t, mayAddObject)
 	if err != nil {
 		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
 	}
@@ -81,13 +81,11 @@ func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
 }
 
 func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
-	log.Fatal("signalGraph.AddNewObject - nothing to add.")
-	return
+	return t.ItsType().AddNewObject(tree, cursor, obj)
 }
 
 func (t *signalGraph) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
-	log.Fatal("signalGraph.RemoveObject - nothing to remove.")
-	return
+	return t.ItsType().RemoveObject(tree, cursor)
 }
 
 /*

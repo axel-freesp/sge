@@ -99,7 +99,7 @@ var _ fmt.Stringer = (*port)(nil)
 
 func (p *port) String() (s string) {
 	s = fmt.Sprintf("%sPort of node %s(%s, %d connections)",
-		p.direction, p.Node().NodeName(), p.name, len(p.connections))
+		p.direction, p.Node().Name(), p.name, len(p.connections))
 	return
 }
 

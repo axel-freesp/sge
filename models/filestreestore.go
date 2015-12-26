@@ -342,7 +342,7 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter 
 func (s *FilesTreeStore) Cursor(obj freesp.TreeElement) (cursor freesp.Cursor) {
 	_, path, err := s.getIterAndPathFromObject(obj)
 	if err != nil {
-		log.Fatalf("FilesTreeStore.Cursor: obj %T: %v not found.\n", obj, obj)
+		log.Panic("FilesTreeStore.Cursor: obj %T: %v not found.\n", obj, obj)
 	}
 	return freesp.Cursor{path, freesp.AppendCursor}
 }

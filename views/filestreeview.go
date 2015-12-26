@@ -26,7 +26,7 @@ func (v *FilesTreeView) TreeView() *gtk.TreeView {
 	return v.view
 }
 
-// Initialize view to render text:
+// Initialize view to reflect the model:
 func (v *FilesTreeView) init(model *models.FilesTreeStore) error {
 	renderer1, err := gtk.CellRendererTextNew()
 	if err != nil {

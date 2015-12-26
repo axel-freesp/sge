@@ -6,12 +6,6 @@ import (
 	"log"
 )
 
-func LibraryNew(filename string) *library {
-	ret := &library{filename, signalTypeListInit(), nodeTypeListInit()}
-	libraries[filename] = ret
-	return ret
-}
-
 type library struct {
 	filename    string
 	signalTypes signalTypeList
@@ -19,6 +13,12 @@ type library struct {
 }
 
 var _ Library = (*library)(nil)
+
+func LibraryNew(filename string) *library {
+	ret := &library{filename, signalTypeListInit(), nodeTypeListInit()}
+	libraries[filename] = ret
+	return ret
+}
 
 func (l *library) Filename() string {
 	return l.filename
@@ -91,7 +91,12 @@ func (s *library) WriteFile(filepath string) error {
 }
 
 func (s *library) SetFilename(filename string) {
+	delete(libraries, s.filename)
 	s.filename = filename
+	for _, t := range s.NodeTypes() {
+		t.(*nodeType).definedAt = filename
+	}
+	libraries[filename] = s
 }
 
 func (l *library) AddNodeType(t NodeType) error {
@@ -240,11 +245,12 @@ func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 
 	case NodeType:
 		nt := tree.Object(cursor).(NodeType)
+		log.Printf("library.RemoveObject: nt=%v\n", nt)
 		if len(nt.Instances()) > 0 {
 			log.Printf(`library.RemoveObject warning: The following nodes
 				are still instances of NodeType %s:\n`, nt.TypeName())
 			for _, n := range nt.Instances() {
-				log.Printf("	%s\n", n.NodeName())
+				log.Printf("	%s\n", n.Name())
 			}
 			return
 		}

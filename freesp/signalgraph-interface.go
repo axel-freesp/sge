@@ -70,7 +70,9 @@ const (
 
 type Node interface {
 	TreeElement
-	NodeName() string
+	Namer
+	Positioner
+	Porter
 	ItsType() NodeType
 	Context() SignalGraphType
 	InPorts() []Port

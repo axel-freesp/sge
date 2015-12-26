@@ -31,7 +31,7 @@ func (w *GoAppWindow) Init(width, height int) (err error) {
 		gtk.MainQuit()
 	})
 	w.window.SetTitle("Go Application")
-	w.window.SetDefaultSize(600, 400)
+	w.window.SetDefaultSize(width, height)
 	w.layout_box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
 	if err != nil {
 		log.Println("Unable to create layout box:", err)

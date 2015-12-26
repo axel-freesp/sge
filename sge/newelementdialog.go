@@ -139,10 +139,9 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	case freesp.Port:
 		thisPort = object.(freesp.Port)
 	case freesp.Connection:
-		conn := object.(freesp.Connection)
-		thisPort = conn.From
+		log.Fatal("getMatchingPorts error: expecting Port, not Connection")
 	default:
-		return []freesp.Port{}
+		log.Fatal("getMatchingPorts error: expecting Port")
 	}
 	thisNode := thisPort.Node()
 	graph := thisNode.Context()
@@ -270,8 +269,15 @@ var inputHandling = map[inputElement]inputElementHandling{
 			if err != nil {
 				log.Fatalf("Internal error: FileTreeStore.GetObjectById(GetCurrentId()) failed\n")
 			}
+			switch object.(type) {
+			case freesp.Port:
+			case freesp.Connection:
+				object = dialog.fts.Object(dialog.fts.Parent(freesp.Cursor{dialog.fts.GetCurrentId(), -1}))
+			default:
+				return
+			}
 			for _, p := range getMatchingPorts(dialog.fts, object) {
-				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().NodeName(), p.PortName()))
+				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().Name(), p.PortName()))
 			}
 			return newComboBox(&dialog.portSelector, choices)
 		},
@@ -425,7 +431,7 @@ func (dialog *NewElementDialog) init(fts *models.FilesTreeStore) (err error) {
 
 	d.AddButton("Cancel", gtk.RESPONSE_CANCEL)
 	d.AddButton("OK", gtk.RESPONSE_OK)
-	d.SetDefaultResponse(gtk.RESPONSE_CANCEL)
+	d.SetDefaultResponse(gtk.RESPONSE_OK)
 	d.ShowAll()
 	if len(selectorChoices) > 0 {
 		dialog.stack.SetVisibleChildName(string(selectorChoices[0]))

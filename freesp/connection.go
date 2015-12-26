@@ -13,8 +13,8 @@ var _ fmt.Stringer = Connection{}
 
 func (c Connection) String() (s string) {
 	s = fmt.Sprintf("Connection(%s/%s -> %s/%s)",
-		c.From.Node().NodeName(), c.From.PortName(),
-		c.To.Node().NodeName(), c.To.PortName())
+		c.From.Node().Name(), c.From.PortName(),
+		c.To.Node().Name(), c.To.PortName())
 	return
 }
 
@@ -25,8 +25,8 @@ func (c Connection) String() (s string) {
 var _ TreeElement = Connection{}
 
 func (c Connection) AddToTree(tree Tree, cursor Cursor) {
-	text := fmt.Sprintf("%s/%s -> %s/%s", c.From.Node().NodeName(), c.From.PortName(),
-		c.To.Node().NodeName(), c.To.PortName())
+	text := fmt.Sprintf("%s/%s -> %s/%s", c.From.Node().Name(), c.From.PortName(),
+		c.To.Node().Name(), c.To.PortName())
 	err := tree.AddEntry(cursor, SymbolConnection, text, c, mayRemove)
 	if err != nil {
 		log.Fatal("Connection.AddToTree error: AddEntry failed: %s", err)

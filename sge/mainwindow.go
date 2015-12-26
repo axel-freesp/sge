@@ -109,6 +109,11 @@ func main() {
 			if err1 == nil {
 				log.Println("Loading signal graph", filepath)
 				fts.AddSignalGraphFile(p, sg)
+				graphview, err := views.GraphViewNew(sg, width, height)
+				if err != nil {
+					log.Fatal("Could not create graph view.")
+				}
+				win.stack.AddTitled(graphview.Widget(), "Graph View", "Graph View")
 				continue
 			}
 			var lib freesp.Library

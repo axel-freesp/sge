@@ -70,6 +70,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			log.Println(err)
 			return
 		}
+		sg.SetFilename(filenameToShow(filename))
 		newId, err := fts.AddSignalGraphFile(filename, sg)
 		if err != nil {
 			log.Println(err)
@@ -77,12 +78,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		}
 		setCursorNewId(ftv, newId)
 	case "alml":
-		lib := freesp.LibraryNew(filename)
+		lib := freesp.LibraryNew(filenameToShow(filename))
 		err := lib.ReadFile(filename)
 		if err != nil {
 			log.Println(err)
 			return
 		}
+		lib.SetFilename(filenameToShow(filename))
 		newId, err := fts.AddLibraryFile(filename, lib)
 		if err != nil {
 			log.Println(err)
@@ -102,9 +104,9 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 	obj := getCurrentTopObject(fts)
 	switch obj.(type) {
 	case freesp.SignalGraph:
-		obj.(freesp.SignalGraph).SetFilename(filename)
+		obj.(freesp.SignalGraph).SetFilename(filenameToShow(filename))
 	case freesp.Library:
-		obj.(freesp.Library).SetFilename(filename)
+		obj.(freesp.Library).SetFilename(filenameToShow(filename))
 	default:
 		log.Fatalf("fileSaveAs error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
 	}
@@ -266,3 +268,14 @@ func getFilenameProposal(fts *models.FilesTreeStore) (filename string) {
 	}
 	return
 }
+
+func filenameToShow(filepath string) (filename string) {
+	if tool.IsSubPath(currentDir, filepath) {
+		filename = tool.RelPath(currentDir, filepath)
+	} else {
+		filename = filepath
+	}
+	return
+}
+
+

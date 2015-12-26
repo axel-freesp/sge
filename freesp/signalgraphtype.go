@@ -3,25 +3,9 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/tool"
 	"log"
+    "image"
 )
-
-var signalTypes map[string]*signalType
-var nodeTypes map[string]*nodeType
-var portTypes map[string]*portType
-var libraries map[string]*library
-var registeredNodeTypes tool.StringList
-var registeredSignalTypes tool.StringList
-
-func Init() {
-	signalTypes = make(map[string]*signalType)
-	nodeTypes = make(map[string]*nodeType)
-	portTypes = make(map[string]*portType)
-	libraries = make(map[string]*library)
-	registeredNodeTypes = tool.StringListInit()
-	registeredSignalTypes = tool.StringListInit()
-}
 
 type signalGraphType struct {
 	libraries                                       []Library
@@ -44,7 +28,7 @@ func (t *signalGraphType) Nodes() []Node {
 
 func (t *signalGraphType) NodeByName(name string) Node {
 	for _, n := range t.nodes {
-		if n.NodeName() == name {
+		if n.Name() == name {
 			return n
 		}
 	}
@@ -93,6 +77,7 @@ func (t *signalGraphType) RemoveNode(n Node) {
 	RemNode(&t.inputNodes, n.(*node))
 	RemNode(&t.outputNodes, n.(*node))
 	RemNode(&t.processingNodes, n.(*node))
+    n.ItsType().(*nodeType).removeInstance(n.(*node))
 }
 
 func (t *signalGraphType) containsLibRef(libname string) bool {
@@ -251,6 +236,7 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
 	nd = NodeNew(nName, nt, t)
+    nd.position = image.Point{n.Hint.X, n.Hint.Y}
 	return
 }
 
@@ -264,12 +250,13 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolve
 		//ret.addInPort(pt)
 		ret.addOutPort(pt)
 	}
+    ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return ret
 }
 
 func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resolvePort func(portname string, dir PortDirection) *namedPortType) *node {
 	nName := n.NName
-	ntName := createInputNodeTypeName(nName)
+	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
 	ret := NodeNew(nName, nt, t)
 	pt := resolvePort(n.NPort, OutPort) // matches also empty names
@@ -277,6 +264,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 		ret.addInPort(pt)
 		//ret.addOutPort(pt)
 	}
+    ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return ret
 }
 
@@ -322,7 +310,7 @@ func (g *signalGraphType) addOutputNodeFromNamedPortType(p NamedPortType) {
 
 func (g *signalGraphType) removeInputNodeFromNamedPortType(p NamedPortType) {
 	for _, n := range g.InputNodes() {
-		if n.NodeName() == fmt.Sprintf("in-%s", p.Name()) {
+		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			g.RemoveNode(n)
 			return
 		}
@@ -331,7 +319,7 @@ func (g *signalGraphType) removeInputNodeFromNamedPortType(p NamedPortType) {
 
 func (g *signalGraphType) removeOutputNodeFromNamedPortType(p NamedPortType) {
 	for _, n := range g.OutputNodes() {
-		if n.NodeName() == fmt.Sprintf("out-%s", p.Name()) {
+		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			g.RemoveNode(n)
 			return
 		}
@@ -340,7 +328,7 @@ func (g *signalGraphType) removeOutputNodeFromNamedPortType(p NamedPortType) {
 
 func (g *signalGraphType) findInputNodeFromNamedPortType(p NamedPortType) Node {
 	for _, n := range g.InputNodes() {
-		if n.NodeName() == fmt.Sprintf("in-%s", p.Name()) {
+		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			return n
 		}
 	}
@@ -349,7 +337,7 @@ func (g *signalGraphType) findInputNodeFromNamedPortType(p NamedPortType) Node {
 
 func (g *signalGraphType) findOutputNodeFromNamedPortType(p NamedPortType) Node {
 	for _, n := range g.OutputNodes() {
-		if n.NodeName() == fmt.Sprintf("out-%s", p.Name()) {
+		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			return n
 		}
 	}

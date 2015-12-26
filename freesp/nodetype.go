@@ -20,18 +20,6 @@ func NodeTypeNew(name, definedAt string) *nodeType {
 		namedPortTypeListInit(), implementationListInit(), nodeListInit()}
 }
 
-// TODO:
-/*
- *
- * Information about TreeCursor is gone in case of redo...
- *
- * Re-think: insertion of deleted objects via AddNewObject - sucks with
- * automatic update of instances and implementation when creating new objects...
- *
- * TODO: carefully maintain list offsets in type definitions (~ #implementation)
- * and nodes (#typedef = 1)
- *
- * */
 func (t *nodeType) AddNamedPortType(p NamedPortType) {
 	pt := p.(*namedPortType)
 	if p.Direction() == InPort {
@@ -85,6 +73,10 @@ func (t *nodeType) Instances() []Node {
 
 func (t *nodeType) addInstance(n *node) {
 	t.instances.Append(n)
+}
+
+func (t *nodeType) removeInstance(n *node) {
+    t.instances.Remove(n)
 }
 
 func (t *nodeType) RemoveImplementation(imp Implementation) {

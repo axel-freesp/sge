@@ -7,6 +7,7 @@ import (
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
+	"github.com/axel-freesp/sge/views/graph"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
@@ -21,6 +22,23 @@ type Global struct {
 	win       *GoAppWindow
 	jl        *jobList
 	graphview []*views.GraphView
+	fts       *models.FilesTreeStore
+	ftv       *views.FilesTreeView
+}
+
+var _ views.Context = (*Global)(nil)
+
+func (g *Global) SelectNode(node graph.GObject) {
+	//log.Printf("Global.SelectNode: %v\n", node)
+	n := node.(freesp.Node)
+	cursor := g.fts.Cursor(n)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
+func (g *Global) EditNode(node graph.GObject) {
+	log.Printf("Global.EditNode: %v\n", node)
 }
 
 var global Global
@@ -73,15 +91,15 @@ func main() {
 		log.Fatal("Unable to initialize models:", err)
 	}
 
-	fts, err := models.FilesTreeStoreNew()
+	global.fts, err = models.FilesTreeStoreNew()
 	if err != nil {
 		log.Fatal("Unable to create FilesTreeStore:", err)
 	}
-	ftv, err := views.FilesTreeViewNew(fts, width/2, height)
+	global.ftv, err = views.FilesTreeViewNew(global.fts, width/2, height)
 	if err != nil {
 		log.Fatal("Unable to create FilesTreeView:", err)
 	}
-	global.win.navigation_box.Add(ftv.Widget())
+	global.win.navigation_box.Add(global.ftv.Widget())
 
 	xmlview, err := views.XmlTextViewNew(width, height)
 	if err != nil {
@@ -89,12 +107,12 @@ func main() {
 	}
 	global.win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
 
-	selection, err := ftv.TreeView().GetSelection()
+	selection, err := global.ftv.TreeView().GetSelection()
 	if err != nil {
 		log.Fatal("Could not get tree selection object.")
 	}
 	selection.SetMode(gtk.SELECTION_SINGLE)
-	arg := &selectionArg{fts, xmlview, menu}
+	arg := &selectionArg{global.fts, xmlview, menu}
 	selection.Connect("changed", treeSelectionChangedCB, arg)
 
 	// Handle command line arguments: treat each as a filename:
@@ -108,8 +126,8 @@ func main() {
 				err1 := sg.ReadFile(filepath)
 				if err1 == nil {
 					log.Println("Loading signal graph", filepath)
-					fts.AddSignalGraphFile(p, sg)
-					gv, err := views.GraphViewNew(sg, width, height)
+					global.fts.AddSignalGraphFile(p, sg)
+					gv, err := views.GraphViewNew(sg, width, height, &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -122,7 +140,7 @@ func main() {
 				err2 := lib.ReadFile(filepath)
 				if err2 == nil {
 					log.Println("Loading library file", filepath)
-					fts.AddLibraryFile(p, lib)
+					global.fts.AddLibraryFile(p, lib)
 					continue
 				}
 				log.Println("Warning: Could not read file ", filepath)
@@ -133,11 +151,11 @@ func main() {
 		}
 	}
 
-	japp := jobApplierNew(fts)
+	japp := jobApplierNew(global.fts)
 	global.jl = jobListNew(japp)
 
-	MenuFileInit(menu, fts, ftv)
-	MenuEditInit(menu, fts, global.jl, ftv)
+	MenuFileInit(menu)
+	MenuEditInit(menu)
 	MenuAboutInit(menu)
 
 	global.win.Window().ShowAll()

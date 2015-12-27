@@ -16,12 +16,12 @@ var (
 	currentDir string
 )
 
-func MenuFileInit(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
-	menu.fileNewSg.Connect("activate", func() { fileNewSg(fts, ftv) })
-	menu.fileNewLib.Connect("activate", func() { fileNewLib(fts, ftv) })
-	menu.fileOpen.Connect("activate", func() { fileOpen(fts, ftv) })
-	menu.fileSave.Connect("activate", func() { fileSave(fts) })
-	menu.fileSaveAs.Connect("activate", func() { fileSaveAs(fts) })
+func MenuFileInit(menu *GoAppMenu) {
+	menu.fileNewSg.Connect("activate", func() { fileNewSg(global.fts, global.ftv) })
+	menu.fileNewLib.Connect("activate", func() { fileNewLib(global.fts, global.ftv) })
+	menu.fileOpen.Connect("activate", func() { fileOpen(global.fts, global.ftv) })
+	menu.fileSave.Connect("activate", func() { fileSave(global.fts) })
+	menu.fileSaveAs.Connect("activate", func() { fileSaveAs(global.fts) })
 
 }
 
@@ -46,7 +46,7 @@ func fileNewSg(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		log.Printf("Warning: ftv.AddSignalGraphFile('%s') failed.\n", filename)
 	}
 	setCursorNewId(ftv, newId)
-	gv, err := views.GraphViewNew(sg, width, height)
+	gv, err := views.GraphViewNew(sg, width, height, &global)
 	if err != nil {
 		log.Fatal("fileNewSg: Could not create graph view.")
 	}
@@ -94,7 +94,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			return
 		}
 		setCursorNewId(ftv, newId)
-		gv, err := views.GraphViewNew(sg, width, height)
+		gv, err := views.GraphViewNew(sg, width, height, &global)
 		if err != nil {
 			log.Fatal("fileOpen: Could not create graph view.")
 		}

@@ -17,6 +17,7 @@ const (
 	PortX0
 	PortY0
 	PortDY
+	FontSize
 )
 
 func NumericOption(index int) int {
@@ -93,6 +94,7 @@ var defaultOptions = gOptions{
 		{"Port X0", -3},
 		{"Port Y0", 24},
 		{"Port DY", 12},
+		{"Font Size", 12},
 	},
 	[]optionColor{
 		{"Background", color.RGBA{240, 240, 240, 0xff}},
@@ -106,7 +108,7 @@ var defaultOptions = gOptions{
 		{"HighlightInPort", color.RGBA{255, 255, 120, 0xff}},
 		{"HighlightOutPort", color.RGBA{255, 255, 120, 0xff}},
 	},
-	[]optionString{
+	[]optionString{	// actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},
 	},
 }

@@ -8,7 +8,10 @@ import (
 	"log"
 )
 
-func MenuEditInit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
+func MenuEditInit(menu *GoAppMenu) {
+	fts := global.fts
+	jl := global.jl
+	ftv := global.ftv
 	menu.editUndo.Connect("activate", func() { editUndo(menu, fts, jl, ftv) })
 	menu.editRedo.Connect("activate", func() { editRedo(menu, fts, jl, ftv) })
 	menu.editNew.Connect("activate", func() { editNew(menu, fts, jl, ftv) })

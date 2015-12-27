@@ -12,10 +12,15 @@ import (
 	"log"
 )
 
-var (
+var ( // TODO: move to connection.go
 	nodeWidth  = graph.NumericOption(graph.NodeWidth)
 	nodeHeight = graph.NumericOption(graph.NodeHeight)
 )
+
+type Context interface {
+	SelectNode(node graph.GObject) // single click selection
+	EditNode(node graph.GObject)   // double click selection
+}
 
 type GraphView struct {
 	ScrolledView
@@ -23,6 +28,7 @@ type GraphView struct {
 	nodes       []graph.Dragable
 	connections []graph.Connection
 	signalGraph freesp.SignalGraph
+	context     Context
 
 	dragOffs              image.Point
 	selected, highlighted int
@@ -31,13 +37,13 @@ type GraphView struct {
 	width, height         int
 }
 
-func GraphViewNew(graph freesp.SignalGraph, width, height int) (viewer *GraphView, err error) {
+func GraphViewNew(graph freesp.SignalGraph, width, height int, context Context) (viewer *GraphView, err error) {
 	v, err := ScrolledViewNew(width, height)
 	if err != nil {
 		viewer = nil
 		return
 	}
-	viewer = &GraphView{*v, nil, nil, nil, graph, image.Point{}, -1, -1, false,
+	viewer = &GraphView{*v, nil, nil, nil, graph, context, image.Point{}, -1, -1, false,
 		image.Point{}, image.Point{}, image.Point{}, width, height}
 	err = viewer.init()
 	return
@@ -90,8 +96,6 @@ func (v *GraphView) Sync() {
 		box := image.Rect(pos.X, pos.Y, pos.X+nodeWidth, pos.Y+nodeHeight+numPorts(n)*dy)
 		v.nodes[i] = graph.NodeNew(box, n)
 	}
-	log.Printf("GraphView.init: initialized %d nodes\n", len(g.ItsType().Nodes()))
-
 	var index = 0
 	for _, n := range g.ItsType().Nodes() {
 		from := v.findNode(n.Name())
@@ -105,7 +109,6 @@ func (v *GraphView) Sync() {
 			}
 		}
 	}
-	log.Printf("GraphView.init: initialized %d edges\n", index)
 	v.DrawAll()
 }
 
@@ -219,12 +222,16 @@ func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 			if oldSelected >= 0 && v.selected != oldSelected {
 				v.repaintObj(v.nodes[oldSelected])
 			}
+			v.context.SelectNode(v.nodes[v.selected].UserObj())
 		} else if oldSelected >= 0 {
 			v.repaintObj(v.nodes[oldSelected])
 		}
 		v.button1Pressed = true
 	case gdk.EVENT_2BUTTON_PRESS:
 		log.Println("areaButtonCallback 2BUTTON_PRESS")
+		if v.selected != -1 {
+			v.context.EditNode(v.nodes[v.selected].UserObj())
+		}
 
 	case gdk.EVENT_BUTTON_RELEASE:
 		v.button1Pressed = false

@@ -12,7 +12,7 @@ type Global struct {
 	padX, padY,
 	portX0, portY0, portDY,
 	portW, portH,
-	textX, textY int
+	textX, textY, fontSize int
 }
 
 var global = Global{
@@ -25,6 +25,7 @@ var global = Global{
 	portH: NumericOption(PortH),
 	textX: NumericOption(NodeTextX),
 	textY: NumericOption(NodeTextY),
+	fontSize: NumericOption(FontSize),
 }
 
 type Node struct {
@@ -156,6 +157,7 @@ func drawBody(context *cairo.Context, x, y, w, h float64, name string, mode Colo
 	context.SetLineWidth(2)
 	context.Stroke()
 	context.SetSourceRGB(ColorOption(Text))
+	context.SetFontSize(float64(global.fontSize))
 	tx, ty := float64(global.textX), float64(global.textY)
 	context.MoveTo(x + tx, y + ty)
 	context.ShowText(name)

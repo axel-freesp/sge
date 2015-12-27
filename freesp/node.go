@@ -73,62 +73,13 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 	} else {
 		prop = mayEdit | mayRemove | mayAddObject
 	}
-	var isImplementation bool
-	var nodeType NodeType
-	parentId := tree.Parent(cursor)
-	parent := tree.Object(parentId)
-	switch parent.(type) {
-	case SignalGraph:
-		isImplementation = false
-	case Implementation:
-		isImplementation = true
-		nodeType = tree.Object(tree.Parent(parentId)).(NodeType)
-	default:
-		log.Panicf("node.AddToTree error: invalid parent type %T\n", parent)
-	}
 	var image Symbol
-	if len(n.InPorts()) == 0 { // TODO: check if linked to parent port
-		image = SymbolOutputNode
-	} else if len(n.OutPorts()) == 0 {
+	if len(n.InPorts()) == 0 {
 		image = SymbolInputNode
-	} else if !isImplementation {
-		image = SymbolProcessingNode
+	} else if len(n.OutPorts()) == 0 {
+		image = SymbolOutputNode
 	} else {
-		allInputPortsLinked := len(n.InPorts()) == 1
-		for _, p := range n.InPorts() {
-			found := false
-			for _, p2 := range nodeType.InPorts() {
-				if p.PortName() == p2.Name() && n.Name() == fmt.Sprintf("in-%s", p2.Name()) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allInputPortsLinked = false
-				break
-			}
-		}
-		allOutputPortsLinked := len(n.OutPorts()) == 1
-		for _, p := range n.OutPorts() {
-			found := false
-			for _, p2 := range nodeType.OutPorts() {
-				if p.PortName() == p2.Name() && n.Name() == fmt.Sprintf("out-%s", p2.Name()) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allOutputPortsLinked = false
-				break
-			}
-		}
-		if allInputPortsLinked {
-			image = SymbolInputNode
-		} else if allOutputPortsLinked {
-			image = SymbolOutputNode
-		} else {
-			image = SymbolProcessingNode
-		}
+		image = SymbolProcessingNode
 	}
 	err := tree.AddEntry(cursor, image, n.Name(), n, prop)
 	if err != nil {

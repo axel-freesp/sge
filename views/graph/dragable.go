@@ -25,6 +25,7 @@ const (
 
 type Dragable interface {
 	GObject
+	UserObj() GObject
 	BBox() image.Rectangle
 	Draw(context *cairo.Context, mode ColorMode)
 	Check(pos image.Point) (r image.Rectangle, ok bool)
@@ -58,6 +59,10 @@ func (drg *DragableObject) NumInPorts() int {
 
 func (drg *DragableObject) NumOutPorts() int {
 	return drg.userObj.NumOutPorts()
+}
+
+func (drg *DragableObject) UserObj() GObject {
+	return drg.userObj
 }
 
 func (drg *DragableObject) BBox() image.Rectangle {

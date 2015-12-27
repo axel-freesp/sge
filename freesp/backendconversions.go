@@ -26,14 +26,15 @@ func CreateXmlInputNode(n Node) *backend.XmlInputNode {
 	if strings.HasPrefix(tName, "autoInputNodeType-") {
 		tName = ""
 	}
-	ret := backend.XmlInputNodeNew(n.Name(), tName)
+	pos := n.Position()
+	ret := backend.XmlInputNodeNew(n.Name(), tName, pos.X, pos.Y)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	} else {
-        for _, p := range n.OutPorts() {
-        	ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
-        }
-    }
+		for _, p := range n.OutPorts() {
+			ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+		}
+	}
 	return ret
 }
 
@@ -42,19 +43,21 @@ func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
 	if strings.HasPrefix(tName, "autoOutputNodeType-") {
 		tName = ""
 	}
-	ret := backend.XmlOutputNodeNew(n.Name(), tName)
+	pos := n.Position()
+	ret := backend.XmlOutputNodeNew(n.Name(), tName, pos.X, pos.Y)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	} else {
-        for _, p := range n.InPorts() {
-        	ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
-        }
-    }
+		for _, p := range n.InPorts() {
+			ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
+		}
+	}
 	return ret
 }
 
 func CreateXmlProcessingNode(n Node) *backend.XmlProcessingNode {
-	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName())
+	pos := n.Position()
+	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), pos.X, pos.Y)
 	if len(n.ItsType().DefinedAt()) == 0 {
 		for _, p := range n.InPorts() {
 			ret.InPort = append(ret.InPort, *CreateXmlInPort(p))

@@ -5,11 +5,11 @@ import (
 )
 
 func TestGraph(t *testing.T) {
-    case1 := []struct {
-	    library, graph string
-	    nodes, connections int
-    }{
-	{`<library xmlns="http://www.freesp.de/xml/freeSP" version="1.0">
+	case1 := []struct {
+		library, graph     string
+		nodes, connections int
+	}{
+		{`<library xmlns="http://www.freesp.de/xml/freeSP" version="1.0">
    <signal-type name="s1" scope="" mode="" c-type="" message-id=""></signal-type>
    <node-type name="Test">
       <intype port="" type="s1"></intype>
@@ -33,28 +33,28 @@ func TestGraph(t *testing.T) {
     </connections>
 </signal-graph>
 `, 3, 2},
-    }
+	}
 
-    for i, c := range case1 {
-	Init()
-	var l Library = LibraryNew("test.alml")
-	buf := copyBuf(c.library)
-	err := l.Read(buf)
-	if err != nil {
-	    t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
-	    return
+	for i, c := range case1 {
+		Init()
+		var l Library = LibraryNew("test.alml")
+		buf := copyBuf(c.library)
+		err := l.Read(buf)
+		if err != nil {
+			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
+			return
+		}
+		var sg SignalGraph = SignalGraphNew("test.sml")
+		buf = copyBuf(c.graph)
+		err = sg.Read(buf)
+		if err != nil {
+			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
+			return
+		}
+		var st SignalGraphType = sg.ItsType()
+		if len(st.Nodes()) != c.nodes {
+			t.Errorf("Testcase %d: Node count mismatch", i)
+			return
+		}
 	}
-	var sg SignalGraph = SignalGraphNew("test.sml")
-	buf = copyBuf(c.graph)
-	err = sg.Read(buf)
-	if err != nil {
-		t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
-		return
-	}
-	var st SignalGraphType = sg.ItsType()
-	if len(st.Nodes()) != c.nodes {
-		t.Errorf("Testcase %d: Node count mismatch", i)
-		return
-	}
-    }
 }

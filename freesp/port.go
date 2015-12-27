@@ -189,7 +189,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraphType:
+		case SignalGraph:
 		case Implementation:
 			// propagate new edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
@@ -203,7 +203,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 			}
 
 		default:
-			log.Fatalf("port.AddNewObject error: wrong context type %t: %v\n", contextCursor, contextCursor)
+			log.Fatalf("port.AddNewObject error: wrong context type %T: %v\n", context, context)
 		}
 
 	default:

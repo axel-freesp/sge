@@ -76,7 +76,7 @@ func (t *nodeType) addInstance(n *node) {
 }
 
 func (t *nodeType) removeInstance(n *node) {
-    t.instances.Remove(n)
+	t.instances.Remove(n)
 }
 
 func (t *nodeType) RemoveImplementation(imp Implementation) {

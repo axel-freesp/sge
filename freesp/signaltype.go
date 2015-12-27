@@ -19,8 +19,29 @@ type signalType struct {
 
 var _ SignalType = (*signalType)(nil)
 
-func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) *signalType {
-	return &signalType{name, ctype, msgid, scope, mode}
+func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) (t *signalType, err error) {
+	newT := &signalType{name, ctype, msgid, scope, mode}
+	sType := signalTypes[name]
+	if sType != nil {
+		if (*newT) != (*sType) {
+			err = fmt.Errorf(`SignalTypeNew error: adding existing signal
+				type %s, which is incompatible`, name)
+			return
+		}
+		log.Printf(`SignalTypeNew: warning: adding existing
+			signal type definition %s (taking the existing)`, name)
+		t = sType
+	} else {
+		t = newT
+		signalTypes[name] = t
+		registeredSignalTypes.Append(name)
+	}
+	return
+}
+
+func SignalTypeDestroy(t SignalType) {
+	registeredSignalTypes.Remove(t.TypeName())
+	delete(signalTypes, t.TypeName())
 }
 
 func (t *signalType) TypeName() string {

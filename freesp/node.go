@@ -2,8 +2,8 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	"image"
+	"log"
 )
 
 type node struct {
@@ -277,10 +277,12 @@ func IsProcessingNode(n Node) bool {
  */
 
 func (n *node) Position() (p image.Point) {
+	p = n.position
 	return
 }
 
-func (n *node) SetPosition(image.Point) {
+func (n *node) SetPosition(p image.Point) {
+	n.position = p
 }
 
 var _ Positioner = (*node)(nil)
@@ -308,7 +310,6 @@ func (n *node) NumOutPorts() int {
 }
 
 var _ Porter = (*node)(nil)
-
 
 /*
  *      nodeList

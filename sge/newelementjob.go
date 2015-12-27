@@ -141,7 +141,11 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		} else {
 			mode = freesp.Synchronous
 		}
-		return freesp.SignalTypeNew(name, cType, channelId, scope, mode)
+
+		// TODO: error handling (trying to define duplicate signal type
+		// returns nil)
+		sType, _ := freesp.SignalTypeNew(name, cType, channelId, scope, mode)
+		return sType
 
 	case eImplementation:
 		switch parentObject.(type) {

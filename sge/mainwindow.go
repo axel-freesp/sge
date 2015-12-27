@@ -5,8 +5,8 @@ import (
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
+	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
-	//"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
@@ -17,10 +17,13 @@ const (
 	height = 600
 )
 
-var (
-	win *GoAppWindow
-	jl  *jobList
-)
+type Global struct {
+	win       *GoAppWindow
+	jl        *jobList
+	graphview []*views.GraphView
+}
+
+var global Global
 
 type selectionArg struct {
 	treeStore *models.FilesTreeStore
@@ -42,7 +45,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
 				log.Fatal("treeSelectionChangedCB: Can't show root element")
 			}
 		}
-		MenuEditCurrent(arg.menu, treeStore, jl)
+		MenuEditCurrent(arg.menu, treeStore, global.jl)
 		xmlview.Set(obj)
 	}
 }
@@ -54,15 +57,16 @@ func main() {
 	backend.Init()
 	freesp.Init()
 
+	var err error
 	// Create a new toplevel window.
-	win, err := GoAppWindowNew(width, height)
+	global.win, err = GoAppWindowNew(width, height)
 	if err != nil {
 		log.Fatal("Unable to create window:", err)
 	}
 
 	menu := GoAppMenuNew()
 	menu.Init()
-	win.layout_box.Add(menu.menubar)
+	global.win.layout_box.Add(menu.menubar)
 
 	err = models.Init()
 	if err != nil {
@@ -77,13 +81,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to create FilesTreeView:", err)
 	}
-	win.navigation_box.Add(ftv.Widget())
+	global.win.navigation_box.Add(ftv.Widget())
 
 	xmlview, err := views.XmlTextViewNew(width, height)
 	if err != nil {
 		log.Fatal("Could not create XML view.")
 	}
-	win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
+	global.win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
 
 	selection, err := ftv.TreeView().GetSelection()
 	if err != nil {
@@ -93,50 +97,49 @@ func main() {
 	arg := &selectionArg{fts, xmlview, menu}
 	selection.Connect("changed", treeSelectionChangedCB, arg)
 
-	if len(unhandledArgs) < 2 {
-		_, err := fts.AddSignalGraphFile("new-file.sml", freesp.SignalGraphNew("new-file.sml"))
-		if err != nil {
-			log.Fatal("ftv.AddSignalGraphFile('new-file.sml') failed.")
-		}
-	}
 	// Handle command line arguments: treat each as a filename:
 	for i, p := range unhandledArgs {
 		if i > 0 {
 			filepath := fmt.Sprintf("%s/%s", backend.XmlRoot(), p)
-			var sg freesp.SignalGraph
-			sg = freesp.SignalGraphNew(p)
-			err1 := sg.ReadFile(filepath)
-			if err1 == nil {
-				log.Println("Loading signal graph", filepath)
-				fts.AddSignalGraphFile(p, sg)
-				graphview, err := views.GraphViewNew(sg, width, height)
-				if err != nil {
-					log.Fatal("Could not create graph view.")
+			switch tool.Suffix(p) {
+			case "sml":
+				var sg freesp.SignalGraph
+				sg = freesp.SignalGraphNew(p)
+				err1 := sg.ReadFile(filepath)
+				if err1 == nil {
+					log.Println("Loading signal graph", filepath)
+					fts.AddSignalGraphFile(p, sg)
+					gv, err := views.GraphViewNew(sg, width, height)
+					if err != nil {
+						log.Fatal("Could not create graph view.")
+					}
+					global.graphview = append(global.graphview, gv)
+					global.win.stack.AddTitled(gv.Widget(), p, p)
 				}
-				win.stack.AddTitled(graphview.Widget(), "Graph View", "Graph View")
-				continue
+			case "alml":
+				var lib freesp.Library
+				lib = freesp.LibraryNew(p)
+				err2 := lib.ReadFile(filepath)
+				if err2 == nil {
+					log.Println("Loading library file", filepath)
+					fts.AddLibraryFile(p, lib)
+					continue
+				}
+				log.Println("Warning: Could not read file ", filepath)
+				log.Println(err2)
+			default:
+				log.Println("Warning: unknown suffix", tool.Suffix(p))
 			}
-			var lib freesp.Library
-			lib = freesp.LibraryNew(p)
-			err2 := lib.ReadFile(filepath)
-			if err2 == nil {
-				log.Println("Loading library file", filepath)
-				fts.AddLibraryFile(p, lib)
-				continue
-			}
-			log.Println("Warning: Could not read file ", filepath)
-			log.Println(err1)
-			log.Println(err2)
 		}
 	}
 
 	japp := jobApplierNew(fts)
-	jl = jobListNew(japp)
+	global.jl = jobListNew(japp)
 
 	MenuFileInit(menu, fts, ftv)
-	MenuEditInit(menu, fts, jl, ftv)
+	MenuEditInit(menu, fts, global.jl, ftv)
 	MenuAboutInit(menu)
 
-	win.Window().ShowAll()
+	global.win.Window().ShowAll()
 	gtk.Main()
 }

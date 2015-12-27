@@ -3,8 +3,8 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"image"
 	"log"
-    "image"
 )
 
 type signalGraphType struct {
@@ -77,7 +77,7 @@ func (t *signalGraphType) RemoveNode(n Node) {
 	RemNode(&t.inputNodes, n.(*node))
 	RemNode(&t.outputNodes, n.(*node))
 	RemNode(&t.processingNodes, n.(*node))
-    n.ItsType().(*nodeType).removeInstance(n.(*node))
+	n.ItsType().(*nodeType).removeInstance(n.(*node))
 }
 
 func (t *signalGraphType) containsLibRef(libname string) bool {
@@ -236,7 +236,7 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
 	nd = NodeNew(nName, nt, t)
-    nd.position = image.Point{n.Hint.X, n.Hint.Y}
+	nd.position = image.Point{n.Hint.X, n.Hint.Y}
 	return
 }
 
@@ -250,7 +250,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolve
 		//ret.addInPort(pt)
 		ret.addOutPort(pt)
 	}
-    ret.position = image.Point{n.Hint.X, n.Hint.Y}
+	ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return ret
 }
 
@@ -264,7 +264,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 		ret.addInPort(pt)
 		//ret.addOutPort(pt)
 	}
-    ret.position = image.Point{n.Hint.X, n.Hint.Y}
+	ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return ret
 }
 
@@ -383,7 +383,7 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 
 		parent := tree.Object(cursor)
 		switch parent.(type) {
-		case SignalGraphType:
+		case SignalGraph:
 		case Implementation:
 			// propagate new node to all instances of embracing type
 			pCursor := tree.Parent(cursor)
@@ -396,7 +396,7 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 			}
 
 		default:
-			log.Fatalf("signalGraphType.AddNewObject error: wrong parent type %t: %v\n", parent, parent)
+			log.Fatalf("signalGraphType.AddNewObject error: wrong parent type %T: %v\n", parent, parent)
 		}
 
 	default:

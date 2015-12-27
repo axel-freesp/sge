@@ -2,8 +2,10 @@ package graph
 
 import (
 	//"fmt"
+	//"log"
 	"image"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/gotk3/gotk3/cairo"
 )
 
 type GObject interface {
@@ -15,24 +17,25 @@ type GObject interface {
 type ColorMode int
 
 const (
-	Normal       ColorMode = 0
-	Highlight    ColorMode = 1
-	Selected     ColorMode = 2
-	NumColorMode ColorMode = 3
+	NormalMode       ColorMode = iota
+	HighlightMode
+	SelectedMode
+	NumColorMode
 )
 
+type Dragable interface {
+	GObject
+	BBox() image.Rectangle
+	Draw(context *cairo.Context, mode ColorMode)
+	Check(pos image.Point) (r image.Rectangle, ok bool)
+}
+
 type DragableObject struct {
-	//CtxMenuer
-	//CtxMenuProvider
-	//Menu     ctxMenu
 	box      image.Rectangle
-	image    []*image.RGBA
 	userObj  GObject
-	//doCtxMenu func(*DragableObject, int)
 }
 
 var _ GObject = (*DragableObject)(nil)
-
 
 func (drg *DragableObject) Name() string {
 	return (*drg).userObj.Name()
@@ -44,6 +47,9 @@ func (drg *DragableObject) Position() image.Point {
 
 func (drg *DragableObject) SetPosition(pos image.Point) {
 	(*drg).userObj.SetPosition(pos)
+	size := drg.box.Size()
+	drg.box.Min = pos
+	drg.box.Max = drg.box.Min.Add(size)
 }
 
 func (drg *DragableObject) NumInPorts() int {
@@ -54,56 +60,17 @@ func (drg *DragableObject) NumOutPorts() int {
 	return drg.userObj.NumOutPorts()
 }
 
-/*
-func (drg *DragableObject) CtxMenuOpen(gc draw2d.GraphicContext, pos image.Point) image.Rectangle {
-	return drg.Menu.CtxMenuOpen(gc, pos)
-}
-
-func (drg *DragableObject) CtxMenuMouse(gc draw2d.GraphicContext, pos image.Point) (image.Rectangle, bool) {
-	return drg.Menu.CtxMenuMouse(gc, pos)
-}
-
-func (drg *DragableObject) CtxMenuChoose() image.Rectangle {
-	return drg.Menu.CtxMenuChoose()
-}
-
-// CtxMenuer interface
-func (drg *DragableObject) CtxMenu(id int) {
-	drg.doCtxMenu(drg, id)
-}
-*/
-
 func (drg *DragableObject) BBox() image.Rectangle {
 	return drg.box
 }
 
-func (drg *DragableObject) Init(box image.Rectangle,
-			userObj GObject) {
-			/*,
-			DrawNode func(*draw2dimg.GraphicContext, DragableObject, ColorMode),
-			doCtxMenu func(*DragableObject, int)*/
-	drg.userObj = userObj
-	drg.box = box
-	drg.image = make([]*image.RGBA, NumColorMode)
-	//drg.doCtxMenu = doCtxMenu
-	//drg.Menu.Init(drg)
-	for _ = range drg.image {
-		/*
-		drg.image[i] = image.NewRGBA(box.Sub(box.Min))
-		gc := draw2dimg.NewGraphicContext(drg.image[i])
-		DrawNode(gc, *drg, ColorMode(i))
-		*/
-	}
-	return
+func hit(drg Dragable, p image.Point) bool {
+	return drg.BBox().Overlaps(image.Rectangle{p, p})
 }
 
-func (drg *DragableObject) hit(p image.Point) bool {
-	return drg.box.Overlaps(image.Rectangle{p, p})
-}
-
-func HitObj(drg []DragableObject, p image.Point) (idx int, ok bool) {
+func HitObj(drg []Dragable, p image.Point) (idx int, ok bool) {
 	for i, o := range drg {
-		if o.hit(p) {
+		if hit(o, p) {
 			return i, true
 		}
 	}
@@ -112,10 +79,11 @@ func HitObj(drg []DragableObject, p image.Point) (idx int, ok bool) {
 
 // Check if a given object (index idx) would overlap with any other
 // if we move it to p coordinates:
-func Overlaps(drg []DragableObject, idx int, p image.Point) bool {
-	newBox := drg[idx].box.Add(p.Sub(drg[idx].box.Min))
+func Overlaps(drg []Dragable, idx int, p image.Point) bool {
+	box := drg[idx].BBox()
+	newBox := box.Add(p.Sub(box.Min))
 	for i, d := range drg {
-		if i != idx && newBox.Overlaps(d.box) {
+		if i != idx && newBox.Overlaps(d.BBox()) {
 			return true
 		}
 	}

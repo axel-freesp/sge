@@ -48,7 +48,10 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 		default:
 			mode = Asynchronous
 		}
-		sType := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
+		sType, err := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
+		if err != nil {
+			return err
+		}
 		l.AddSignalType(sType)
 	}
 	for _, n := range xmlLib.NodeTypes {
@@ -130,6 +133,7 @@ func (l *library) RemoveNodeType(nt NodeType) {
 }
 
 func (l *library) AddSignalType(s SignalType) {
+	/* moved to SignalTypeNew:
 	sType := signalTypes[s.TypeName()]
 	if sType != nil {
 		log.Printf(`library.AddSignalType: warning: adding existing
@@ -139,6 +143,7 @@ func (l *library) AddSignalType(s SignalType) {
 		signalTypes[s.TypeName()] = sType
 		registeredSignalTypes.Append(s.TypeName())
 	}
+	*/
 	for _, st := range l.signalTypes.SignalTypes() {
 		if st.TypeName() == s.TypeName() {
 			log.Printf(`library.AddSignalType: warning: adding
@@ -146,7 +151,7 @@ func (l *library) AddSignalType(s SignalType) {
 			return
 		}
 	}
-	l.signalTypes.Append(sType)
+	l.signalTypes.Append(s)
 }
 
 func (l *library) RemoveSignalType(st SignalType) {
@@ -168,8 +173,9 @@ func (l *library) RemoveSignalType(st SignalType) {
 		}
 	}
 	delete(portTypes, st.TypeName())
-	delete(signalTypes, st.TypeName())
-	registeredSignalTypes.Remove(st.TypeName())
+	SignalTypeDestroy(st)
+	//delete(signalTypes, st.TypeName())
+	//registeredSignalTypes.Remove(st.TypeName())
 	l.signalTypes.Remove(st)
 }
 

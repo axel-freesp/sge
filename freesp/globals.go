@@ -19,4 +19,3 @@ func Init() {
 	registeredNodeTypes = tool.StringListInit()
 	registeredSignalTypes = tool.StringListInit()
 }
-

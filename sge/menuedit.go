@@ -23,6 +23,9 @@ func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	menu.editDelete.SetSensitive(prop.MayRemove())
 	menu.editUndo.SetSensitive(jl.CanUndo())
 	menu.editRedo.SetSensitive(jl.CanRedo())
+	for _, v := range global.graphview {
+		v.Sync()
+	}
 }
 
 func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {

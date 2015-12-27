@@ -29,13 +29,30 @@ func MenuFileInit(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesT
  *		Callbacks
  */
 
+var sgFilenameIndex = 0
+
+func newSGFilename() string {
+	ret := fmt.Sprintf("new-file-%d.sml", sgFilenameIndex)
+	sgFilenameIndex++
+	return ret
+}
+
 func fileNewSg(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	log.Println("fileNewSg")
-	newId, err := fts.AddSignalGraphFile("new-file.sml", freesp.SignalGraphNew("new-file.sml"))
+	filename := newSGFilename()
+	sg := freesp.SignalGraphNew(filename)
+	newId, err := fts.AddSignalGraphFile(sg.Filename(), sg)
 	if err != nil {
-		log.Println("Warning: ftv.AddSignalGraphFile('new-file.sml') failed.")
+		log.Printf("Warning: ftv.AddSignalGraphFile('%s') failed.\n", filename)
 	}
 	setCursorNewId(ftv, newId)
+	gv, err := views.GraphViewNew(sg, width, height)
+	if err != nil {
+		log.Fatal("fileNewSg: Could not create graph view.")
+	}
+	global.graphview = append(global.graphview, gv)
+	global.win.stack.AddTitled(gv.Widget(), filename, filename)
+	global.win.Window().ShowAll()
 }
 
 func setCursorNewId(ftv *views.FilesTreeView, newId string) {
@@ -77,6 +94,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			return
 		}
 		setCursorNewId(ftv, newId)
+		gv, err := views.GraphViewNew(sg, width, height)
+		if err != nil {
+			log.Fatal("fileOpen: Could not create graph view.")
+		}
+		global.graphview = append(global.graphview, gv)
+		global.win.stack.AddTitled(gv.Widget(), filenameToShow(filename), filenameToShow(filename))
+		global.win.Window().ShowAll()
 	case "alml":
 		lib := freesp.LibraryNew(filenameToShow(filename))
 		err := lib.ReadFile(filename)
@@ -277,5 +301,3 @@ func filenameToShow(filepath string) (filename string) {
 	}
 	return
 }
-
-

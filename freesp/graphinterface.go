@@ -1,6 +1,6 @@
 package freesp
 
-import(
+import (
 	"image"
 )
 
@@ -17,4 +17,3 @@ type Porter interface {
 	NumInPorts() int
 	NumOutPorts() int
 }
-

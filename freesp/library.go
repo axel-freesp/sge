@@ -133,17 +133,6 @@ func (l *library) RemoveNodeType(nt NodeType) {
 }
 
 func (l *library) AddSignalType(s SignalType) {
-	/* moved to SignalTypeNew:
-	sType := signalTypes[s.TypeName()]
-	if sType != nil {
-		log.Printf(`library.AddSignalType: warning: adding existing
-			signal type definition %s (taking the existing)`, s.TypeName())
-	} else {
-		sType = s.(*signalType)
-		signalTypes[s.TypeName()] = sType
-		registeredSignalTypes.Append(s.TypeName())
-	}
-	*/
 	for _, st := range l.signalTypes.SignalTypes() {
 		if st.TypeName() == s.TypeName() {
 			log.Printf(`library.AddSignalType: warning: adding
@@ -158,24 +147,21 @@ func (l *library) RemoveSignalType(st SignalType) {
 	for _, ntName := range registeredNodeTypes.Strings() {
 		nt := nodeTypes[ntName]
 		for _, p := range nt.InPorts() {
-			if p.SignalType() == st {
+			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
 					SignalType %v is still in use\n`, st)
 				return
 			}
 		}
 		for _, p := range nt.OutPorts() {
-			if p.SignalType() == st {
+			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
 					SignalType %v is still in use\n`, st)
 				return
 			}
 		}
 	}
-	delete(portTypes, st.TypeName())
 	SignalTypeDestroy(st)
-	//delete(signalTypes, st.TypeName())
-	//registeredSignalTypes.Remove(st.TypeName())
 	l.signalTypes.Remove(st)
 }
 
@@ -231,14 +217,14 @@ func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 		st := tree.Object(cursor).(SignalType)
 		for _, nt := range l.NodeTypes() {
 			for _, p := range nt.InPorts() {
-				if p.SignalType() == st {
+				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
 						SignalType %v is still in use\n`, st)
 					return
 				}
 			}
 			for _, p := range nt.OutPorts() {
-				if p.SignalType() == st {
+				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
 						SignalType %v is still in use\n`, st)
 					return

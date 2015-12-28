@@ -17,10 +17,6 @@ const (
 	textCol = 1
 )
 
-var (
-	imageSignalGraphAlt *gdk.Pixbuf = nil
-)
-
 func Init() (err error) {
 	iconPath := os.Getenv(envIconPathKey)
 	if len(iconPath) == 0 {

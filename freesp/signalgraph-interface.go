@@ -101,14 +101,9 @@ type SignalType interface {
 	Mode() Mode
 }
 
-type PortType interface {
-	TypeName() string
-	SignalType() SignalType
-}
-
 type NamedPortType interface {
 	TreeElement
-	PortType
+	SignalType() SignalType
 	Name() string
 	Direction() PortDirection
 }
@@ -116,10 +111,11 @@ type NamedPortType interface {
 type Port interface {
 	TreeElement
 	PortName() string
-	ItsType() PortType
+	ItsType() SignalType
 	Direction() PortDirection
 	Connections() []Port
 	Node() Node
+    Connection(c *port) Connection
 	AddConnection(Port) error
 	RemoveConnection(c Port)
 }

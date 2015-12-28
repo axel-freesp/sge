@@ -78,13 +78,6 @@ func (x *XmlTextView) Set(object interface{}) error {
 				xmlporttype := freesp.CreateXmlNamedOutPort(t)
 				buf, err = xmlporttype.Write()
 			}
-		case freesp.PortType:
-			pt := object.(freesp.PortType)
-			s := pt.SignalType()
-			if s != nil {
-				xmlsignaltype := freesp.CreateXmlSignalType(s)
-				buf, err = xmlsignaltype.Write()
-			}
 		case freesp.Connection:
 			xmlconn := freesp.CreateXmlConnection(object.(freesp.Connection))
 			buf, err = xmlconn.Write()

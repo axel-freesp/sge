@@ -153,7 +153,7 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 			ports = n.InPorts()
 		}
 		for _, p := range ports {
-			if p.ItsType().SignalType() == thisPort.ItsType().SignalType() {
+			if p.ItsType().TypeName() == thisPort.ItsType().TypeName() {
 				ret = append(ret, p)
 			}
 		}

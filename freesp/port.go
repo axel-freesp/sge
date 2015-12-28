@@ -8,13 +8,14 @@ import (
 
 type port struct {
 	name        string
-	itsType     PortType
+	itsType     SignalType
 	direction   PortDirection
 	connections []Port
 	node        Node
 }
 
-func newPort(name string, pt *portType, dir PortDirection, n *node) *port {
+// TODO: Create namedPortType object first and hand it here?
+func newPort(name string, pt SignalType, dir PortDirection, n Node) *port {
 	return &port{name, pt, dir, nil, n}
 }
 
@@ -27,6 +28,7 @@ func newPort(name string, pt *portType, dir PortDirection, n *node) *port {
  *  	Direction() PortDirection
  *  	Connections() []Port
  *  	Node() Node
+ *      Connection(c *port) Connection
  *  	AddConnection(Port) error
  *  	RemoveConnection(c Port)
  *  }
@@ -43,7 +45,7 @@ func (p *port) PortName() string {
 	return p.name
 }
 
-func (p *port) ItsType() PortType {
+func (p *port) ItsType() SignalType {
 	return p.itsType
 }
 
@@ -73,6 +75,18 @@ func (p *port) RemoveConnection(c Port) {
 	} else {
 		fmt.Printf("port(%s).RemoveConnection error: could not find port %s\n", p, c)
 	}
+}
+
+func (p *port) Connection(c *port) Connection {
+	var from, to Port
+	if p.Direction() == InPort {
+		from = c
+		to = p
+	} else {
+		from = p
+		to = c
+	}
+	return Connection{from, to}
 }
 
 func PortConnect(port1, port2 Port) error {
@@ -136,10 +150,10 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 	}
 	err := tree.AddEntry(cursor, kind, p.PortName(), p, prop)
 	if err != nil {
-		log.Fatal("Port.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
+		log.Fatalf("port.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
-	t := p.ItsType().SignalType()
+	t := p.ItsType()
 	t.AddToTree(tree, child)
 	for _, c := range p.Connections() {
 		child = tree.Append(cursor)
@@ -153,7 +167,6 @@ func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, other
 	conn.AddToTree(tree, newCursor)
 	contextCursor := tree.Parent(tree.Parent(cursor))
 	cCursor := tree.CursorAt(contextCursor, otherPort)
-	log.Printf("port.treeAddNewObject: cursor=%v, cCursor=%v\n", cursor, cCursor)
 	cChild := tree.Append(cCursor)
 	conn.AddToTree(tree, cChild)
 	return
@@ -163,7 +176,6 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 	switch obj.(type) {
 	case Connection:
 		conn := obj.(Connection)
-		log.Println("port.AddNewObject: conn =", conn)
 		var thisPort, otherPort Port
 		if p.Direction() == InPort {
 			otherPort = conn.From
@@ -207,7 +219,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		}
 
 	default:
-		log.Fatalf("Port.AddNewObject error: invalid type %T: %v", obj, obj)
+		log.Fatalf("port.AddNewObject error: invalid type %T: %v\n", obj, obj)
 	}
 	return
 }
@@ -225,7 +237,7 @@ func (p *port) treeRemoveObject(tree Tree, cursor Cursor, conn Connection, other
 func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	parent := tree.Parent(cursor)
 	if p != tree.Object(parent) {
-		log.Fatal("NodeType.RemoveObject error: not removing child of mine.")
+		log.Fatal("port.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
@@ -236,13 +248,13 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			otherPort = conn.From
 			thisPort = conn.To
 			if p != thisPort {
-				log.Fatal("Port.AddNewObject error: invalid connection ", conn)
+				log.Fatal("port.AddNewObject error: invalid connection ", conn)
 			}
 		} else {
 			otherPort = conn.To
 			thisPort = conn.From
 			if p != thisPort {
-				log.Fatal("Port.AddNewObject error: invalid connection ", conn)
+				log.Fatal("port.AddNewObject error: invalid connection ", conn)
 			}
 		}
 		contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
@@ -268,21 +280,9 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		otherPort.RemoveConnection(p)
 
 	default:
-		log.Fatalf("Port.RemoveObject error: invalid type %T: %v", obj, obj)
+		log.Fatalf("Port.RemoveObject error: invalid type %T: %v\n", obj, obj)
 	}
 	return
-}
-
-func (p *port) Connection(c *port) Connection {
-	var from, to Port
-	if p.Direction() == InPort {
-		from = c
-		to = p
-	} else {
-		from = p
-		to = c
-	}
-	return Connection{from, to}
 }
 
 /*

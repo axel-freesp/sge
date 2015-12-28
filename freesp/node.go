@@ -181,11 +181,11 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 }
 
 func (n *node) addInPort(pt *namedPortType) {
-	n.inPort.Append(newPort(pt.name, pt.pType, InPort, n))
+	n.inPort.Append(newPort(pt.name, pt.SignalType(), InPort, n))
 }
 
 func (n *node) addOutPort(pt *namedPortType) {
-	n.outPort.Append(newPort(pt.name, pt.pType, OutPort, n))
+	n.outPort.Append(newPort(pt.name, pt.SignalType(), OutPort, n))
 }
 
 func (n *node) removePort(pt *namedPortType) {

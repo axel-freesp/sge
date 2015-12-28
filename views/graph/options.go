@@ -36,6 +36,8 @@ const (
 	Text
 	HighlightInPort
 	HighlightOutPort
+	SelectInPort
+	SelectOutPort
 )
 
 func ColorOption(index int) (r, g, b float64) {
@@ -105,8 +107,10 @@ var defaultOptions = gOptions{
 		{"OutputPort", color.RGBA{60, 60, 255, 0xff}},
 		{"BoxFrame", color.RGBA{0, 0, 0, 0xff}},
 		{"Text", color.RGBA{0, 0, 0, 0xff}},
-		{"HighlightInPort", color.RGBA{255, 255, 120, 0xff}},
-		{"HighlightOutPort", color.RGBA{255, 255, 120, 0xff}},
+		{"HighlightInPort", color.RGBA{255, 160, 160, 0xff}},
+		{"HighlightOutPort", color.RGBA{160, 160, 255, 0xff}},
+		{"SelectInPort", color.RGBA{255, 255, 180, 0xff}},
+		{"SelectOutPort", color.RGBA{255, 255, 180, 0xff}},
 	},
 	[]optionString{	// actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},

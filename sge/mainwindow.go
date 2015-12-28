@@ -22,6 +22,7 @@ type Global struct {
 	win       *GoAppWindow
 	jl        *jobList
 	graphview []*views.GraphView
+	xmlview   *views.XmlTextView
 	fts       *models.FilesTreeStore
 	ftv       *views.FilesTreeView
 }
@@ -41,21 +42,28 @@ func (g *Global) EditNode(node graph.GObject) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 
+func (g *Global) SelectPort(port freesp.Port) {
+	log.Printf("Global.SelectPort: %v\n", port)
+	n := port.Node()
+	cursor := g.fts.Cursor(n)
+	pCursor := g.fts.CursorAt(cursor, port)
+	path, _ := gtk.TreePathNewFromString(pCursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
 var global Global
 
 type selectionArg struct {
-	treeStore *models.FilesTreeStore
-	xmlview   *views.XmlTextView
-	menu      *GoAppMenu
+	menu *GoAppMenu
 }
 
 func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
-	treeStore := arg.treeStore
-	xmlview := arg.xmlview
+	treeStore := global.fts
 	var iter gtk.TreeIter
 	var model gtk.ITreeModel
 	if selection.GetSelected(&model, &iter) {
-		obj, err := treeStore.GetObject(&iter)
+		obj, err := treeStore.GetObject(&iter) // This one updates treeStore.Current...
 		if err != nil {
 			log.Println("treeSelectionChangedCB: Could not get object from model", err)
 			obj, err = treeStore.GetObjectById("0")
@@ -64,7 +72,10 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
 			}
 		}
 		MenuEditCurrent(arg.menu, treeStore, global.jl)
-		xmlview.Set(obj)
+		global.xmlview.Set(obj)
+		for _, v := range global.graphview {
+			v.Select(obj)
+		}
 	}
 }
 
@@ -101,18 +112,18 @@ func main() {
 	}
 	global.win.navigation_box.Add(global.ftv.Widget())
 
-	xmlview, err := views.XmlTextViewNew(width, height)
+	global.xmlview, err = views.XmlTextViewNew(width, height)
 	if err != nil {
 		log.Fatal("Could not create XML view.")
 	}
-	global.win.stack.AddTitled(xmlview.Widget(), "XML View", "XML View")
+	global.win.stack.AddTitled(global.xmlview.Widget(), "XML View", "XML View")
 
 	selection, err := global.ftv.TreeView().GetSelection()
 	if err != nil {
 		log.Fatal("Could not get tree selection object.")
 	}
 	selection.SetMode(gtk.SELECTION_SINGLE)
-	arg := &selectionArg{global.fts, xmlview, menu}
+	arg := &selectionArg{menu}
 	selection.Connect("changed", treeSelectionChangedCB, arg)
 
 	// Handle command line arguments: treat each as a filename:

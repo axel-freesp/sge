@@ -4,9 +4,20 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/gotk3/gotk3/gdk"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"os"
 )
 
-// Public:
+type method int
+
+const (
+	gdkReadFile = iota
+	ioReadFile
+)
+
+const imageMethod = gdkReadFile
 
 // Access the Pixbuf objects
 func normalPixbuf(s freesp.Symbol) *gdk.Pixbuf {
@@ -22,21 +33,27 @@ type symbolConfig struct {
 	filename string
 }
 
+const suffix = "png"
+
+func makeFilename(s string) string {
+	return fmt.Sprintf("%s.%s", s, suffix)
+}
+
 var sConfig = []symbolConfig{
-	{freesp.SymbolSignalType, "signal-type.png"},
-	{freesp.SymbolInputPort, "inport-green.png"},
-	{freesp.SymbolOutputPort, "outport-red.png"},
-	{freesp.SymbolConnection, "link.png"},
-	{freesp.SymbolImplElement, "test0.png"},
-	{freesp.SymbolImplGraph, "test1.png"},
-	{freesp.SymbolLibrary, "test0.png"},
-	{freesp.SymbolInputPortType, "inport-green.png"},
-	{freesp.SymbolOutputPortType, "outport-red.png"},
-	{freesp.SymbolInputNode, "input.png"},
-	{freesp.SymbolOutputNode, "output.png"},
-	{freesp.SymbolProcessingNode, "node.png"},
-	{freesp.SymbolNodeType, "node-type.png"},
-	{freesp.SymbolSignalGraph, "test1.png"},
+	{freesp.SymbolSignalType, makeFilename("signal-type")},
+	{freesp.SymbolInputPort, makeFilename("inport-green")},
+	{freesp.SymbolOutputPort, makeFilename("outport-red")},
+	{freesp.SymbolConnection, makeFilename("link")},
+	{freesp.SymbolImplElement, makeFilename("test0")},
+	{freesp.SymbolImplGraph, makeFilename("test1")},
+	{freesp.SymbolLibrary, makeFilename("test0")},
+	{freesp.SymbolInputPortType, makeFilename("inport-green")},
+	{freesp.SymbolOutputPortType, makeFilename("outport-red")},
+	{freesp.SymbolInputNode, makeFilename("input")},
+	{freesp.SymbolOutputNode, makeFilename("output")},
+	{freesp.SymbolProcessingNode, makeFilename("node")},
+	{freesp.SymbolNodeType, makeFilename("node-type")},
+	{freesp.SymbolSignalGraph, makeFilename("test1")},
 }
 
 var normalTable, readonlyTable map[freesp.Symbol]*gdk.Pixbuf
@@ -45,27 +62,27 @@ func symbolInit(iconPath string) (err error) {
 	normalTable = make(map[freesp.Symbol]*gdk.Pixbuf)
 	readonlyTable = make(map[freesp.Symbol]*gdk.Pixbuf)
 	for _, s := range sConfig {
-		normalTable[s.symbol], err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/%s", iconPath, s.filename))
+		normalTable[s.symbol], err = normalInit(iconPath, s)
 		if err != nil {
-			err = fmt.Errorf("symbolInit error loading %s: %s\n", s.filename, err)
+			err = fmt.Errorf("symbolInit error loading %s: normalInit failed: %s\n", s.filename, err)
 			return
 		}
-		err = readonlyInit(iconPath, s)
+		readonlyTable[s.symbol], err = readonlyInit(iconPath, s)
 		if err != nil {
-			err = fmt.Errorf("symbolInit error: %s\n", err)
+			err = fmt.Errorf("symbolInit error loading %s: readonlyInit failed: %s\n", s.filename, err)
 			return
 		}
 	}
 	return
 }
 
-func readonlyInit(iconPath string, config symbolConfig) (err error) {
-	pixbuf, err := gdk.PixbufCopy(normalTable[config.symbol])
+// Make all pixels brighter, keep alpha
+func readonlyInit(iconPath string, config symbolConfig) (pixbuf *gdk.Pixbuf, err error) {
+	pixbuf, err = gdk.PixbufCopy(normalTable[config.symbol])
 	if err != nil {
 		err = fmt.Errorf("symbolInit error loading %s: %s\n", config.filename, err)
 		return
 	}
-	readonlyTable[config.symbol] = pixbuf
 	data := pixbuf.GetPixels()
 	pixelSize := 3
 	if pixbuf.GetHasAlpha() {
@@ -86,40 +103,66 @@ func readonlyInit(iconPath string, config symbolConfig) (err error) {
 	return
 }
 
-/*
- * What a pity: alpha colors come wrong!
- *
-func readonlyInit(iconPath string, config symbolConfig) (err error) {
-	file, err := os.Open(fmt.Sprintf("%s/%s", iconPath, config.filename))
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		err = fmt.Errorf("readonlyInit error: image.Decode failed: %s", err)
-		return
-	}
-
-	bounds := img.Bounds()
-	width := bounds.Max.X - bounds.Min.X
-	height := bounds.Max.Y - bounds.Min.Y
-	data := make([]byte, width*height*4)
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		j := width * 4 * y
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			r, g, b, a := img.At(x, y).RGBA()
-			data[j+4*x+0] = byte(r)
-			data[j+4*x+1] = byte(g)
-			data[j+4*x+2] = byte(b)
-			data[j+4*x+3] = byte(a)
+func normalInit(iconPath string, config symbolConfig) (img *gdk.Pixbuf, err error) {
+	switch imageMethod {
+	case gdkReadFile:
+		img, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/%s", iconPath, config.filename))
+	case ioReadFile:
+		var file *os.File
+		file, err = os.Open(fmt.Sprintf("%s/%s", iconPath, config.filename))
+		if err != nil {
+			return
 		}
-	}
-
-	readonlyTable[config.symbol], err = gdk.PixbufNewFromBytes(data, gdk.COLORSPACE_RGB, true, 8, width, height, width*4)
-	if err != nil {
-		err = fmt.Errorf("readonlyInit error: PixbufNewFromXpmData failed: %s", err)
+		defer file.Close()
+		var decImg image.Image
+		decImg, _, err = image.Decode(file)
+		if err != nil {
+			err = fmt.Errorf("readonlyInit error: image.Decode failed: %s", err)
+			return
+		}
+		img, err = gdk.PixbufNewFromBytes(ImageRgbaToGdkColorspace(decImg))
+		if err != nil {
+			err = fmt.Errorf("readonlyInit error: PixbufNewFromBytes failed: %s", err)
+		}
+	default:
 	}
 	return
 }
-*/
+
+func ImageRgbaToGdkColorspace(img image.Image) (data []byte,
+	colorspace gdk.Colorspace,
+	hasAlpha bool,
+	bitsPerSample, width, height, stride int) {
+	bounds := img.Bounds()
+	width = bounds.Max.X - bounds.Min.X
+	height = bounds.Max.Y - bounds.Min.Y
+	colorspace = gdk.COLORSPACE_RGB
+	hasAlpha = true
+	bitsPerSample = 8
+	stride = width * 4
+	data = make([]byte, width*height*4)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		j := stride * y
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			r, g, b, a := img.At(x, y).RGBA()
+			switch a {
+			case 0xFFFF:
+				data[j+4*x+0] = byte(r >> 8)
+				data[j+4*x+1] = byte(g >> 8)
+				data[j+4*x+2] = byte(b >> 8)
+				data[j+4*x+3] = byte(a >> 8)
+			case 0:
+				data[j+4*x+0] = 0
+				data[j+4*x+1] = 0
+				data[j+4*x+2] = 0
+				data[j+4*x+3] = 0
+			default:
+				data[j+4*x+0] = byte((r << 8) / a)
+				data[j+4*x+1] = byte((g << 8) / a)
+				data[j+4*x+2] = byte((b << 8) / a)
+				data[j+4*x+3] = byte(a >> 8)
+			}
+		}
+	}
+	return
+}

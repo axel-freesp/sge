@@ -83,15 +83,8 @@ func PortConnect(port1, port2 Port) error {
 	if port1.Direction() == port2.Direction() {
 		return fmt.Errorf("direction mismatch")
 	}
-	var ok bool
-	_, ok = p1.connections.Find(p2.Name())
-	if !ok {
-		p1.connections.Append(port2)
-	}
-	_, ok = p2.connections.Find(p1.Name())
-	if !ok {
-		p2.connections.Append(port1)
-	}
+	p1.connections.Append(port2)
+	p2.connections.Append(port1)
 	return nil
 }
 
@@ -299,14 +292,14 @@ func portListInit() portList {
 	return portList{nil}
 }
 
-func (l *portList) Append(nt Port) {
-	l.ports = append(l.ports, nt)
+func (l *portList) Append(p Port) {
+	l.ports = append(l.ports, p)
 }
 
-func (l *portList) Remove(nt Port) {
+func (l *portList) Remove(p Port) {
 	var i int
 	for i = range l.ports {
-		if nt == l.ports[i] {
+		if p == l.ports[i] {
 			break
 		}
 	}
@@ -314,7 +307,7 @@ func (l *portList) Remove(nt Port) {
 		for _, v := range l.ports {
 			log.Printf("portList.RemovePort have Port %v\n", v)
 		}
-		log.Fatalf("portList.RemovePort error: Port %v not in this list\n", nt)
+		log.Fatalf("portList.RemovePort error: Port %v not in this list\n", p)
 	}
 	for i++; i < len(l.ports); i++ {
 		l.ports[i-1] = l.ports[i]

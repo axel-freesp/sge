@@ -426,7 +426,7 @@ func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWi
 		parentCursor := tree.Parent(cursor)
 		parent := tree.Object(parentCursor)
 		switch parent.(type) {
-		case SignalGraphType:
+		case SignalGraph:
 		case Implementation:
 			// propagate new node to all instances of embracing type
 			pCursor := tree.Parent(parentCursor)

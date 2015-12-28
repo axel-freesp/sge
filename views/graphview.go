@@ -20,6 +20,7 @@ var ( // TODO: move to connection.go
 type Context interface {
 	SelectNode(node graph.GObject) // single click selection
 	EditNode(node graph.GObject)   // double click selection
+	SelectPort(port freesp.Port)   // single click selection
 }
 
 type GraphView struct {
@@ -110,6 +111,42 @@ func (v *GraphView) Sync() {
 		}
 	}
 	v.DrawAll()
+}
+
+func (v *GraphView) selectNode(obj freesp.Node) (n graph.Dragable, ok bool) {
+	var i int
+	for i, n = range v.nodes {
+		if obj.Name() == n.Name() {
+			if obj.(freesp.Node) == n.UserObj().(freesp.Node) {
+				if i != v.selected {
+					if v.selected != -1 {
+						v.repaintObj(v.nodes[v.selected])
+						v.nodes[v.selected].(*graph.Node).Deselect()
+					}
+					v.repaintObj(n)
+					v.selected = i
+				}
+				ok = true
+				return
+			} else {
+				return
+			}
+		}
+	}
+	return
+}
+
+// Is this cool?
+func (v *GraphView) Select(obj freesp.TreeElement) {
+	switch obj.(type) {
+	case freesp.Node:
+		v.selectNode(obj.(freesp.Node))
+	case freesp.Port:
+		n, ok := v.selectNode(obj.(freesp.Port).Node())
+		if ok {
+			n.(*graph.Node).SelectPort(obj.(freesp.Port))
+		}
+	}
 }
 
 func numPorts(n graph.GObject) int {
@@ -216,15 +253,18 @@ func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 	case gdk.EVENT_BUTTON_PRESS:
 		v.dragOffs = pos
 		oldSelected := v.selected
-		v.selected = idx
 		if ok {
+			v.selected = idx
 			v.repaintObj(v.nodes[v.selected])
 			if oldSelected >= 0 && v.selected != oldSelected {
 				v.repaintObj(v.nodes[oldSelected])
+				v.nodes[oldSelected].Deselect()
 			}
 			v.context.SelectNode(v.nodes[v.selected].UserObj())
-		} else if oldSelected >= 0 {
-			v.repaintObj(v.nodes[oldSelected])
+			_, ok, p := v.check(pos, true)
+			if ok {
+				v.context.SelectPort(p)
+			}
 		}
 		v.button1Pressed = true
 	case gdk.EVENT_2BUTTON_PRESS:
@@ -239,8 +279,8 @@ func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 	}
 }
 
-func (v *GraphView) check(pos image.Point) (r image.Rectangle, ok bool) {
-	return v.nodes[v.selected].Check(pos)
+func (v *GraphView) check(pos image.Point, button bool) (r image.Rectangle, ok bool, p freesp.Port) {
+	return v.nodes[v.selected].Check(pos, button)
 }
 
 func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
@@ -267,7 +307,7 @@ func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 		if idx == v.selected {
 			v.highlighted = -1
 			if ok {
-				r, ok := v.check(pos)
+				r, ok, _ := v.check(pos, false)
 				if ok {
 					v.DrawScene(r)
 				}

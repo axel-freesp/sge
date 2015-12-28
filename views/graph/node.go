@@ -2,7 +2,7 @@ package graph
 
 import (
 	//"fmt"
-	//"log"
+	"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/axel-freesp/sge/freesp"
@@ -31,12 +31,13 @@ var global = Global{
 type Node struct {
 	DragableObject
 	highlightInport, highlightOutport int
+	selectInport, selectOutport int
 }
 
 var _ Dragable = (*Node)(nil)
 
 func NodeNew(box image.Rectangle, userObj freesp.Node) *Node {
-	return &Node{DragableObject{box, userObj}, -1, -1}
+	return &Node{DragableObject{box, userObj}, -1, -1, -1, -1}
 }
 
 func (n *Node) Draw(context *cairo.Context, mode ColorMode){
@@ -45,7 +46,9 @@ func (n *Node) Draw(context *cairo.Context, mode ColorMode){
 	drawBody(context, x, y, w, h, n.Name(), mode)
 	context.SetLineWidth(1)
 	for i := 0; i < n.NumInPorts(); i++ {
-		if i == n.highlightInport {
+		if i == n.selectInport {
+			context.SetSourceRGB(ColorOption(SelectInPort))
+		} else if i == n.highlightInport {
 			context.SetSourceRGB(ColorOption(HighlightInPort))
 		} else {
 			context.SetSourceRGB(ColorOption(InputPort))
@@ -56,7 +59,9 @@ func (n *Node) Draw(context *cairo.Context, mode ColorMode){
 		context.Stroke()
 	}
 	for i := 0; i < n.NumOutPorts(); i++ {
-		if i == n.highlightOutport {
+		if i == n.selectOutport {
+			context.SetSourceRGB(ColorOption(SelectOutPort))
+		} else if i == n.highlightOutport {
 			context.SetSourceRGB(ColorOption(HighlightOutPort))
 		} else {
 			context.SetSourceRGB(ColorOption(OutputPort))
@@ -68,7 +73,30 @@ func (n *Node) Draw(context *cairo.Context, mode ColorMode){
 	}
 }
 
-func (n *Node) Check(pos image.Point) (rect image.Rectangle, ok bool) {
+func (n *Node) SelectPort(p freesp.Port) {
+	if p.Direction() == freesp.InPort {
+		for i := 0; i < n.NumInPorts(); i++ {
+			if p.Name() == n.userObj.(freesp.Node).InPorts()[i].Name() {
+				n.selectInport = i
+				log.Printf("Node.SelectPort: matching in port %s\n", p.Name())
+			}
+		}
+	} else {
+		for i := 0; i < n.NumOutPorts(); i++ {
+			if p.Name() == n.userObj.(freesp.Node).OutPorts()[i].Name() {
+				n.selectOutport = i
+				log.Printf("Node.SelectPort: matching out port %s\n", p.Name())
+			}
+		}
+	}
+}
+
+func (n *Node) Deselect() {
+	n.selectInport = -1
+	n.selectOutport = -1
+}
+
+func (n *Node) Check(pos image.Point, button bool) (rect image.Rectangle, ok bool, port freesp.Port) {
 	box := n.BBox()
 	dx, dy := global.padX, global.padY
 	w0, h0 := box.Size().X, box.Size().Y
@@ -98,7 +126,12 @@ func (n *Node) Check(pos image.Point) (rect image.Rectangle, ok bool) {
 		if p.Overlaps(r) {
 			ok = true
 			rect = r
-			n.highlightInport = i
+			if button {
+				n.selectInport = i
+			} else {
+				n.highlightInport = i
+			}
+			port = n.UserObj().(freesp.Node).InPorts()[i]
 		}
 	}
 	for i := 0; i < n.NumOutPorts(); i++ {
@@ -111,7 +144,12 @@ func (n *Node) Check(pos image.Point) (rect image.Rectangle, ok bool) {
 		if p.Overlaps(r){
 			ok = true
 			rect = r
-			n.highlightOutport = i
+			if button {
+				n.selectOutport = i
+			} else {
+				n.highlightOutport = i
+			}
+			port = n.UserObj().(freesp.Node).OutPorts()[i]
 		}
 	}
 	if oldRect.Size().X > 0 {

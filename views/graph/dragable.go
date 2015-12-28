@@ -28,7 +28,8 @@ type Dragable interface {
 	UserObj() GObject
 	BBox() image.Rectangle
 	Draw(context *cairo.Context, mode ColorMode)
-	Check(pos image.Point) (r image.Rectangle, ok bool)
+	Check(pos image.Point, button bool) (r image.Rectangle, ok bool, p freesp.Port)
+	Deselect()
 }
 
 type DragableObject struct {

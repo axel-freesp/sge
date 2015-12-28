@@ -127,17 +127,17 @@ func (t *nodeType) Implementation() []Implementation {
 func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 	nt := NodeTypeNew(ntName, "")
 	for _, p := range n.InPort {
-        pType, ok := signalTypes[p.PType]
-        if !ok {
-            log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
-        }
+		pType, ok := signalTypes[p.PType]
+		if !ok {
+			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+		}
 		nt.addInPort(p.PName, pType)
 	}
 	for _, p := range n.OutPort {
-        pType, ok := signalTypes[p.PType]
-        if !ok {
-            log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
-        }
+		pType, ok := signalTypes[p.PType]
+		if !ok {
+			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+		}
 		nt.addOutPort(p.PName, pType)
 	}
 	nodeTypes[ntName] = nt
@@ -172,17 +172,17 @@ func (t *nodeType) doResolvePort(name string, dir PortDirection) *portType {
 func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 	nt := NodeTypeNew(n.TypeName, filename)
 	for _, p := range n.InPort {
-        pType, ok := signalTypes[p.PType]
-        if !ok {
-            log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
-        }
+		pType, ok := signalTypes[p.PType]
+		if !ok {
+			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+		}
 		nt.addInPort(p.PName, pType)
 	}
 	for _, p := range n.OutPort {
-        pType, ok := signalTypes[p.PType]
-        if !ok {
-            log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
-        }
+		pType, ok := signalTypes[p.PType]
+		if !ok {
+			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+		}
 		nt.addOutPort(p.PName, pType)
 	}
 	if len(n.Implementation) > 0 {

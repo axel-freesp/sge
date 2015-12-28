@@ -34,7 +34,7 @@ const (
 	eNode                       = "Node"
 	eNodeType                   = "NodeType"
 	ePort                       = "Port"
-	ePortType              = "NamedPortType"
+	ePortType                   = "NamedPortType"
 	eConnection                 = "Connection"
 	eSignalType                 = "SignalType"
 	eLibrary                    = "Library"
@@ -46,7 +46,7 @@ var choiceMap = map[elementType][]elementType{
 	eNode:           {eNode},
 	eNodeType:       {eNodeType, ePortType, eImplementation},
 	ePort:           {eConnection},
-	ePortType:  {ePortType},
+	ePortType:       {ePortType},
 	eConnection:     {eConnection},
 	eSignalType:     {eSignalType},
 	eLibrary:        {eSignalType, eNodeType},
@@ -56,7 +56,7 @@ var choiceMap = map[elementType][]elementType{
 var inputElementMap = map[elementType][]inputElement{
 	eNode:           {iNodeName, iNodeTypeSelect},
 	eNodeType:       {iTypeName},
-	ePortType:  {iPortName, iSignalTypeSelect, iDirection},
+	ePortType:       {iPortName, iSignalTypeSelect, iDirection},
 	eConnection:     {iPortSelect},
 	eSignalType:     {iSignalTypeName, iCType, iChannelId, iScope, iSignalMode},
 	eImplementation: {iImplName, iImplementationType},

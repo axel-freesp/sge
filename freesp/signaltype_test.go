@@ -13,7 +13,7 @@ type SignalType interface {
 	Scope() Scope
 	Mode() Mode
 }
- */
+*/
 
 func TestSignalType(t *testing.T) {
 	case1 := []struct {
@@ -36,17 +36,17 @@ func TestSignalType(t *testing.T) {
 		 *
 		 * 	TreeElement interface not tested.
 		 */
-		{"", "s1", "",    "",    0, 0, true},
-		{"", "s1", "",    "",    0, 0, true},  // compatible duplicate
-		{"", "s1", "int", "",    0, 0, false}, // incompatible duplicate
+		{"", "s1", "", "", 0, 0, true},
+		{"", "s1", "", "", 0, 0, true},        // compatible duplicate
+		{"", "s1", "int", "", 0, 0, false},    // incompatible duplicate
 		{"", "s2", "int", "ch1", 0, 0, true},  // new
 		{"", "s2", "int", "ch1", 0, 1, false}, // incompatible duplicate
 		{"", "s2", "int", "ch1", 1, 0, false}, // incompatible duplicate
 		{"", "s2", "int", "ch1", 0, 0, true},  // compatible duplicate
-		{"s1", "", "",    "",    0, 0, true},  // remove
-		{"s1", "", "",    "",    0, 0, false}, // remove duplicate
-		{"s3", "", "",    "",    0, 0, false}, // remove non-existing
-		{"", "s1", "int", "",    0, 0, true},  // new (after removal)
+		{"s1", "", "", "", 0, 0, true},        // remove
+		{"s1", "", "", "", 0, 0, false},       // remove duplicate
+		{"s3", "", "", "", 0, 0, false},       // remove non-existing
+		{"", "s1", "int", "", 0, 0, true},     // new (after removal)
 	}
 	Init()
 	for i, c := range case1 {

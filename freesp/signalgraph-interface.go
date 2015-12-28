@@ -115,7 +115,7 @@ type Port interface {
 	Direction() PortDirection
 	Connections() []Port
 	Node() Node
-    Connection(c *port) Connection
+	Connection(c *port) Connection
 	AddConnection(Port) error
 	RemoveConnection(c Port)
 }

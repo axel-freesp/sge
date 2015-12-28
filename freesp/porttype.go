@@ -17,9 +17,9 @@ var _ PortType = (*portType)(nil)
 
 func PortTypeNew(name string, pTypeName string, dir PortDirection) *portType {
 	st, ok := signalTypes[pTypeName]
-    if !ok {
-        log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
-    }
+	if !ok {
+		log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
+	}
 	return &portType{st, name, dir}
 }
 
@@ -28,7 +28,7 @@ func (t *portType) Name() string {
 }
 
 func (t *portType) SignalType() SignalType {
-    return t.signalType
+	return t.signalType
 }
 
 func (t *portType) Direction() PortDirection {

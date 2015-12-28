@@ -170,31 +170,31 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 		n1 := t.NodeByName(c.From)
 		if n1 == nil {
 			dump, _ := g.Write()
-            log.Println("createSignalGraphTypeFromXml error:")
+			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d: node %s not found\n%s", i, c.From, dump))
 		}
 		n2 := t.NodeByName(c.To)
 		if n2 == nil {
 			dump, _ := g.Write()
-            log.Println("createSignalGraphTypeFromXml error:")
+			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d: node %s not found\n%s", i, c.To, dump))
 		}
 		p1, err := n1.(*node).outPortFromName(c.FromPort)
 		if err != nil {
 			dump, _ := g.Write()
-            log.Println("createSignalGraphTypeFromXml error:")
+			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d outPortFromName failed: %s\n%s", i, err, dump))
 		}
 		p2, err := n2.(*node).inPortFromName(c.ToPort)
 		if err != nil {
 			dump, _ := g.Write()
-            log.Println("createSignalGraphTypeFromXml error:")
+			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d inPortFromName failed: %s\n%s", i, err, dump))
 		}
 		err = PortConnect(p1, p2)
 		if err != nil {
 			dump, _ := g.Write()
-            log.Println("createSignalGraphTypeFromXml error:")
+			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d PortConnect failed: %s\n%s", i, err, dump))
 		}
 	}

@@ -234,6 +234,10 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObje
 
 var rootCursor = freesp.Cursor{"", freesp.AppendCursor}
 
+func (s *FilesTreeStore) Current() freesp.Cursor {
+	return freesp.Cursor{s.GetCurrentId(), freesp.AppendCursor}
+}
+
 func (s *FilesTreeStore) Append(c freesp.Cursor) freesp.Cursor {
 	var iter *gtk.TreeIter
 	var err error

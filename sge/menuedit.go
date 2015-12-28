@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
@@ -20,7 +19,7 @@ func MenuEditInit(menu *GoAppMenu) {
 }
 
 func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
-	cursor := freesp.Cursor{fts.GetCurrentId(), freesp.AppendCursor}
+	cursor := fts.Current()
 	prop := fts.Property(cursor)
 	menu.editNew.SetSensitive(prop.MayAddObject())
 	menu.editDelete.SetSensitive(prop.MayRemove())

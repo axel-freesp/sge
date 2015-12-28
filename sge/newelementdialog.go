@@ -264,15 +264,13 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return dialog.portSelector.GetActiveText()
 		},
 		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			fts := dialog.fts
 			var choices []string
-			object, err := dialog.fts.GetObjectById(dialog.fts.GetCurrentId())
-			if err != nil {
-				log.Fatalf("Internal error: FileTreeStore.GetObjectById(GetCurrentId()) failed\n")
-			}
+			object := fts.Object(fts.Current())
 			switch object.(type) {
 			case freesp.Port:
 			case freesp.Connection:
-				object = dialog.fts.Object(dialog.fts.Parent(freesp.Cursor{dialog.fts.GetCurrentId(), -1}))
+				object = fts.Object(fts.Parent(fts.Current()))
 			default:
 				return
 			}

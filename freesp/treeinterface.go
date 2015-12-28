@@ -1,6 +1,7 @@
 package freesp
 
 type Tree interface {
+	Current() Cursor
 	Append(c Cursor) Cursor
 	Insert(c Cursor) Cursor
 	Remove(c Cursor) (prefix string, index int)

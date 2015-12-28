@@ -471,7 +471,7 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 				list = n.OutPorts()
 			}
 			for _, p = range list {
-				if p.PortName() == nt.Name() {
+				if p.Name() == nt.Name() {
 					break
 				}
 			}

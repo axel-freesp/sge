@@ -110,8 +110,8 @@ type PortType interface {
 
 type Port interface {
 	TreeElement
-	PortName() string
-	ItsType() SignalType
+	Name() string
+	SignalType() SignalType
 	Direction() PortDirection
 	Connections() []Port
 	Node() Node

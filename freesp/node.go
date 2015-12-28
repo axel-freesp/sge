@@ -122,7 +122,7 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		} else {
 			list = nt.(*nodeType).outPorts
 		}
-		_, ok, index := list.Find(p.PortName())
+		_, ok, index := list.Find(p.Name())
 		if !ok {
 			log.Println("node.RemoveObject: saving removed port", p)
 			removed = append(removed, IdWithObject{parentId.Path, index, obj})
@@ -168,7 +168,7 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 		return
 	default:
 		for _, p := range list {
-			if p.(*port).name == name {
+			if p.Name() == name {
 				ret = p
 				err = nil
 				return
@@ -181,11 +181,11 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 }
 
 func (n *node) addInPort(pt PortType) {
-	n.inPort.Append(newPort(pt.Name(), pt.SignalType(), InPort, n))
+	n.inPort.Append(newPort(pt, n))
 }
 
 func (n *node) addOutPort(pt PortType) {
-	n.outPort.Append(newPort(pt.Name(), pt.SignalType(), OutPort, n))
+	n.outPort.Append(newPort(pt, n))
 }
 
 func (n *node) removePort(pt PortType) {
@@ -197,12 +197,12 @@ func (n *node) removePort(pt PortType) {
 	}
 	var i int
 	for i = 0; i < len(list.Ports()); i++ {
-		if list.Ports()[i].PortName() == pt.Name() {
+		if list.Ports()[i].Name() == pt.Name() {
 			break
 		}
 	}
 	toRemove := list.Ports()[i]
-	for _, c := range toRemove.(*port).connections {
+	for _, c := range toRemove.Connections() {
 		c.RemoveConnection(toRemove)
 	}
 	list.Remove(toRemove)

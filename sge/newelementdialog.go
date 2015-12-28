@@ -153,7 +153,7 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 			ports = n.InPorts()
 		}
 		for _, p := range ports {
-			if p.ItsType().TypeName() == thisPort.ItsType().TypeName() {
+			if p.SignalType().TypeName() == thisPort.SignalType().TypeName() {
 				ret = append(ret, p)
 			}
 		}
@@ -277,7 +277,7 @@ var inputHandling = map[inputElement]inputElementHandling{
 				return
 			}
 			for _, p := range getMatchingPorts(dialog.fts, object) {
-				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().Name(), p.PortName()))
+				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().Name(), p.Name()))
 			}
 			return newComboBox(&dialog.portSelector, choices)
 		},

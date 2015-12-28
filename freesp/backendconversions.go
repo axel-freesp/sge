@@ -6,11 +6,11 @@ import (
 )
 
 func CreateXmlInPort(p Port) *backend.XmlInPort {
-	return backend.XmlInPortNew(p.PortName(), p.ItsType().TypeName())
+	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
 }
 
 func CreateXmlOutPort(p Port) *backend.XmlOutPort {
-	return backend.XmlOutPortNew(p.PortName(), p.ItsType().TypeName())
+	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
 }
 
 func CreateXmlNamedInPort(p PortType) *backend.XmlInPort {
@@ -94,9 +94,9 @@ func CreateXmlImplementation(impl Implementation) *backend.XmlImplementation {
 func CreateXmlConnection(p Connection) *backend.XmlConnect {
 	switch p.From.Direction() {
 	case OutPort:
-		return backend.XmlConnectNew(p.From.Node().Name(), p.To.Node().Name(), p.From.PortName(), p.To.PortName())
+		return backend.XmlConnectNew(p.From.Node().Name(), p.To.Node().Name(), p.From.Name(), p.To.Name())
 	default:
-		return backend.XmlConnectNew(p.To.Node().Name(), p.From.Node().Name(), p.To.PortName(), p.From.PortName())
+		return backend.XmlConnectNew(p.To.Node().Name(), p.From.Node().Name(), p.To.Name(), p.From.Name())
 	}
 }
 

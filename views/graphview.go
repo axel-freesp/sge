@@ -100,10 +100,10 @@ func (v *GraphView) Sync() {
 	for _, n := range g.ItsType().Nodes() {
 		from := v.findNode(n.Name())
 		for _, p := range n.OutPorts() {
-			fromId := v.outPortIndex(n, p.PortName())
+			fromId := v.outPortIndex(n, p.Name())
 			for _, c := range p.Connections() {
 				to := v.findNode(c.Node().Name())
-				toId := v.inPortIndex(c.Node(), c.PortName())
+				toId := v.inPortIndex(c.Node(), c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
 			}
@@ -129,7 +129,7 @@ func (v *GraphView) findNode(name string) *graph.Node {
 
 func (v *GraphView) inPortIndex(n freesp.Node, portName string) int {
 	for i, p := range n.InPorts() {
-		if p.PortName() == portName {
+		if p.Name() == portName {
 			return i
 		}
 	}
@@ -138,7 +138,7 @@ func (v *GraphView) inPortIndex(n freesp.Node, portName string) int {
 
 func (v *GraphView) outPortIndex(n freesp.Node, portName string) int {
 	for i, p := range n.OutPorts() {
-		if p.PortName() == portName {
+		if p.Name() == portName {
 			return i
 		}
 	}

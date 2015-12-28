@@ -69,7 +69,7 @@ func (t *signalGraphType) AddNode(n Node) error {
 
 func (t *signalGraphType) RemoveNode(n Node) {
 	for _, p := range n.(*node).inPort.Ports() {
-		for _, c := range p.(*port).connections {
+		for _, c := range p.Connections() {
 			c.RemoveConnection(p)
 		}
 	}

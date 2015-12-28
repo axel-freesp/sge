@@ -7,16 +7,14 @@ import (
 )
 
 type port struct {
-	name        string
-	itsType     SignalType
-	direction   PortDirection
-	connections []Port
+	itsType     PortType
+	connections portList
 	node        Node
 }
 
 // TODO: Create namedPortType object first and hand it here?
-func newPort(name string, pt SignalType, dir PortDirection, n Node) *port {
-	return &port{name, pt, dir, nil, n}
+func newPort(pt PortType, n Node) *port {
+	return &port{pt, portListInit(), n}
 }
 
 /*
@@ -37,24 +35,20 @@ func newPort(name string, pt SignalType, dir PortDirection, n Node) *port {
  */
 var _ Port = (*port)(nil)
 
-type portError struct {
-	reason string
+func (p *port) Name() string {
+	return p.itsType.Name()
 }
 
-func (p *port) PortName() string {
-	return p.name
-}
-
-func (p *port) ItsType() SignalType {
-	return p.itsType
+func (p *port) SignalType() SignalType {
+	return p.itsType.SignalType()
 }
 
 func (p *port) Direction() PortDirection {
-	return p.direction
+	return p.itsType.Direction()
 }
 
 func (p *port) Connections() []Port {
-	return p.connections
+	return p.connections.Ports()
 }
 
 func (p *port) Node() Node {
@@ -66,15 +60,7 @@ func (p *port) AddConnection(c Port) error {
 }
 
 func (p *port) RemoveConnection(c Port) {
-	i, ok := p.indexOfConnection(c)
-	if ok {
-		for j := i + 1; j < len(p.connections); j++ {
-			p.connections[j-1] = p.connections[j]
-		}
-		p.connections = p.connections[:len(p.connections)-1]
-	} else {
-		fmt.Printf("port(%s).RemoveConnection error: could not find port %s\n", p, c)
-	}
+	p.connections.Remove(c)
 }
 
 func (p *port) Connection(c *port) Connection {
@@ -91,17 +77,20 @@ func (p *port) Connection(c *port) Connection {
 
 func PortConnect(port1, port2 Port) error {
 	p1, p2 := port1.(*port), port2.(*port)
-	if p1.itsType != p2.itsType {
+	if port1.SignalType().TypeName() != port2.SignalType().TypeName() {
 		return fmt.Errorf("type mismatch")
 	}
-	if p1.direction == p2.direction {
+	if port1.Direction() == port2.Direction() {
 		return fmt.Errorf("direction mismatch")
 	}
-	if !findPort(p1.connections, p2) {
-		p1.connections = append(p1.connections, port2)
+	var ok bool
+	_, ok = p1.connections.Find(p2.Name())
+	if !ok {
+		p1.connections.Append(port2)
 	}
-	if !findPort(p2.connections, p1) {
-		p2.connections = append(p2.connections, port1)
+	_, ok = p2.connections.Find(p1.Name())
+	if !ok {
+		p2.connections.Append(port1)
 	}
 	return nil
 }
@@ -113,7 +102,7 @@ var _ fmt.Stringer = (*port)(nil)
 
 func (p *port) String() (s string) {
 	s = fmt.Sprintf("%sPort of node %s(%s, %d connections)",
-		p.direction, p.Node().Name(), p.name, len(p.connections))
+		p.Direction(), p.Node().Name(), p.Name(), len(p.Connections()))
 	return
 }
 
@@ -148,12 +137,12 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 	} else {
 		kind = SymbolOutputPort
 	}
-	err := tree.AddEntry(cursor, kind, p.PortName(), p, prop)
+	err := tree.AddEntry(cursor, kind, p.Name(), p, prop)
 	if err != nil {
 		log.Fatalf("port.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
-	t := p.ItsType()
+	t := p.SignalType()
 	t.AddToTree(tree, child)
 	for _, c := range p.Connections() {
 		child = tree.Append(cursor)
@@ -297,16 +286,6 @@ func findPort(list []Port, prt *port) bool {
 	return false
 }
 
-func (p *port) indexOfConnection(c Port) (index int, ok bool) {
-	for index = 0; index < len(p.connections); index++ {
-		if c == p.connections[index] {
-			break
-		}
-	}
-	ok = (index < len(p.connections))
-	return
-}
-
 /*
  *      portList
  *
@@ -350,7 +329,7 @@ func (l *portList) Ports() []Port {
 func (l *portList) Find(name string) (p Port, ok bool) {
 	ok = false
 	for _, p = range l.ports {
-		if p.PortName() == name {
+		if p.Name() == name {
 			ok = true
 			return
 		}

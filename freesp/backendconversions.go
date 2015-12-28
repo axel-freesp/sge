@@ -13,11 +13,11 @@ func CreateXmlOutPort(p Port) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.PortName(), p.ItsType().TypeName())
 }
 
-func CreateXmlNamedInPort(p NamedPortType) *backend.XmlInPort {
+func CreateXmlNamedInPort(p PortType) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
 }
 
-func CreateXmlNamedOutPort(p NamedPortType) *backend.XmlOutPort {
+func CreateXmlNamedOutPort(p PortType) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
 }
 

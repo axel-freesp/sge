@@ -36,7 +36,7 @@ func (s *signalGraph) Read(data []byte) error {
 	}
 	fmt.Println("signalGraph.Read: call createSignalGraphTypeFromXml")
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
-		func(_ string, _ PortDirection) *namedPortType { return nil })
+		func(_ string, _ PortDirection) *portType { return nil })
 	return err
 }
 
@@ -47,7 +47,7 @@ func (s *signalGraph) ReadFile(filepath string) error {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.ReadFile: %v", err))
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
-		func(_ string, _ PortDirection) *namedPortType { return nil })
+		func(_ string, _ PortDirection) *portType { return nil })
 	return err
 }
 

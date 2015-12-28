@@ -85,7 +85,7 @@ func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
 	switch parent.(type) {
 	case Library:
 		prop = mayAddObject | mayEdit | mayRemove
-	case Port, NamedPortType:
+	case Port, PortType:
 		prop = 0
 	default:
 		log.Fatalf("signalType.AddToTree error: invalid parent type %T\n", parent)

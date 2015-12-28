@@ -34,7 +34,7 @@ const (
 	eNode                       = "Node"
 	eNodeType                   = "NodeType"
 	ePort                       = "Port"
-	eNamedPortType              = "NamedPortType"
+	ePortType              = "NamedPortType"
 	eConnection                 = "Connection"
 	eSignalType                 = "SignalType"
 	eLibrary                    = "Library"
@@ -44,9 +44,9 @@ const (
 var choiceMap = map[elementType][]elementType{
 	eSignalGraph:    {eNode},
 	eNode:           {eNode},
-	eNodeType:       {eNodeType, eNamedPortType, eImplementation},
+	eNodeType:       {eNodeType, ePortType, eImplementation},
 	ePort:           {eConnection},
-	eNamedPortType:  {eNamedPortType},
+	ePortType:  {ePortType},
 	eConnection:     {eConnection},
 	eSignalType:     {eSignalType},
 	eLibrary:        {eSignalType, eNodeType},
@@ -56,7 +56,7 @@ var choiceMap = map[elementType][]elementType{
 var inputElementMap = map[elementType][]inputElement{
 	eNode:           {iNodeName, iNodeTypeSelect},
 	eNodeType:       {iTypeName},
-	eNamedPortType:  {iPortName, iSignalTypeSelect, iDirection},
+	ePortType:  {iPortName, iSignalTypeSelect, iDirection},
 	eConnection:     {iPortSelect},
 	eSignalType:     {iSignalTypeName, iCType, iChannelId, iScope, iSignalMode},
 	eImplementation: {iImplName, iImplementationType},
@@ -111,8 +111,8 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		activeElem = eNodeType
 	case freesp.Port:
 		activeElem = ePort
-	case freesp.NamedPortType:
-		activeElem = eNamedPortType
+	case freesp.PortType:
+		activeElem = ePortType
 	case freesp.Connection:
 		activeElem = eConnection
 	case freesp.SignalType:
@@ -356,7 +356,7 @@ func (dialog *NewElementDialog) fillBox(box *gtk.Box, e elementType, fts *models
 var stackAlternatives = []elementType{
 	eNode,
 	eNodeType,
-	eNamedPortType,
+	ePortType,
 	eConnection,
 	eSignalType,
 	eImplementation,

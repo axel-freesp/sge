@@ -98,9 +98,9 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 			}
 		}
 
-	case eNamedPortType:
+	case ePortType:
 		switch parentObject.(type) {
-		case freesp.NamedPortType:
+		case freesp.PortType:
 			j.parentId = getParentId(j.parentId)
 		case freesp.NodeType:
 		default:
@@ -116,7 +116,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		} else {
 			dir = freesp.OutPort
 		}
-		return freesp.NamedPortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
+		return freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
 
 	case eSignalType:
 		switch parentObject.(type) {

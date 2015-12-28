@@ -12,7 +12,7 @@ type node struct {
 	nodetype NodeType
 	inPort   portList
 	outPort  portList
-	portlink NamedPortType
+	portlink PortType
 	position image.Point
 }
 
@@ -24,10 +24,10 @@ var _ Node = (*node)(nil)
 func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
 	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), portListInit(), portListInit(), nil, image.Point{0, 0}}
 	for _, p := range ntype.InPorts() {
-		ret.addInPort(p.(*namedPortType))
+		ret.addInPort(p)
 	}
 	for _, p := range ntype.OutPorts() {
-		ret.addOutPort(p.(*namedPortType))
+		ret.addOutPort(p)
 	}
 	ntype.(*nodeType).addInstance(ret)
 	return ret
@@ -116,7 +116,7 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			conn := Connection{c, p}
 			removed = append(removed, IdWithObject{cursor.Path, index, conn})
 		}
-		var list namedPortTypeList
+		var list portTypeList
 		if p.Direction() == InPort {
 			list = nt.(*nodeType).inPorts
 		} else {
@@ -180,15 +180,15 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 	return
 }
 
-func (n *node) addInPort(pt *namedPortType) {
-	n.inPort.Append(newPort(pt.name, pt.SignalType(), InPort, n))
+func (n *node) addInPort(pt PortType) {
+	n.inPort.Append(newPort(pt.Name(), pt.SignalType(), InPort, n))
 }
 
-func (n *node) addOutPort(pt *namedPortType) {
-	n.outPort.Append(newPort(pt.name, pt.SignalType(), OutPort, n))
+func (n *node) addOutPort(pt PortType) {
+	n.outPort.Append(newPort(pt.Name(), pt.SignalType(), OutPort, n))
 }
 
-func (n *node) removePort(pt *namedPortType) {
+func (n *node) removePort(pt PortType) {
 	var list *portList
 	if pt.Direction() == InPort {
 		list = &n.inPort

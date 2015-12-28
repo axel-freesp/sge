@@ -5,38 +5,38 @@ import (
 	"log"
 )
 
-// namedPortType
+// portType
 
-type namedPortType struct {
+type portType struct {
 	signalType SignalType
 	name       string
 	direction  PortDirection
 }
 
-var _ NamedPortType = (*namedPortType)(nil)
+var _ PortType = (*portType)(nil)
 
-func NamedPortTypeNew(name string, pTypeName string, dir PortDirection) *namedPortType {
+func PortTypeNew(name string, pTypeName string, dir PortDirection) *portType {
 	st, ok := signalTypes[pTypeName]
     if !ok {
         log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
     }
-	return &namedPortType{st, name, dir}
+	return &portType{st, name, dir}
 }
 
-func (t *namedPortType) Name() string {
+func (t *portType) Name() string {
 	return t.name
 }
 
-func (t *namedPortType) SignalType() SignalType {
+func (t *portType) SignalType() SignalType {
     return t.signalType
 }
 
-func (t *namedPortType) Direction() PortDirection {
+func (t *portType) Direction() PortDirection {
 	return t.direction
 }
 
-func (t *namedPortType) String() (s string) {
-	s = fmt.Sprintf("NamedPortType(%s, %s, %s)", t.name, t.direction, t.SignalType())
+func (t *portType) String() (s string) {
+	s = fmt.Sprintf("PortType(%s, %s, %s)", t.name, t.direction, t.SignalType())
 	return
 }
 
@@ -44,9 +44,9 @@ func (t *namedPortType) String() (s string) {
  *  TreeElement API
  */
 
-var _ TreeElement = (*namedPortType)(nil)
+var _ TreeElement = (*portType)(nil)
 
-func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {
+func (p *portType) AddToTree(tree Tree, cursor Cursor) {
 	var prop property
 	parentId := tree.Parent(cursor)
 	if tree.Property(parentId).IsReadOnly() {
@@ -62,65 +62,65 @@ func (p *namedPortType) AddToTree(tree Tree, cursor Cursor) {
 	}
 	err := tree.AddEntry(cursor, kind, p.Name(), p, prop)
 	if err != nil {
-		log.Fatal("NamedPortType.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
+		log.Fatal("PortType.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
 	p.SignalType().AddToTree(tree, child)
 }
 
-func (p *namedPortType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
-	log.Fatal("NamedPortType.AddNewObject - nothing to add.")
+func (p *portType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+	log.Fatal("PortType.AddNewObject - nothing to add.")
 	return
 }
 
-func (p *namedPortType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
-	log.Fatal("NamedPortType.AddNewObject - nothing to remove.")
+func (p *portType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatal("PortType.AddNewObject - nothing to remove.")
 	return
 }
 
 /*
- *      namedPortTypeList
+ *      portTypeList
  *
  */
 
-type namedPortTypeList struct {
-	namedPortTypes []NamedPortType
+type portTypeList struct {
+	portTypes []PortType
 }
 
-func namedPortTypeListInit() namedPortTypeList {
-	return namedPortTypeList{nil}
+func portTypeListInit() portTypeList {
+	return portTypeList{nil}
 }
 
-func (l *namedPortTypeList) Append(nt NamedPortType) {
-	l.namedPortTypes = append(l.namedPortTypes, nt)
+func (l *portTypeList) Append(nt PortType) {
+	l.portTypes = append(l.portTypes, nt)
 }
 
-func (l *namedPortTypeList) Remove(nt NamedPortType) {
+func (l *portTypeList) Remove(nt PortType) {
 	var i int
-	for i = range l.namedPortTypes {
-		if nt == l.namedPortTypes[i] {
+	for i = range l.portTypes {
+		if nt == l.portTypes[i] {
 			break
 		}
 	}
-	if i >= len(l.namedPortTypes) {
-		for _, v := range l.namedPortTypes {
-			log.Printf("namedPortTypeList.RemovePort have NamedPortType %v\n", v)
+	if i >= len(l.portTypes) {
+		for _, v := range l.portTypes {
+			log.Printf("portTypeList.RemovePort have PortType %v\n", v)
 		}
-		log.Fatalf("namedPortTypeList.RemovePort error: NamedPortType %v not in this list\n", nt)
+		log.Fatalf("portTypeList.RemovePort error: PortType %v not in this list\n", nt)
 	}
-	for i++; i < len(l.namedPortTypes); i++ {
-		l.namedPortTypes[i-1] = l.namedPortTypes[i]
+	for i++; i < len(l.portTypes); i++ {
+		l.portTypes[i-1] = l.portTypes[i]
 	}
-	l.namedPortTypes = l.namedPortTypes[:len(l.namedPortTypes)-1]
+	l.portTypes = l.portTypes[:len(l.portTypes)-1]
 }
 
-func (l *namedPortTypeList) NamedPortTypes() []NamedPortType {
-	return l.namedPortTypes
+func (l *portTypeList) PortTypes() []PortType {
+	return l.portTypes
 }
 
-func (l *namedPortTypeList) Find(name string) (p NamedPortType, ok bool, index int) {
+func (l *portTypeList) Find(name string) (p PortType, ok bool, index int) {
 	ok = false
-	for index, p = range l.namedPortTypes {
+	for index, p = range l.portTypes {
 		if p.Name() == name {
 			ok = true
 			return

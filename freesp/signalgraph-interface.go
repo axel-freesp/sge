@@ -43,12 +43,12 @@ type NodeType interface {
 	TreeElement
 	TypeName() string
 	DefinedAt() string
-	InPorts() []NamedPortType
-	OutPorts() []NamedPortType
+	InPorts() []PortType
+	OutPorts() []PortType
 	Implementation() []Implementation
 	Instances() []Node
-	AddNamedPortType(NamedPortType)
-	RemoveNamedPortType(NamedPortType)
+	AddNamedPortType(PortType)
+	RemoveNamedPortType(PortType)
 	AddImplementation(Implementation)
 	RemoveImplementation(Implementation)
 }
@@ -101,7 +101,7 @@ type SignalType interface {
 	Mode() Mode
 }
 
-type NamedPortType interface {
+type PortType interface {
 	TreeElement
 	SignalType() SignalType
 	Name() string

@@ -69,8 +69,8 @@ func (x *XmlTextView) Set(object interface{}) error {
 				xmlport := freesp.CreateXmlInPort(p)
 				buf, err = xmlport.Write()
 			}
-		case freesp.NamedPortType:
-			t := object.(freesp.NamedPortType)
+		case freesp.PortType:
+			t := object.(freesp.PortType)
 			if t.Direction() == freesp.InPort {
 				xmlporttype := freesp.CreateXmlNamedInPort(t)
 				buf, err = xmlporttype.Write()

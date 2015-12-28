@@ -128,7 +128,7 @@ func (t *signalGraphType) addNode(n Node) error {
 	return nil
 }
 
-func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolvePort func(portname string, dir PortDirection) *namedPortType) (t *signalGraphType, err error) {
+func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolvePort func(portname string, dir PortDirection) *portType) (t *signalGraphType, err error) {
 	t = SignalGraphTypeNew()
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
@@ -232,7 +232,7 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 	return
 }
 
-func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolvePort func(portname string, dir PortDirection) *namedPortType) *node {
+func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolvePort func(portname string, dir PortDirection) *portType) *node {
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -246,7 +246,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolve
 	return ret
 }
 
-func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resolvePort func(portname string, dir PortDirection) *namedPortType) *node {
+func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resolvePort func(portname string, dir PortDirection) *portType) *node {
 	nName := n.NName
 	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -260,7 +260,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	return ret
 }
 
-func (g *signalGraphType) addInputNodeFromNamedPortType(p NamedPortType) {
+func (g *signalGraphType) addInputNodeFromPortType(p PortType) {
 	st := p.SignalType()
 	ntName := createInputNodeTypeName(st.TypeName())
 	nt, ok := nodeTypes[ntName]
@@ -269,7 +269,7 @@ func (g *signalGraphType) addInputNodeFromNamedPortType(p NamedPortType) {
 		nt.addOutPort("", st)
 		nodeTypes[ntName] = nt
 	}
-	if len(nt.outPorts.NamedPortTypes()) == 0 {
+	if len(nt.outPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addInputNodeFromNamedPortType: invalid input node type")
 	}
 	n := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, g)
@@ -280,7 +280,7 @@ func (g *signalGraphType) addInputNodeFromNamedPortType(p NamedPortType) {
 	}
 }
 
-func (g *signalGraphType) addOutputNodeFromNamedPortType(p NamedPortType) {
+func (g *signalGraphType) addOutputNodeFromPortType(p PortType) {
 	st := p.SignalType()
 	ntName := createOutputNodeTypeName(st.TypeName())
 	nt, ok := nodeTypes[ntName]
@@ -289,7 +289,7 @@ func (g *signalGraphType) addOutputNodeFromNamedPortType(p NamedPortType) {
 		nt.addInPort("", st)
 		nodeTypes[ntName] = nt
 	}
-	if len(nt.inPorts.NamedPortTypes()) == 0 {
+	if len(nt.inPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addOutputNodeFromNamedPortType: invalid output node type")
 	}
 	n := NodeNew(fmt.Sprintf("out-%s", p.Name()), nt, g)
@@ -300,7 +300,7 @@ func (g *signalGraphType) addOutputNodeFromNamedPortType(p NamedPortType) {
 	}
 }
 
-func (g *signalGraphType) removeInputNodeFromNamedPortType(p NamedPortType) {
+func (g *signalGraphType) removeInputNodeFromPortType(p PortType) {
 	for _, n := range g.InputNodes() {
 		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			g.RemoveNode(n)
@@ -309,7 +309,7 @@ func (g *signalGraphType) removeInputNodeFromNamedPortType(p NamedPortType) {
 	}
 }
 
-func (g *signalGraphType) removeOutputNodeFromNamedPortType(p NamedPortType) {
+func (g *signalGraphType) removeOutputNodeFromPortType(p PortType) {
 	for _, n := range g.OutputNodes() {
 		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			g.RemoveNode(n)
@@ -318,7 +318,7 @@ func (g *signalGraphType) removeOutputNodeFromNamedPortType(p NamedPortType) {
 	}
 }
 
-func (g *signalGraphType) findInputNodeFromNamedPortType(p NamedPortType) Node {
+func (g *signalGraphType) findInputNodeFromPortType(p PortType) Node {
 	for _, n := range g.InputNodes() {
 		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			return n
@@ -327,7 +327,7 @@ func (g *signalGraphType) findInputNodeFromNamedPortType(p NamedPortType) Node {
 	return nil
 }
 
-func (g *signalGraphType) findOutputNodeFromNamedPortType(p NamedPortType) Node {
+func (g *signalGraphType) findOutputNodeFromPortType(p PortType) Node {
 	for _, n := range g.OutputNodes() {
 		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			return n

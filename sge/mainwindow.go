@@ -29,7 +29,7 @@ type Global struct {
 
 var _ views.Context = (*Global)(nil)
 
-func (g *Global) SelectNode(node graph.GObject) {
+func (g *Global) SelectNode(node graph.NodeObject) {
 	//log.Printf("Global.SelectNode: %v\n", node)
 	n := node.(freesp.Node)
 	cursor := g.fts.Cursor(n)
@@ -38,7 +38,7 @@ func (g *Global) SelectNode(node graph.GObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) EditNode(node graph.GObject) {
+func (g *Global) EditNode(node graph.NodeObject) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 
@@ -48,6 +48,18 @@ func (g *Global) SelectPort(port freesp.Port) {
 	cursor := g.fts.Cursor(n)
 	pCursor := g.fts.CursorAt(cursor, port)
 	path, _ := gtk.TreePathNewFromString(pCursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
+func (g *Global) SelectConnect(conn freesp.Connection) {
+	log.Printf("Global.SelectConnect: %v\n", conn)
+	p := conn.From()
+	n := p.Node()
+	cursor := g.fts.Cursor(n)
+	pCursor := g.fts.CursorAt(cursor, p)
+	cCursor := g.fts.CursorAt(pCursor, conn)
+	path, _ := gtk.TreePathNewFromString(cCursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }

@@ -4,6 +4,30 @@ import (
 	"image/color"
 )
 
+// Convenient access:
+type Global struct {
+	nodeWidth, nodeHeight,
+	padX, padY,
+	portX0, portY0, portDY,
+	portW, portH,
+	textX, textY, fontSize int
+}
+
+var global = Global{
+	nodeWidth: NumericOption(NodeWidth),
+	nodeHeight: NumericOption(NodeHeight),
+	padX: NumericOption(NodePadX),
+	padY: NumericOption(NodePadY),
+	portX0: NumericOption(PortX0),
+	portY0: NumericOption(PortY0),
+	portDY: NumericOption(PortDY),
+	portW: NumericOption(PortW),
+	portH: NumericOption(PortH),
+	textX: NumericOption(NodeTextX),
+	textY: NumericOption(NodeTextY),
+	fontSize: NumericOption(FontSize),
+}
+
 // Index arguments for NumericOption()
 const (
 	NodeWidth = iota
@@ -38,6 +62,9 @@ const (
 	HighlightOutPort
 	SelectInPort
 	SelectOutPort
+	SelectLine
+	HighlightLine
+	NormalLine
 )
 
 func ColorOption(index int) (r, g, b float64) {
@@ -111,6 +138,9 @@ var defaultOptions = gOptions{
 		{"HighlightOutPort", color.RGBA{160, 160, 255, 0xff}},
 		{"SelectInPort", color.RGBA{255, 255, 180, 0xff}},
 		{"SelectOutPort", color.RGBA{255, 255, 180, 0xff}},
+		{"SelectLine", color.RGBA{0, 0, 255, 0xff}},
+		{"HighlightLine", color.RGBA{0, 255, 0, 0xff}},
+		{"NormalLine", color.RGBA{120, 120, 120, 0xff}},
 	},
 	[]optionString{	// actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},

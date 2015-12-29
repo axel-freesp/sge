@@ -16,4 +16,10 @@ type Namer interface {
 type Porter interface {
 	NumInPorts() int
 	NumOutPorts() int
+	InPortIndex(portname string) int
+	OutPortIndex(portname string) int
+}
+
+type Directioner interface {
+	Direction() PortDirection
 }

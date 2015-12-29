@@ -74,9 +74,9 @@ type Node interface {
 	Positioner
 	Porter
 	ItsType() NodeType
-	Context() SignalGraphType
 	InPorts() []Port
 	OutPorts() []Port
+	Context() SignalGraphType
 }
 
 type Scope int
@@ -110,9 +110,9 @@ type PortType interface {
 
 type Port interface {
 	TreeElement
+	Directioner
 	Name() string
 	SignalType() SignalType
-	Direction() PortDirection
 	Connections() []Port
 	Node() Node
 	Connection(Port) Connection

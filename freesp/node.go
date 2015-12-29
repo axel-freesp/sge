@@ -47,16 +47,16 @@ func (n *node) ItsType() NodeType {
 	return n.nodetype
 }
 
-func (n *node) Context() SignalGraphType {
-	return n.context
-}
-
 func (n *node) InPorts() []Port {
 	return n.inPort.Ports()
 }
 
 func (n *node) OutPorts() []Port {
 	return n.outPort.Ports()
+}
+
+func (n *node) Context() SignalGraphType {
+	return n.context
 }
 
 /*
@@ -270,6 +270,22 @@ func (n *node) NumOutPorts() int {
 	return len(n.OutPorts())
 }
 
+func (n *node) InPortIndex(portName string) int {
+	_, ok, index := n.inPort.Find(n.Name(), portName)
+	if ok {
+		return index
+	}
+	return -1
+}
+
+func (n *node) OutPortIndex(portName string) int {
+	_, ok, index := n.outPort.Find(n.Name(), portName)
+	if ok {
+		return index
+	}
+	return -1
+}
+
 var _ Porter = (*node)(nil)
 
 /*
@@ -310,4 +326,16 @@ func (l *nodeList) Remove(n Node) {
 
 func (l *nodeList) Nodes() []Node {
 	return l.nodes
+}
+
+func (l *nodeList) Find(node Node) (ok bool, index int) {
+	ok = false
+	var n Node
+	for index, n = range l.nodes {
+		if n == node {
+			ok = true
+			return
+		}
+	}
+	return
 }

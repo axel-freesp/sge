@@ -388,7 +388,10 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 			err = fmt.Errorf("signalGraphType.AddNewObject error: %s", err)
 			nt := n.ItsType().(*nodeType)
 			if nt != nil {
-				nt.instances.Remove(n)
+				ok, _ := nt.instances.Find(n)
+				if ok {
+					nt.instances.Remove(n)
+				}
 			}
 			return
 		}

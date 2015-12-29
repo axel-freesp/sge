@@ -18,16 +18,17 @@ var ( // TODO: move to connection.go
 )
 
 type Context interface {
-	SelectNode(node graph.GObject) // single click selection
-	EditNode(node graph.GObject)   // double click selection
-	SelectPort(port freesp.Port)   // single click selection
+	SelectNode(node graph.NodeObject)     // single click selection
+	EditNode(node graph.NodeObject)       // double click selection
+	SelectPort(port freesp.Port)          // single click selection
+	SelectConnect(conn freesp.Connection) // single click selection
 }
 
 type GraphView struct {
 	ScrolledView
 	area        *gtk.DrawingArea
-	nodes       []graph.Dragable
-	connections []graph.Connection
+	nodes       []graph.NodeIf
+	connections []graph.ConnectIf
 	signalGraph freesp.SignalGraph
 	context     Context
 
@@ -81,7 +82,7 @@ func (v *GraphView) init() (err error) {
 
 func (v *GraphView) Sync() {
 	g := v.signalGraph
-	v.nodes = make([]graph.Dragable, len(g.ItsType().Nodes()))
+	v.nodes = make([]graph.NodeIf, len(g.ItsType().Nodes()))
 
 	var numberOfConnections = 0
 	for _, n := range g.ItsType().Nodes() {
@@ -89,7 +90,7 @@ func (v *GraphView) Sync() {
 			numberOfConnections += len(p.Connections())
 		}
 	}
-	v.connections = make([]graph.Connection, numberOfConnections)
+	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
 	dy := graph.NumericOption(graph.PortDY)
 	for i, n := range g.ItsType().Nodes() {
@@ -101,10 +102,10 @@ func (v *GraphView) Sync() {
 	for _, n := range g.ItsType().Nodes() {
 		from := v.findNode(n.Name())
 		for _, p := range n.OutPorts() {
-			fromId := v.outPortIndex(n, p.Name())
+			fromId := from.OutPortIndex(p.Name())
 			for _, c := range p.Connections() {
 				to := v.findNode(c.Node().Name())
-				toId := v.inPortIndex(c.Node(), c.Name())
+				toId := to.InPortIndex(c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
 			}
@@ -113,23 +114,21 @@ func (v *GraphView) Sync() {
 	v.DrawAll()
 }
 
-func (v *GraphView) selectNode(obj freesp.Node) (n graph.Dragable, ok bool) {
+func (v *GraphView) selectNode(obj freesp.Node) (ret graph.NodeIf, ok bool) {
 	var i int
+	var n graph.NodeIf
+	v.selected = -1
 	for i, n = range v.nodes {
-		if obj.Name() == n.Name() {
-			if obj.(freesp.Node) == n.UserObj().(freesp.Node) {
-				if i != v.selected {
-					if v.selected != -1 {
-						v.repaintObj(v.nodes[v.selected])
-						v.nodes[v.selected].(*graph.Node).Deselect()
-					}
-					v.repaintObj(n)
-					v.selected = i
-				}
-				ok = true
-				return
-			} else {
-				return
+		if obj == n.UserObj().(freesp.Node) {
+			if !n.Select() {
+				v.repaintNode(n)
+			}
+			v.selected = i
+			ret = n
+			ok = true
+		} else {
+			if n.Deselect() {
+				v.repaintNode(n)
 			}
 		}
 	}
@@ -149,7 +148,7 @@ func (v *GraphView) Select(obj freesp.TreeElement) {
 	}
 }
 
-func numPorts(n graph.GObject) int {
+func numPorts(n freesp.Porter) int {
 	npi := n.NumInPorts()
 	npo := n.NumOutPorts()
 	return tool.MaxInt(npi, npo)
@@ -164,22 +163,185 @@ func (v *GraphView) findNode(name string) *graph.Node {
 	return nil
 }
 
-func (v *GraphView) inPortIndex(n freesp.Node, portName string) int {
-	for i, p := range n.InPorts() {
-		if p.Name() == portName {
-			return i
+func (v *GraphView) BBox() (box image.Rectangle) {
+	emptyRect := image.Rectangle{}
+	for _, o := range v.nodes {
+		if box == emptyRect {
+			box = o.BBox()
+		} else {
+			box = box.Union(o.BBox())
 		}
 	}
-	return -1
+	return
 }
 
-func (v *GraphView) outPortIndex(n freesp.Node, portName string) int {
-	for i, p := range n.OutPorts() {
-		if p.Name() == portName {
-			return i
+func (v *GraphView) DrawAll() {
+	v.DrawScene(v.BBox())
+}
+
+func (v *GraphView) DrawScene(r image.Rectangle) {
+	v.area.QueueDrawArea(r.Min.X, r.Min.Y, r.Size().X, r.Size().Y)
+	return
+}
+
+func (v *GraphView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
+	ret := n.BBox()
+	for _, c := range v.connections {
+		if c.IsLinked(n.Name()) {
+			ret = ret.Union(c.BBox())
 		}
 	}
-	return -1
+	return ret
+}
+
+func (v *GraphView) repaintNode(n graph.NodeIf) {
+	v.DrawScene(v.nodeDrawBox(n))
+}
+
+func (v *GraphView) repaintConnection(c graph.ConnectIf) {
+	v.DrawScene(c.BBox())
+}
+
+func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
+	ev := gdk.EventButton{event}
+	pos := image.Point{int(ev.X()), int(ev.Y())}
+	switch ev.Type() {
+	case gdk.EVENT_BUTTON_PRESS:
+		v.button1Pressed = true
+		v.dragOffs = pos
+		v.selected = -1
+		for i, n := range v.nodes {
+			if n.CheckHit(pos) {
+				v.selected = i
+				if !n.Select() {
+					v.repaintNode(n)
+				}
+				v.context.SelectNode(n.UserObj())
+				ok, port := n.(*graph.Node).GetSelectedPort()
+				if ok {
+					v.context.SelectPort(port)
+				}
+			} else {
+				if n.Deselect() {
+					v.repaintNode(n)
+				}
+			}
+		}
+		for _, c := range v.connections {
+			if c.CheckHit(pos) {
+				c.Select()
+				n1 := c.From()
+				p1 := n1.GetOutPort(c.FromId())
+				n2 := c.To()
+				p2 := n2.GetInPort(c.ToId())
+				v.context.SelectConnect(p1.(freesp.Port).Connection(p2.(freesp.Port)))
+				v.repaintConnection(c)
+			} else {
+				if c.Deselect() {
+					v.repaintConnection(c)
+				}
+			}
+		}
+	case gdk.EVENT_2BUTTON_PRESS:
+		log.Println("areaButtonCallback 2BUTTON_PRESS")
+		if v.selected != -1 {
+			v.context.EditNode(v.nodes[v.selected].UserObj())
+		}
+
+	case gdk.EVENT_BUTTON_RELEASE:
+		v.button1Pressed = false
+	default:
+	}
+}
+
+func (v *GraphView) handleDrag(pos image.Point) {
+	if v.selected != -1 {
+		s := v.nodes[v.selected]
+		box := s.BBox()
+		if !graph.Overlaps(v.nodes, v.selected, box.Min.Add(pos.Sub(v.dragOffs))) {
+			v.repaintNode(s)
+			box = box.Add(pos.Sub(v.dragOffs))
+			v.dragOffs = pos
+			s.SetPosition(box.Min)
+			v.repaintNode(s)
+		}
+	}
+}
+
+func (v *GraphView) handleMouseover(pos image.Point) {
+	var idx int
+	ok := false
+	for i, n := range v.nodes {
+		if n.CheckHit(pos) {
+			ok = true
+			idx = i
+			break
+		}
+	}
+	oldHighlighted := v.highlighted
+	if idx == v.selected {
+		v.highlighted = -1
+		if ok {
+			ok = v.nodes[v.selected].CheckHit(pos)
+			if ok {
+				v.repaintNode(v.nodes[v.selected])
+			}
+		}
+		ok = false
+	} else {
+		v.highlighted = idx
+	}
+	if ok {
+		v.repaintNode(v.nodes[v.highlighted])
+		if oldHighlighted >= 0 && v.highlighted != oldHighlighted {
+			v.repaintNode(v.nodes[oldHighlighted])
+		}
+	} else if oldHighlighted >= 0 {
+		v.repaintNode(v.nodes[oldHighlighted])
+	}
+	for _, c := range v.connections {
+		if c.CheckHit(pos) {
+			v.repaintConnection(c)
+		}
+	}
+}
+
+func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
+	ev := gdk.EventMotion{event}
+	x, y := ev.MotionVal()
+	pos := image.Point{int(x), int(y)}
+	if v.button1Pressed {
+		v.handleDrag(pos)
+	} else {
+		v.handleMouseover(pos)
+	}
+}
+
+// Draw all connections
+func (v *GraphView) drawConnections(context *cairo.Context, r image.Rectangle) {
+	for _, c := range v.connections {
+		box := c.BBox()
+		if lineRectOverlap(r, box.Min, box.Max) {
+			c.Draw(context)
+		}
+	}
+}
+
+// Draw all nodes
+func (v *GraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
+	for _, o := range v.nodes {
+		if o.BBox().Overlaps(r) {
+			o.Draw(context)
+		}
+	}
+}
+
+func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *GraphView) bool {
+	x1, y1, x2, y2 := context.ClipExtents()
+	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
+	v.drawNodes(context, r)
+	v.drawConnections(context, r)
+	return true
 }
 
 func lineRectOverlap(r image.Rectangle, p1, p2 image.Point) bool {
@@ -201,172 +363,4 @@ func lineRectOverlap(r image.Rectangle, p1, p2 image.Point) bool {
 	c3 := sign(crossProd(l, r.Min.Add(ph).Sub(p1)))
 	c4 := sign(crossProd(l, r.Max.Sub(p1)))
 	return (c1 || c2 || c3 || c4) != (c1 && c2 && c3 && c4)
-}
-
-func (v *GraphView) connectionsBox(drg graph.Dragable) image.Rectangle {
-	ret := drg.BBox()
-	for _, c := range v.connections {
-		if drg.Name() == c.From.Name() || drg.Name() == c.To.Name() {
-			p1, p2 := v.connectionPoints(c)
-			r := c.BBox(p1, p2)
-			ret = ret.Union(r)
-		}
-	}
-	return ret
-}
-
-func (v *GraphView) BBox() (box image.Rectangle) {
-	emptyRect := image.Rectangle{}
-	for _, o := range v.nodes {
-		if box == emptyRect {
-			box = o.BBox()
-		} else {
-			box = box.Union(o.BBox())
-		}
-	}
-	return
-}
-
-func (v *GraphView) DrawAll() {
-	v.area.QueueDrawArea(0, 0, v.width, v.height)
-}
-
-func (v *GraphView) DrawScene(r image.Rectangle) {
-	v.area.QueueDrawArea(r.Min.X, r.Min.Y, r.Size().X, r.Size().Y)
-	return
-}
-
-func (v *GraphView) ClearScene(r image.Rectangle) {
-	v.area.QueueDrawArea(r.Min.X, r.Min.Y, r.Size().X, r.Size().Y)
-	return
-}
-
-func (v *GraphView) repaintObj(drg graph.Dragable) {
-	v.DrawScene(drg.BBox())
-}
-
-func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
-	ev := gdk.EventButton{event}
-	pos := image.Point{int(ev.X()), int(ev.Y())}
-	idx, ok := graph.HitObj(v.nodes, pos)
-	switch ev.Type() {
-	case gdk.EVENT_BUTTON_PRESS:
-		v.dragOffs = pos
-		oldSelected := v.selected
-		if ok {
-			v.selected = idx
-			v.repaintObj(v.nodes[v.selected])
-			if oldSelected >= 0 && v.selected != oldSelected {
-				v.repaintObj(v.nodes[oldSelected])
-				v.nodes[oldSelected].Deselect()
-			}
-			v.context.SelectNode(v.nodes[v.selected].UserObj())
-			_, ok, p := v.check(pos, true)
-			if ok {
-				v.context.SelectPort(p)
-			}
-		}
-		v.button1Pressed = true
-	case gdk.EVENT_2BUTTON_PRESS:
-		log.Println("areaButtonCallback 2BUTTON_PRESS")
-		if v.selected != -1 {
-			v.context.EditNode(v.nodes[v.selected].UserObj())
-		}
-
-	case gdk.EVENT_BUTTON_RELEASE:
-		v.button1Pressed = false
-	default:
-	}
-}
-
-func (v *GraphView) check(pos image.Point, button bool) (r image.Rectangle, ok bool, p freesp.Port) {
-	return v.nodes[v.selected].Check(pos, button)
-}
-
-func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
-	ev := gdk.EventMotion{event}
-	x, y := ev.MotionVal()
-	pos := image.Point{int(x), int(y)}
-	idx, ok := graph.HitObj(v.nodes, pos)
-
-	if v.button1Pressed {
-		if v.selected != -1 {
-			s := v.nodes[v.selected]
-			box := s.BBox()
-			if !graph.Overlaps(v.nodes, v.selected, box.Min.Add(pos.Sub(v.dragOffs))) {
-				clearbox := v.connectionsBox(s)
-				v.ClearScene(clearbox)
-				box = box.Add(pos.Sub(v.dragOffs))
-				v.dragOffs = pos
-				s.SetPosition(box.Min)
-				v.DrawScene(clearbox.Union(v.connectionsBox(s)))
-			}
-		}
-	} else {
-		oldHighlighted := v.highlighted
-		if idx == v.selected {
-			v.highlighted = -1
-			if ok {
-				r, ok, _ := v.check(pos, false)
-				if ok {
-					v.DrawScene(r)
-				}
-			}
-			ok = false
-		} else {
-			v.highlighted = idx
-		}
-		if ok {
-			v.repaintObj(v.nodes[v.highlighted])
-			if oldHighlighted >= 0 && v.highlighted != oldHighlighted {
-				v.repaintObj(v.nodes[oldHighlighted])
-			}
-		} else if oldHighlighted >= 0 {
-			v.repaintObj(v.nodes[oldHighlighted])
-		}
-	}
-
-}
-
-// Draw all connections
-func (v *GraphView) drawConnections(context *cairo.Context, r image.Rectangle) {
-	context.SetSourceRGB(0.0, 0.0, 0.0)
-	context.SetLineWidth(2)
-	for _, c := range v.connections {
-		p1, p2 := v.connectionPoints(c)
-		box := c.BBox(p1, p2)
-		if lineRectOverlap(r, box.Min, box.Max) {
-			graph.DrawArrow(context, p1, p2)
-		}
-	}
-}
-
-func (v *GraphView) connectionPoints(c graph.Connection) (p1, p2 image.Point) {
-	p1 = c.From.BBox().Min.Add(v.conOut.Add(v.portDY.Mul(c.FromPort)))
-	p2 = c.To.BBox().Min.Add(v.conIn.Add(v.portDY.Mul(c.ToPort)))
-	return
-}
-
-// Draw all nodes
-func (v *GraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
-	for i, o := range v.nodes {
-		if o.BBox().Overlaps(r) {
-			switch i {
-			case v.selected:
-				o.Draw(context, graph.SelectedMode)
-			case v.highlighted:
-				o.Draw(context, graph.HighlightMode)
-			default:
-				o.Draw(context, graph.NormalMode)
-			}
-		}
-	}
-}
-
-func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *GraphView) bool {
-	x1, y1, x2, y2 := context.ClipExtents()
-	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
-	v.drawNodes(context, r)
-	v.drawConnections(context, r)
-	return true
 }

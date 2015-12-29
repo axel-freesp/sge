@@ -8,84 +8,139 @@ import (
 	"github.com/gotk3/gotk3/cairo"
 )
 
-type GObject interface {
+// user objects
+
+type NodeObject interface {
 	freesp.Namer
 	freesp.Positioner
 	freesp.Porter
 }
 
-type ColorMode int
+type PortObject freesp.Port
 
-const (
-	NormalMode       ColorMode = iota
-	HighlightMode
-	SelectedMode
-	NumColorMode
-)
+
+// graph items
+
+type NodeIf interface {
+	freesp.Namer
+	freesp.Positioner
+	freesp.Porter // own interface??
+	SelectableBox
+	Drawer
+	UserObj() NodeObject
+	GetOutPort(index int) PortObject
+	GetInPort(index int) PortObject
+}
+
+type PortIf interface {
+	freesp.Positioner
+	SelectableBox
+	Drawer
+	UserObj() PortObject
+}
+
+type ConnectIf interface {
+	SelectableBox
+	Drawer
+	IsLinked(nodeName string) bool
+	From() NodeIf
+	To() NodeIf
+	FromId() int
+	ToId() int
+}
+
+// Grouping
+
+type SelectableBox interface {
+	BBoxer
+	Selecter
+	Hitter
+}
 
 type Dragable interface {
-	GObject
-	UserObj() GObject
+	freesp.Namer
+    SelectableBox
+}
+
+
+type BBoxer interface {
 	BBox() image.Rectangle
-	Draw(context *cairo.Context, mode ColorMode)
-	Check(pos image.Point, button bool) (r image.Rectangle, ok bool, p freesp.Port)
-	Deselect()
 }
 
-type DragableObject struct {
+type Selecter interface {
+	Select() bool
+	Deselect() bool
+}
+
+type Hitter interface {
+	CheckHit(image.Point) bool
+}
+
+type Drawer interface {
+	Draw(*cairo.Context)
+}
+
+
+// Implementations
+
+type SelectableObject struct {
 	box      image.Rectangle
-	userObj  GObject
+	selected, highlighted bool
 }
 
-var _ GObject = (*DragableObject)(nil)
+var _ SelectableBox = (*SelectableObject)(nil)
 
-func (drg *DragableObject) Name() string {
-	return (*drg).userObj.Name()
+/*
+ *      Default Positioner implementation
+ */
+
+func (b *SelectableObject) Position() image.Point {
+	return b.BBox().Min
 }
 
-func (drg *DragableObject) Position() image.Point {
-	return (*drg).userObj.Position()
+func (b *SelectableObject) SetPosition(pos image.Point) {
+	size := b.box.Size()
+	b.box.Min = pos
+	b.box.Max = b.box.Min.Add(size)
 }
 
-func (drg *DragableObject) SetPosition(pos image.Point) {
-	(*drg).userObj.SetPosition(pos)
-	size := drg.box.Size()
-	drg.box.Min = pos
-	drg.box.Max = drg.box.Min.Add(size)
+/*
+ *      Default BBox implementation
+ */
+
+func (b *SelectableObject) BBox() image.Rectangle {
+	return b.box
 }
 
-func (drg *DragableObject) NumInPorts() int {
-	return drg.userObj.NumInPorts()
+/*
+ *      Default Selecter implementation
+ */
+
+var _ Selecter  = (*SelectableObject)(nil)
+
+func (b *SelectableObject) Select() (selected bool) {
+	selected = b.selected
+	b.selected = true
+	return
 }
 
-func (drg *DragableObject) NumOutPorts() int {
-	return drg.userObj.NumOutPorts()
+func (b *SelectableObject) Deselect() (selected bool) {
+	selected = b.selected
+	b.selected = false
+	return
 }
 
-func (drg *DragableObject) UserObj() GObject {
-	return drg.userObj
+func (b *SelectableObject) CheckHit(p image.Point) (ok bool) {
+	test := image.Rectangle{p, p}
+	ok = b.BBox().Overlaps(test)
+	b.highlighted = ok
+	return
 }
 
-func (drg *DragableObject) BBox() image.Rectangle {
-	return drg.box
-}
-
-func hit(drg Dragable, p image.Point) bool {
-	return drg.BBox().Overlaps(image.Rectangle{p, p})
-}
-
-func HitObj(drg []Dragable, p image.Point) (idx int, ok bool) {
-	for i, o := range drg {
-		if hit(o, p) {
-			return i, true
-		}
-	}
-	return -1, false
-}
 
 // Check if a given object (index idx) would overlap with any other
 // if we move it to p coordinates:
-func Overlaps(drg []Dragable, idx int, p image.Point) bool {
+func Overlaps(drg []NodeIf, idx int, p image.Point) bool {
 	box := drg[idx].BBox()
 	newBox := box.Add(p.Sub(box.Min))
 	for i, d := range drg {

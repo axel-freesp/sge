@@ -315,9 +315,9 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 			var p Port
 			var ok bool
 			if pt.Direction() == InPort {
-				p, ok = n.(*node).inPort.Find(pt.Name())
+				p, ok, _ = n.(*node).inPort.Find(n.Name(), pt.Name())
 			} else {
-				p, ok = n.(*node).outPort.Find(pt.Name())
+				p, ok, _ = n.(*node).outPort.Find(n.Name(), pt.Name())
 			}
 			if !ok {
 				log.Fatalf("nodeType.treeInstObject error: port %s not found.\n", pt.Name())
@@ -342,7 +342,7 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 	return
 }
 
-func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
 	case Implementation:
 		t.AddImplementation(obj.(Implementation))
@@ -387,7 +387,7 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 				for _, p := range n.OutPorts() {
 					pCursor := tree.CursorAt(nCursor, p)
 					for index, c := range p.Connections() {
-						conn := Connection{p, c}
+						conn := p.Connection(c)
 						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 					}
 				}
@@ -420,14 +420,14 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 				for _, p := range n.InPorts() {
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
-						conn := p.(*port).Connection(c.(*port))
+						conn := p.Connection(c)
 						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
 				for _, p := range n.OutPorts() {
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
-						conn := p.(*port).Connection(c.(*port))
+						conn := p.Connection(c)
 						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
 					}
 				}

@@ -15,7 +15,7 @@ type Tree interface {
 
 type TreeElement interface {
 	AddToTree(tree Tree, cursor Cursor)
-	AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor)
+	AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
 	RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
 }
 

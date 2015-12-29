@@ -96,7 +96,7 @@ func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (t *signalType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *signalType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	log.Fatal("signalType.AddNewObject - nothing to add.")
 	return
 }

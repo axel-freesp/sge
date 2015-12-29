@@ -59,13 +59,18 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		object := job.newElement.CreateObject(a.fts)
+		var object freesp.TreeElement
+		object, err = job.newElement.CreateObject(a.fts)
+		if err != nil {
+			log.Printf("jobApplier.Apply error: %s\n", err)
+			return
+		}
 		job.newElement.newId, err = a.fts.AddNewObject(job.newElement.parentId, -1, object)
 		if err == nil {
 			state = job.newElement.newId
 		} else {
 			state = a.fts.GetCurrentId()
-			log.Printf("jobApplier.Apply: error: %s\n", err)
+			log.Printf("jobApplier.Apply error: %s\n", err)
 		}
 	case JobDeleteObject:
 		job.deleteObject.deletedObjects, err = a.fts.DeleteObject(job.deleteObject.id)

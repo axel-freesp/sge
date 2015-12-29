@@ -132,7 +132,7 @@ func (l *library) RemoveNodeType(nt NodeType) {
 	l.nodeTypes.Remove(nt)
 }
 
-func (l *library) AddSignalType(s SignalType) {
+func (l *library) AddSignalType(s SignalType) (ok bool) {
 	for _, st := range l.signalTypes.SignalTypes() {
 		if st.TypeName() == s.TypeName() {
 			log.Printf(`library.AddSignalType: warning: adding
@@ -140,7 +140,9 @@ func (l *library) AddSignalType(s SignalType) {
 			return
 		}
 	}
+	ok = true
 	l.signalTypes.Append(s)
+	return
 }
 
 func (l *library) RemoveSignalType(st SignalType) {
@@ -182,20 +184,29 @@ func (l *library) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+	if obj == nil {
+		err = fmt.Errorf("library.AddNewObject error: nil object")
+		return
+	}
 	switch obj.(type) {
 	case SignalType:
 		t := obj.(SignalType)
-		l.AddSignalType(t)
+		ok := l.AddSignalType(t)
+		if !ok {
+			err = fmt.Errorf("library.AddNewObject warning: duplicate")
+			return
+		}
 		cursor.Position = len(l.SignalTypes()) - 1
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
 
 	case NodeType:
 		t := obj.(NodeType)
-		err := l.AddNodeType(t)
+		err = l.AddNodeType(t)
 		if err != nil {
-			log.Fatalf("library.AddNewObject error: AddNodeType failed: %s\n", err)
+			err = fmt.Errorf("library.AddNewObject error: AddNodeType failed: %s", err)
+			return
 		}
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)

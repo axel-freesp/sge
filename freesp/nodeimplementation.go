@@ -86,11 +86,10 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
 	case Node:
 		if impl.ImplementationType() == NodeTypeGraph {
-			log.Println("implementation.AddNewObject: delegate to signalGraphType\n")
 			return impl.Graph().AddNewObject(tree, cursor, obj)
 		} else {
 			log.Fatalf("implementation.AddNewObject error: cannot add node to elementary implementation.\n")
@@ -130,14 +129,14 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 		for _, p := range n.OutPorts() {
 			pCursor := tree.CursorAt(cursor, p)
 			for index, c := range p.Connections() {
-				conn := Connection{p, c}
+				conn := p.Connection(c)
 				removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 			}
 		}
 		for _, p := range n.InPorts() {
 			pCursor := tree.CursorAt(cursor, p)
 			for index, c := range p.Connections() {
-				conn := Connection{c, p}
+				conn := p.Connection(c)
 				removed = append(removed, IdWithObject{pCursor.Path, index, conn})
 			}
 		}

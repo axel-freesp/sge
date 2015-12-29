@@ -34,7 +34,7 @@ type Library interface {
 	WriteFile(filepath string) error
 	AddNodeType(NodeType) error
 	RemoveNodeType(t NodeType)
-	AddSignalType(SignalType)
+	AddSignalType(SignalType) bool
 	RemoveSignalType(t SignalType)
 	SetFilename(string)
 }
@@ -115,7 +115,7 @@ type Port interface {
 	Direction() PortDirection
 	Connections() []Port
 	Node() Node
-	Connection(c *port) Connection
+	Connection(Port) Connection
 	AddConnection(Port) error
 	RemoveConnection(c Port)
 }
@@ -127,8 +127,10 @@ const (
 	OutPort PortDirection = true
 )
 
-type Connection struct {
-	From, To Port
+type Connection interface {
+	TreeElement
+	From() Port
+	To() Port
 }
 
 // TODO: Turn into interface

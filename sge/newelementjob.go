@@ -32,8 +32,9 @@ func getParentId(id string) string {
 	return strings.Join(split[:len(split)-1], ":")
 }
 
-func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElement {
-	parentObject, err := fts.GetObjectById(j.parentId)
+func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.TreeElement, err error) {
+	var parentObject freesp.TreeElement
+	parentObject, err = fts.GetObjectById(j.parentId)
 	if err != nil {
 		log.Fatal("NewElementJob.CreateObject error: referenced parentObject run away...")
 	}
@@ -52,7 +53,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 			if parentObject.(freesp.Implementation).ImplementationType() == freesp.NodeTypeGraph {
 				context = parentObject.(freesp.Implementation).Graph()
 			} else {
-				return nil
+				log.Fatal("NewElementJob.CreateObject(eNode) error: parent implementation is no graph...")
 			}
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject wrong type...")
@@ -61,7 +62,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		if !ok {
 			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject type wrong...")
 		}
-		return freesp.NodeNew(j.input[iNodeName], ntype, context)
+		ret, err = freesp.NodeNew(j.input[iNodeName], ntype, context)
 
 	case eNodeType:
 		var context string
@@ -74,7 +75,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNodeType) error: referenced parentObject wrong type...")
 		}
-		return freesp.NodeTypeNew(j.input[iTypeName], context)
+		ret = freesp.NodeTypeNew(j.input[iTypeName], context)
 
 	case eConnection:
 		switch parentObject.(type) {
@@ -86,15 +87,8 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		for _, p := range ports {
 			s := fmt.Sprintf("%s/%s", p.Node().Name(), p.Name())
 			if j.input[iPortSelect] == s {
-				var from, to freesp.Port
-				if p.Direction() == freesp.InPort {
-					from = parentObject.(freesp.Port)
-					to = p
-				} else {
-					from = p
-					to = parentObject.(freesp.Port)
-				}
-				return freesp.Connection{from, to}
+				ret = parentObject.(freesp.Port).Connection(p)
+				break
 			}
 		}
 
@@ -104,11 +98,12 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 			j.parentId = getParentId(j.parentId)
 		case freesp.NodeType:
 		default:
-			log.Fatal("NewElementJob.CreateObject(eNamedPortType) error: referenced parentObject wrong type...")
+			log.Fatal("NewElementJob.CreateObject(ePortType) error: referenced parentObject wrong type...")
 		}
 		_, ok := freesp.GetSignalTypeByName(j.input[iSignalTypeSelect])
 		if !ok {
-			log.Fatal("NewElementJob.CreateObject(eNamedPortType) error: referenced signal type wrong...")
+			err = fmt.Errorf("NewElementJob.CreateObject(ePortType) error: referenced signal type wrong...")
+			return
 		}
 		var dir freesp.PortDirection
 		if j.input[iDirection] == "InPort" {
@@ -116,7 +111,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		} else {
 			dir = freesp.OutPort
 		}
-		return freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
+		ret = freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
 
 	case eSignalType:
 		switch parentObject.(type) {
@@ -141,11 +136,11 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		} else {
 			mode = freesp.Synchronous
 		}
-
-		// TODO: error handling (trying to define duplicate signal type
-		// returns nil)
-		sType, _ := freesp.SignalTypeNew(name, cType, channelId, scope, mode)
-		return sType
+		ret, err = freesp.SignalTypeNew(name, cType, channelId, scope, mode)
+		if err != nil {
+			log.Printf("NewElementJob.CreateObject(eSignalType) error: SignalTypeNew failed: %s\n", err)
+			return
+		}
 
 	case eImplementation:
 		switch parentObject.(type) {
@@ -161,10 +156,10 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) freesp.TreeElem
 		} else {
 			implType = freesp.NodeTypeGraph
 		}
-		return freesp.ImplementationNew(j.input[iImplName], implType)
+		ret = freesp.ImplementationNew(j.input[iImplName], implType)
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)
 	}
-	return nil
+	return
 }

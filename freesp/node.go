@@ -21,8 +21,18 @@ type node struct {
  */
 var _ Node = (*node)(nil)
 
-func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
-	ret := &node{context.(*signalGraphType), name, ntype.(*nodeType), portListInit(), portListInit(), nil, image.Point{0, 0}}
+func NodeNew(name string, ntype NodeType, context SignalGraphType) (ret *node, err error) {
+	for _, n := range context.Nodes() {
+		if n.Name() == name {
+			err = fmt.Errorf("NodeNew error: node '%s' already exists in context.", name)
+			return
+		}
+	}
+	if len(ntype.InPorts())+len(ntype.OutPorts()) == 0 {
+		err = fmt.Errorf("NodeNew error: type '%s' has no ports.", ntype.TypeName())
+		return
+	}
+	ret = &node{context, name, ntype, portListInit(), portListInit(), nil, image.Point{}}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p)
 	}
@@ -30,7 +40,7 @@ func NodeNew(name string, ntype NodeType, context SignalGraphType) *node {
 		ret.addOutPort(p)
 	}
 	ntype.(*nodeType).addInstance(ret)
-	return ret
+	return
 }
 
 func (n *node) ItsType() NodeType {
@@ -97,7 +107,7 @@ func (n *node) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (n *node) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (n *node) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	log.Fatal("node.AddNewObject - nothing to add.")
 	return
 }
@@ -113,7 +123,7 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	case Port:
 		p := obj.(Port)
 		for index, c := range p.Connections() {
-			conn := Connection{c, p}
+			conn := p.Connection(c)
 			removed = append(removed, IdWithObject{cursor.Path, index, conn})
 		}
 		var list portTypeList
@@ -275,14 +285,14 @@ func nodeListInit() nodeList {
 	return nodeList{nil}
 }
 
-func (l *nodeList) Append(nt Node) {
-	l.nodes = append(l.nodes, nt)
+func (l *nodeList) Append(n Node) {
+	l.nodes = append(l.nodes, n)
 }
 
-func (l *nodeList) Remove(nt Node) {
+func (l *nodeList) Remove(n Node) {
 	var i int
 	for i = range l.nodes {
-		if nt == l.nodes[i] {
+		if n == l.nodes[i] {
 			break
 		}
 	}
@@ -290,7 +300,7 @@ func (l *nodeList) Remove(nt Node) {
 		for _, v := range l.nodes {
 			log.Printf("nodeList.RemoveNode have Node %v\n", v)
 		}
-		log.Fatalf("nodeList.RemoveNode error: Node %v not in this list\n", nt)
+		log.Fatalf("nodeList.RemoveNode error: Node %v not in this list\n", n)
 	}
 	for i++; i < len(l.nodes); i++ {
 		l.nodes[i-1] = l.nodes[i]

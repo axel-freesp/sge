@@ -68,7 +68,7 @@ func (p *portType) AddToTree(tree Tree, cursor Cursor) {
 	p.SignalType().AddToTree(tree, child)
 }
 
-func (p *portType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (p *portType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	log.Fatal("PortType.AddNewObject - nothing to add.")
 	return
 }

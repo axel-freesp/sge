@@ -7,14 +7,15 @@ import (
 )
 
 type port struct {
-	itsType     PortType
-	connections portList
-	node        Node
+	itsType   PortType
+	connected portList
+	conn      []Connection
+	node      Node
 }
 
 // TODO: Create namedPortType object first and hand it here?
 func newPort(pt PortType, n Node) *port {
-	return &port{pt, portListInit(), n}
+	return &port{pt, portListInit(), nil, n}
 }
 
 /*
@@ -48,7 +49,7 @@ func (p *port) Direction() PortDirection {
 }
 
 func (p *port) Connections() []Port {
-	return p.connections.Ports()
+	return p.connected.Ports()
 }
 
 func (p *port) Node() Node {
@@ -60,19 +61,23 @@ func (p *port) AddConnection(c Port) error {
 }
 
 func (p *port) RemoveConnection(c Port) {
-	p.connections.Remove(c)
+	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
+	if !ok {
+		log.Fatalf("port.Connection error: port %v not in connected list of port %v\n", c, p)
+	}
+	p.connected.Remove(c)
+	for index++; index < len(p.conn); index++ {
+		p.conn[index-1] = p.conn[index]
+	}
+	p.conn = p.conn[:len(p.conn)-1]
 }
 
-func (p *port) Connection(c *port) Connection {
-	var from, to Port
-	if p.Direction() == InPort {
-		from = c
-		to = p
-	} else {
-		from = p
-		to = c
+func (p *port) Connection(c Port) Connection {
+	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
+	if !ok {
+		log.Fatalf("port.Connection error: port %v not in connected list of port %v\n", c, p)
 	}
-	return Connection{from, to}
+	return p.conn[index]
 }
 
 func PortConnect(port1, port2 Port) error {
@@ -83,8 +88,19 @@ func PortConnect(port1, port2 Port) error {
 	if port1.Direction() == port2.Direction() {
 		return fmt.Errorf("direction mismatch")
 	}
-	p1.connections.Append(port2)
-	p2.connections.Append(port1)
+	var from, to Port
+	if port1.Direction() == InPort {
+		from = port2
+		to = port1
+	} else {
+		from = port1
+		to = port2
+	}
+	conn := &connection{from, to}
+	p1.connected.Append(port2)
+	p1.conn = append(p1.conn, conn)
+	p2.connected.Append(port1)
+	p2.conn = append(p2.conn, conn)
 	return nil
 }
 
@@ -139,7 +155,7 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 	t.AddToTree(tree, child)
 	for _, c := range p.Connections() {
 		child = tree.Append(cursor)
-		p.Connection(c.(*port)).AddToTree(tree, child)
+		p.Connection(c).AddToTree(tree, child)
 	}
 	return
 }
@@ -154,17 +170,17 @@ func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, other
 	return
 }
 
-func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
 	case Connection:
 		conn := obj.(Connection)
 		var thisPort, otherPort Port
 		if p.Direction() == InPort {
-			otherPort = conn.From
-			thisPort = conn.To
+			otherPort = conn.From()
+			thisPort = conn.To()
 		} else {
-			otherPort = conn.To
-			thisPort = conn.From
+			otherPort = conn.To()
+			thisPort = conn.From()
 		}
 		if p != thisPort {
 			log.Println("p =", p)
@@ -178,7 +194,6 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		contextCursor := tree.Parent(tree.Parent(cursor))
 
 		thisPort.AddConnection(otherPort)
-		otherPort.AddConnection(thisPort)
 		newCursor = p.treeAddNewObject(tree, cursor, conn, otherPort)
 
 		context := tree.Object(contextCursor)
@@ -227,23 +242,23 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		conn := obj.(Connection)
 		var thisPort, otherPort Port
 		if p.Direction() == InPort {
-			otherPort = conn.From
-			thisPort = conn.To
+			otherPort = conn.From()
+			thisPort = conn.To()
 			if p != thisPort {
-				log.Fatal("port.AddNewObject error: invalid connection ", conn)
+				log.Fatal("port.RemoveObject error: invalid connection ", conn)
 			}
 		} else {
-			otherPort = conn.To
-			thisPort = conn.From
+			otherPort = conn.To()
+			thisPort = conn.From()
 			if p != thisPort {
-				log.Fatal("port.AddNewObject error: invalid connection ", conn)
+				log.Fatal("port.RemoveObject error: invalid connection ", conn)
 			}
 		}
 		contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
 		removed = p.treeRemoveObject(tree, cursor, conn, otherPort)
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraphType:
+		case SignalGraph:
 		case Implementation:
 			// propagate removed edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
@@ -256,7 +271,7 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			}
 
 		default:
-			log.Fatalf("port.AddNewObject error: wrong context type %t: %v\n", contextCursor, contextCursor)
+			log.Fatalf("port.RemoveObject error: wrong context type %T: %v\n", context, context)
 		}
 		p.RemoveConnection(otherPort)
 		otherPort.RemoveConnection(p)
@@ -299,7 +314,7 @@ func (l *portList) Append(p Port) {
 func (l *portList) Remove(p Port) {
 	var i int
 	for i = range l.ports {
-		if p == l.ports[i] {
+		if p.Node().Name() == l.ports[i].Node().Name() && p.Name() == l.ports[i].Name() {
 			break
 		}
 	}
@@ -319,10 +334,10 @@ func (l *portList) Ports() []Port {
 	return l.ports
 }
 
-func (l *portList) Find(name string) (p Port, ok bool) {
+func (l *portList) Find(nodeName, portName string) (p Port, ok bool, index int) {
 	ok = false
-	for _, p = range l.ports {
-		if p.Name() == name {
+	for index, p = range l.ports {
+		if p.Node().Name() == nodeName && p.Name() == portName {
 			ok = true
 			return
 		}

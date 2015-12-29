@@ -2,7 +2,7 @@ package graph
 
 import (
 	//"fmt"
-	"log"
+	//"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/axel-freesp/sge/freesp"
@@ -78,14 +78,14 @@ func (n *Node) SelectPort(p freesp.Port) {
 		for i := 0; i < n.NumInPorts(); i++ {
 			if p.Name() == n.userObj.(freesp.Node).InPorts()[i].Name() {
 				n.selectInport = i
-				log.Printf("Node.SelectPort: matching in port %s\n", p.Name())
+				//log.Printf("Node.SelectPort: matching in port %s\n", p.Name())
 			}
 		}
 	} else {
 		for i := 0; i < n.NumOutPorts(); i++ {
 			if p.Name() == n.userObj.(freesp.Node).OutPorts()[i].Name() {
 				n.selectOutport = i
-				log.Printf("Node.SelectPort: matching out port %s\n", p.Name())
+				//log.Printf("Node.SelectPort: matching out port %s\n", p.Name())
 			}
 		}
 	}

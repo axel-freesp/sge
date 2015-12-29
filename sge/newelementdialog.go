@@ -34,7 +34,7 @@ const (
 	eNode                       = "Node"
 	eNodeType                   = "NodeType"
 	ePort                       = "Port"
-	ePortType                   = "NamedPortType"
+	ePortType                   = "PortType"
 	eConnection                 = "Connection"
 	eSignalType                 = "SignalType"
 	eLibrary                    = "Library"

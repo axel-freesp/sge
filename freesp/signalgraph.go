@@ -80,7 +80,7 @@ func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
 	t.ItsType().AddToTree(tree, cursor)
 }
 
-func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	return t.ItsType().AddNewObject(tree, cursor, obj)
 }
 

@@ -91,12 +91,16 @@ func CreateXmlImplementation(impl Implementation) *backend.XmlImplementation {
 	return ret
 }
 
-func CreateXmlConnection(p Connection) *backend.XmlConnect {
-	switch p.From.Direction() {
+func CreateXmlConnection(c Connection) *backend.XmlConnect {
+	from := c.From()
+	to := c.To()
+	fromNode := from.Node()
+	toNode := to.Node()
+	switch from.Direction() {
 	case OutPort:
-		return backend.XmlConnectNew(p.From.Node().Name(), p.To.Node().Name(), p.From.Name(), p.To.Name())
+		return backend.XmlConnectNew(fromNode.Name(), toNode.Name(), from.Name(), to.Name())
 	default:
-		return backend.XmlConnectNew(p.To.Node().Name(), p.From.Node().Name(), p.To.Name(), p.From.Name())
+		return backend.XmlConnectNew(toNode.Name(), fromNode.Name(), to.Name(), from.Name())
 	}
 }
 
@@ -143,7 +147,7 @@ func CreateXmlSignalGraphType(t SignalGraphType) *backend.XmlSignalGraph {
 	for _, n := range t.Nodes() {
 		for _, p := range n.OutPorts() {
 			for _, c := range p.Connections() {
-				conn := Connection{p, c}
+				conn := p.Connection(c)
 				ret.Connections = append(ret.Connections, *CreateXmlConnection(conn))
 			}
 		}

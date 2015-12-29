@@ -227,7 +227,11 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 	if nt == nil {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
-	nd = NodeNew(nName, nt, t)
+	var err error
+	nd, err = NodeNew(nName, nt, t)
+	if err != nil {
+		log.Fatal("signalGraphType.createNodeFromXml: TODO: error handling")
+	}
 	nd.position = image.Point{n.Hint.X, n.Hint.Y}
 	return
 }
@@ -236,7 +240,10 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolve
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret := NodeNew(nName, nt, t)
+	ret, err := NodeNew(nName, nt, t)
+	if err != nil {
+		log.Fatal("signalGraphType.createInputNodeFromXml: TODO: error handling")
+	}
 	pt := resolvePort(n.NPort, InPort)
 	if pt != nil {
 		//ret.addInPort(pt)
@@ -250,7 +257,10 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resol
 	nName := n.NName
 	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret := NodeNew(nName, nt, t)
+	ret, err := NodeNew(nName, nt, t)
+	if err != nil {
+		log.Fatal("signalGraphType.createOutputNodeFromXml: TODO: error handling")
+	}
 	pt := resolvePort(n.NPort, OutPort) // matches also empty names
 	if pt != nil {
 		ret.addInPort(pt)
@@ -272,9 +282,12 @@ func (g *signalGraphType) addInputNodeFromPortType(p PortType) {
 	if len(nt.outPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addInputNodeFromNamedPortType: invalid input node type")
 	}
-	n := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, g)
+	n, err := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, g)
+	if err != nil {
+		log.Fatal("signalGraphType.addInputNodeFromPortType: TODO: error handling")
+	}
 	n.portlink = p
-	err := g.addNode(n)
+	err = g.addNode(n)
 	if err != nil {
 		log.Fatal("signalGraphType.addInputNodeFromNamedPortType: AddNode failed:", err)
 	}
@@ -292,9 +305,12 @@ func (g *signalGraphType) addOutputNodeFromPortType(p PortType) {
 	if len(nt.inPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addOutputNodeFromNamedPortType: invalid output node type")
 	}
-	n := NodeNew(fmt.Sprintf("out-%s", p.Name()), nt, g)
+	n, err := NodeNew(fmt.Sprintf("out-%s", p.Name()), nt, g)
+	if err != nil {
+		log.Fatal("signalGraphType.addOutputNodeFromPortType: TODO: error handling")
+	}
 	n.portlink = p
-	err := g.addNode(n)
+	err = g.addNode(n)
 	if err != nil {
 		log.Fatal("signalGraphType.addOutputNodeFromNamedPortType: AddNode failed:", err)
 	}
@@ -363,13 +379,18 @@ func (t *signalGraphType) treeAddNewObject(tree Tree, cursor Cursor, n Node) (ne
 	return
 }
 
-func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
 	case Node:
 		n := obj.(Node)
-		err := t.AddNode(n)
+		err = t.AddNode(n)
 		if err != nil {
-			log.Fatalf("signalGraphType.AddNewObject error: %s\n", err)
+			err = fmt.Errorf("signalGraphType.AddNewObject error: %s", err)
+			nt := n.ItsType().(*nodeType)
+			if nt != nil {
+				nt.instances.Remove(n)
+			}
+			return
 		}
 		newCursor = t.treeAddNewObject(tree, cursor, n)
 
@@ -405,7 +426,7 @@ func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWi
 		// Remove all connections first
 		for _, p := range n.OutPorts() {
 			for _, c := range p.Connections() {
-				conn := Connection{p, c}
+				conn := p.Connection(c)
 				cCursor := tree.CursorAt(cursor, conn)
 				del := p.RemoveObject(tree, cCursor)
 				for _, d := range del {
@@ -415,7 +436,7 @@ func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWi
 		}
 		for _, p := range n.InPorts() {
 			for _, c := range p.Connections() {
-				conn := Connection{c, p}
+				conn := p.Connection(c)
 				cCursor := tree.CursorAt(cursor, conn)
 				del := p.RemoveObject(tree, cCursor)
 				for _, d := range del {

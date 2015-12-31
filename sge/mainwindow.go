@@ -19,18 +19,19 @@ const (
 )
 
 type Global struct {
-	win       *GoAppWindow
-	jl        *jobList
-	graphview []*views.GraphView
-	xmlview   *views.XmlTextView
-	fts       *models.FilesTreeStore
-	ftv       *views.FilesTreeView
+	win          *GoAppWindow
+	jl           *jobList
+	graphview    []*views.GraphView
+	xmlview      *views.XmlTextView
+	fts          *models.FilesTreeStore
+	ftv          *views.FilesTreeView
+	graphviewMap map[freesp.Implementation]*views.GraphView
+	libraryMap   map[string]freesp.Library
 }
 
 var _ views.Context = (*Global)(nil)
 
 func (g *Global) SelectNode(node graph.NodeObject) {
-	//log.Printf("Global.SelectNode: %v\n", node)
 	n := node.(freesp.Node)
 	cursor := g.fts.Cursor(n)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
@@ -43,7 +44,6 @@ func (g *Global) EditNode(node graph.NodeObject) {
 }
 
 func (g *Global) SelectPort(port freesp.Port) {
-	log.Printf("Global.SelectPort: %v\n", port)
 	n := port.Node()
 	cursor := g.fts.Cursor(n)
 	pCursor := g.fts.CursorAt(cursor, port)
@@ -53,7 +53,6 @@ func (g *Global) SelectPort(port freesp.Port) {
 }
 
 func (g *Global) SelectConnect(conn freesp.Connection) {
-	log.Printf("Global.SelectConnect: %v\n", conn)
 	p := conn.From()
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
@@ -66,11 +65,7 @@ func (g *Global) SelectConnect(conn freesp.Connection) {
 
 var global Global
 
-type selectionArg struct {
-	menu *GoAppMenu
-}
-
-func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
+func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 	treeStore := global.fts
 	var iter gtk.TreeIter
 	var model gtk.ITreeModel
@@ -83,10 +78,39 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, arg *selectionArg) {
 				log.Fatal("treeSelectionChangedCB: Can't show root element")
 			}
 		}
-		MenuEditCurrent(arg.menu, treeStore, global.jl)
+		MenuEditCurrent(menu, treeStore, global.jl)
 		global.xmlview.Set(obj)
-		for _, v := range global.graphview {
-			v.Select(obj)
+		switch obj.(type) {
+		case freesp.Node, freesp.Port, freesp.Connection:
+			for _, v := range global.graphview {
+				v.Select(obj)
+			}
+		case freesp.Implementation:
+			impl := obj.(freesp.Implementation)
+			if impl.ImplementationType() == freesp.NodeTypeGraph {
+				log.Println("treeSelectionChangedCB: Have graph implementation to show")
+				gv, ok := global.graphviewMap[impl]
+				if !ok {
+					cursor := treeStore.Cursor(obj)
+					ntCursor := treeStore.Parent(cursor)
+					nt := treeStore.Object(ntCursor).(freesp.NodeType)
+					_, ok := global.libraryMap[nt.DefinedAt()]
+					log.Printf("treeSelectionChangedCB: Need library %s: %v\n", nt.DefinedAt(), ok)
+					if !ok {
+						return
+					}
+					gv, err = views.GraphViewNew(impl.Graph(), width, height, &global)
+					if err != nil {
+						log.Fatal("Could not create graph view.")
+					}
+					global.graphview = append(global.graphview, gv)
+					global.win.stack.AddTitled(gv.Widget(), nt.TypeName(), nt.TypeName())
+					global.graphviewMap[impl] = gv
+					gv.Widget().ShowAll()
+					log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
+				}
+				gv.Sync()
+			}
 		}
 	}
 }
@@ -97,6 +121,8 @@ func main() {
 	gtk.Init(&unhandledArgs)
 	backend.Init()
 	freesp.Init()
+	global.graphviewMap = make(map[freesp.Implementation]*views.GraphView)
+	global.libraryMap = make(map[string]freesp.Library)
 
 	var err error
 	// Create a new toplevel window.
@@ -135,8 +161,7 @@ func main() {
 		log.Fatal("Could not get tree selection object.")
 	}
 	selection.SetMode(gtk.SELECTION_SINGLE)
-	arg := &selectionArg{menu}
-	selection.Connect("changed", treeSelectionChangedCB, arg)
+	selection.Connect("changed", treeSelectionChangedCB, menu)
 
 	// Handle command line arguments: treat each as a filename:
 	for i, p := range unhandledArgs {
@@ -145,12 +170,12 @@ func main() {
 			switch tool.Suffix(p) {
 			case "sml":
 				var sg freesp.SignalGraph
-				sg = freesp.SignalGraphNew(p)
+				sg = freesp.SignalGraphNew(p, &global)
 				err1 := sg.ReadFile(filepath)
 				if err1 == nil {
 					log.Println("Loading signal graph", filepath)
 					global.fts.AddSignalGraphFile(p, sg)
-					gv, err := views.GraphViewNew(sg, width, height, &global)
+					gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -158,16 +183,7 @@ func main() {
 					global.win.stack.AddTitled(gv.Widget(), p, p)
 				}
 			case "alml":
-				var lib freesp.Library
-				lib = freesp.LibraryNew(p)
-				err2 := lib.ReadFile(filepath)
-				if err2 == nil {
-					log.Println("Loading library file", filepath)
-					global.fts.AddLibraryFile(p, lib)
-					continue
-				}
-				log.Println("Warning: Could not read file ", filepath)
-				log.Println(err2)
+				_, err = global.GetLibrary(p)
 			default:
 				log.Println("Warning: unknown suffix", tool.Suffix(p))
 			}
@@ -183,4 +199,29 @@ func main() {
 
 	global.win.Window().ShowAll()
 	gtk.Main()
+}
+
+func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
+	var ok bool
+	lib, ok = g.libraryMap[libname]
+	if ok {
+		return
+	}
+	lib = freesp.LibraryNew(libname)
+	for _, try := range backend.XmlSearchPaths() {
+		err = lib.ReadFile(fmt.Sprintf("%s/%s", try, libname), g)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		err = fmt.Errorf("Global.GetLibrary: library file %s not found", libname)
+		return
+	}
+	log.Println("Global.GetLibrary: library", libname, "successfully loaded")
+	if err == nil {
+		g.libraryMap[libname] = lib
+		_, err = g.fts.AddLibraryFile(libname, lib)
+	}
+	return
 }

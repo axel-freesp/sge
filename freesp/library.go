@@ -32,7 +32,7 @@ func (l *library) NodeTypes() []NodeType {
 	return l.nodeTypes.NodeTypes()
 }
 
-func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
+func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary, context Context) error {
 	for _, st := range xmlLib.SignalTypes {
 		var scope Scope
 		var mode Mode
@@ -55,7 +55,7 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 		l.AddSignalType(sType)
 	}
 	for _, n := range xmlLib.NodeTypes {
-		nType := createNodeTypeFromXml(n, l.Filename())
+		nType := createNodeTypeFromXml(n, l.Filename(), context)
 		err := l.AddNodeType(nType)
 		if err != nil {
 			log.Println("library.Read warning:", err)
@@ -64,22 +64,24 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 	return nil
 }
 
+/*
 func (s *library) Read(data []byte) error {
 	l := backend.XmlLibraryNew()
 	err := l.Read(data)
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l)
+	return s.createLibFromXml(l, context)
 }
+*/
 
-func (s *library) ReadFile(filepath string) error {
+func (s *library) ReadFile(filepath string, context Context) error {
 	l := backend.XmlLibraryNew()
 	err := l.ReadFile(filepath)
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l)
+	return s.createLibFromXml(l, context)
 }
 
 func (s *library) Write() (data []byte, err error) {

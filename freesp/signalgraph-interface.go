@@ -1,5 +1,9 @@
 package freesp
 
+type Context interface {
+	GetLibrary(libname string) (lib Library, err error)
+}
+
 type SignalGraphType interface {
 	TreeElement
 	Libraries() []Library
@@ -16,7 +20,7 @@ type SignalGraph interface {
 	TreeElement
 	Filename() string
 	ItsType() SignalGraphType
-	Read(data []byte) error
+	//Read(data []byte) error
 	ReadFile(filepath string) error
 	Write() (data []byte, err error)
 	WriteFile(filepath string) error
@@ -28,8 +32,8 @@ type Library interface {
 	Filename() string
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
-	Read(data []byte) error
-	ReadFile(filepath string) error
+	//Read(data []byte) error
+	ReadFile(filepath string, context Context) error
 	Write() (data []byte, err error)
 	WriteFile(filepath string) error
 	AddNodeType(NodeType) error

@@ -6,8 +6,8 @@ import (
 	"log"
 )
 
-func SignalGraphNew(filename string) *signalGraph {
-	return &signalGraph{filename, SignalGraphTypeNew()}
+func SignalGraphNew(filename string, context Context) *signalGraph {
+	return &signalGraph{filename, SignalGraphTypeNew(context)}
 }
 
 type signalGraph struct {
@@ -28,6 +28,7 @@ func (s *signalGraph) ItsType() SignalGraphType {
 	return s.itsType
 }
 
+/*
 func (s *signalGraph) Read(data []byte) error {
 	g := backend.XmlSignalGraphNew()
 	err := g.Read(data)
@@ -39,6 +40,7 @@ func (s *signalGraph) Read(data []byte) error {
 		func(_ string, _ PortDirection) *portType { return nil })
 	return err
 }
+*/
 
 func (s *signalGraph) ReadFile(filepath string) error {
 	g := backend.XmlSignalGraphNew()
@@ -46,7 +48,7 @@ func (s *signalGraph) ReadFile(filepath string) error {
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.ReadFile: %v", err))
 	}
-	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
+	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
 		func(_ string, _ PortDirection) *portType { return nil })
 	return err
 }

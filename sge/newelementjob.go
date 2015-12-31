@@ -156,7 +156,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		} else {
 			implType = freesp.NodeTypeGraph
 		}
-		ret = freesp.ImplementationNew(j.input[iImplName], implType)
+		ret = freesp.ImplementationNew(j.input[iImplName], implType, &global)
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)

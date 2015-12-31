@@ -79,18 +79,14 @@ func (c *Connection) Draw(context *cairo.Context){
  *	Overwrite default implementation
  */
 
-func (c *Connection) CheckHit(pos image.Point) (ok bool) {
-    a, b := c.connectionPoints()
-    m := a.Add(b).Div(2)
-    am := m.Sub(a)
-    r := math.Sqrt(float64(am.X*am.X) + float64(am.Y*am.Y))
-    cos := float64(m.X - a.X) / r
-    sin := float64(a.Y - m.Y) / r
-    p := trans(cos, sin, m, pos)
-    frame := image.Rect(int(-r), -4, int(r), 4)
-    test := image.Rectangle{p, p}
-    ok = frame.Overlaps(test)
-    c.highlighted = ok
+func (c *Connection) CheckHit(pos image.Point) (hit, modified bool) {
+    f, r := c.Transformation()
+    p := f(pos)
+    px := math.Abs(float64(p.X))
+    py := math.Abs(float64(p.Y))
+    hit = (px <= r && py <= 4.0)
+    modified = c.highlighted != hit
+    c.highlighted = hit
     return
 }
 
@@ -103,6 +99,22 @@ func (c *Connection) BBox() image.Rectangle {
     r.Min.Y -= k
     r.Max.Y += k
     return r
+}
+
+func (c *Connection) Transformation() (func(image.Point) image.Point, float64) {
+    a, b := c.connectionPoints()
+    m := a.Add(b).Div(2)
+    am := m.Sub(a)
+    r := math.Sqrt(float64(am.X*am.X) + float64(am.Y*am.Y))
+    cos := float64(m.X - a.X) / r
+    sin := float64(a.Y - m.Y) / r
+    return func(x image.Point) (y image.Point) {
+	p1 := x.Sub(m)
+	a := int(cos*float64(p1.X) - sin*float64(p1.Y))
+	b := int(sin*float64(p1.X) + cos*float64(p1.Y))
+	y = image.Point{a, b}
+	return
+    }, r
 }
 
 /*

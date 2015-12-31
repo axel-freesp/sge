@@ -60,7 +60,7 @@ func (n *Node) GetInPort(index int) PortObject {
 }
 
 
-func (n *Node) SelectPort(userObj freesp.Port) {
+func (n *Node) SelectPort(userObj PortObject) {
 	var index int
 	if userObj.Direction() == freesp.InPort {
 		index = n.InPortIndex(userObj.Name())
@@ -166,14 +166,16 @@ func (n *Node) Draw(context *cairo.Context){
 var _ Hitter  = (*Node)(nil)
 var _ Hitter  = (*Port)(nil)
 
-func (n *Node) CheckHit(pos image.Point) (ok bool) {
+func (n *Node) CheckHit(pos image.Point) (hit, modified bool) {
 	test := image.Rectangle{pos, pos}
-	ok = n.BBox().Overlaps(test)
-	n.highlighted = ok
-	if ok {
+	hit = n.BBox().Overlaps(test)
+	modified = n.highlighted != hit
+	n.highlighted = hit
+	if hit {
 		n.selectedPort = -1
 		for i, p := range n.ports {
-			if p.CheckHit(pos) {
+			phit, _ := p.CheckHit(pos)
+			if phit {
 				n.selectedPort = i
 			}
 		}

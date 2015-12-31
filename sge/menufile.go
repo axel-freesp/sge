@@ -40,13 +40,13 @@ func newSGFilename() string {
 func fileNewSg(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	log.Println("fileNewSg")
 	filename := newSGFilename()
-	sg := freesp.SignalGraphNew(filename)
+	sg := freesp.SignalGraphNew(filename, &global)
 	newId, err := fts.AddSignalGraphFile(sg.Filename(), sg)
 	if err != nil {
 		log.Printf("Warning: ftv.AddSignalGraphFile('%s') failed.\n", filename)
 	}
 	setCursorNewId(ftv, newId)
-	gv, err := views.GraphViewNew(sg, width, height, &global)
+	gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
 	if err != nil {
 		log.Fatal("fileNewSg: Could not create graph view.")
 	}
@@ -66,11 +66,11 @@ func setCursorNewId(ftv *views.FilesTreeView, newId string) {
 
 func fileNewLib(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	log.Println("fileNewLib")
-	newId, err := fts.AddLibraryFile("new-file.alml", freesp.LibraryNew("new-file.alml"))
+	cursor, err := fts.AddLibraryFile("new-file.alml", freesp.LibraryNew("new-file.alml"))
 	if err != nil {
 		log.Println("Warning: ftv.AddLibraryFile('new-file.alml') failed.")
 	}
-	setCursorNewId(ftv, newId)
+	setCursorNewId(ftv, cursor.Path)
 }
 
 func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
@@ -81,7 +81,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	switch tool.Suffix(filename) {
 	case "sml":
-		sg := freesp.SignalGraphNew(filename)
+		sg := freesp.SignalGraphNew(filename, &global)
 		err := sg.ReadFile(filename)
 		if err != nil {
 			log.Println(err)
@@ -94,7 +94,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			return
 		}
 		setCursorNewId(ftv, newId)
-		gv, err := views.GraphViewNew(sg, width, height, &global)
+		gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
 		if err != nil {
 			log.Fatal("fileOpen: Could not create graph view.")
 		}
@@ -102,19 +102,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		global.win.stack.AddTitled(gv.Widget(), filenameToShow(filename), filenameToShow(filename))
 		global.win.Window().ShowAll()
 	case "alml":
-		lib := freesp.LibraryNew(filenameToShow(filename))
-		err := lib.ReadFile(filename)
+		lib, err := global.GetLibrary(filenameToShow(filename))
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		lib.SetFilename(filenameToShow(filename))
-		newId, err := fts.AddLibraryFile(filename, lib)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		setCursorNewId(ftv, newId)
+		cursor := fts.Cursor(lib)
+		setCursorNewId(ftv, cursor.Path)
 	default:
 	}
 }

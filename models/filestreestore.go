@@ -138,10 +138,9 @@ func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.Signal
 	return
 }
 
-func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (newId string, err error) {
-	cursor := s.Append(rootCursor)
+func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (cursor freesp.Cursor, err error) {
+	cursor = s.Append(rootCursor)
 	lib.AddToTree(s, cursor)
-	newId = cursor.Path
 	return
 }
 

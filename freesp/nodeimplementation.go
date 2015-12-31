@@ -13,10 +13,10 @@ type implementation struct {
 
 var _ Implementation = (*implementation)(nil)
 
-func ImplementationNew(iName string, iType ImplementationType) *implementation {
+func ImplementationNew(iName string, iType ImplementationType, context Context) *implementation {
 	ret := &implementation{iType, iName, nil}
 	if iType == NodeTypeGraph {
-		ret.graph = SignalGraphTypeNew()
+		ret.graph = SignalGraphTypeNew(context)
 	}
 	return ret
 }

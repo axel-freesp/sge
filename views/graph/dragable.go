@@ -73,7 +73,7 @@ type Selecter interface {
 }
 
 type Hitter interface {
-	CheckHit(image.Point) bool
+	CheckHit(image.Point) (hit, modified bool)
 }
 
 type Drawer interface {
@@ -130,10 +130,11 @@ func (b *SelectableObject) Deselect() (selected bool) {
 	return
 }
 
-func (b *SelectableObject) CheckHit(p image.Point) (ok bool) {
+func (b *SelectableObject) CheckHit(p image.Point) (hit, modified bool) {
 	test := image.Rectangle{p, p}
-	ok = b.BBox().Overlaps(test)
-	b.highlighted = ok
+	hit = b.BBox().Overlaps(test)
+	modified = b.highlighted != hit
+	b.highlighted = hit
 	return
 }
 

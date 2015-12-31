@@ -139,7 +139,7 @@ var defaultOptions = gOptions{
 		{"SelectInPort", color.RGBA{255, 255, 180, 0xff}},
 		{"SelectOutPort", color.RGBA{255, 255, 180, 0xff}},
 		{"SelectLine", color.RGBA{0, 0, 255, 0xff}},
-		{"HighlightLine", color.RGBA{0, 255, 0, 0xff}},
+		{"HighlightLine", color.RGBA{0, 190, 0, 0xff}},
 		{"NormalLine", color.RGBA{120, 120, 120, 0xff}},
 	},
 	[]optionString{	// actually not needed anymore:

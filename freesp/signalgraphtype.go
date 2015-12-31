@@ -8,6 +8,7 @@ import (
 )
 
 type signalGraphType struct {
+	context                                         Context
 	libraries                                       []Library
 	nodes, inputNodes, outputNodes, processingNodes []Node
 }
@@ -18,8 +19,8 @@ type signalGraphType struct {
 
 var _ SignalGraphType = (*signalGraphType)(nil)
 
-func SignalGraphTypeNew() *signalGraphType {
-	return &signalGraphType{nil, nil, nil, nil, nil}
+func SignalGraphTypeNew(context Context) *signalGraphType {
+	return &signalGraphType{context, nil, nil, nil, nil, nil}
 }
 
 func (t *signalGraphType) Nodes() []Node {
@@ -128,36 +129,50 @@ func (t *signalGraphType) addNode(n Node) error {
 	return nil
 }
 
-func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolvePort func(portname string, dir PortDirection) *portType) (t *signalGraphType, err error) {
-	t = SignalGraphTypeNew()
+func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, context Context,
+	resolvePort func(portname string, dir PortDirection) *portType) (t *signalGraphType, err error) {
+	t = SignalGraphTypeNew(context)
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
 		if l == nil {
-			l = LibraryNew(ref.Name)
-			libraries[ref.Name] = l
-			fmt.Println("createSignalGraphTypeFromXml: loading library", ref.Name)
-			for _, try := range backend.XmlSearchPaths() {
-				fmt.Printf("createSignalGraphTypeFromXml: try %s/%s\n", try, ref.Name)
-				err = l.ReadFile(fmt.Sprintf("%s/%s", try, ref.Name))
-				if err == nil {
-					break
+			var lib Library
+			lib, err = t.context.GetLibrary(ref.Name)
+			l = lib.(*library)
+			/*
+				l = LibraryNew(ref.Name)
+				fmt.Println("createSignalGraphTypeFromXml: loading library", ref.Name)
+				for _, try := range backend.XmlSearchPaths() {
+					fmt.Printf("createSignalGraphTypeFromXml: try %s/%s\n", try, ref.Name)
+					err = l.ReadFile(fmt.Sprintf("%s/%s", try, ref.Name))
+					if err == nil {
+						break
+					}
 				}
-			}
+			*/
 			if err != nil {
 				err = newSignalGraphError(fmt.Sprintf("signalGraph.Read: referenced library file %s not found", ref.Name))
 				return
 			}
+			libraries[ref.Name] = l
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
 		}
 		t.libraries = append(t.libraries, l)
 	}
 	for _, n := range g.InputNodes {
-		nnode := t.createInputNodeFromXml(n, resolvePort)
+		var nnode *node
+		nnode, err = t.createInputNodeFromXml(n, resolvePort)
+		if err != nil {
+			return
+		}
 		t.inputNodes = append(t.inputNodes, nnode)
 		t.nodes = append(t.nodes, nnode)
 	}
 	for _, n := range g.OutputNodes {
-		nnode := t.createOutputNodeFromXml(n, resolvePort)
+		var nnode *node
+		nnode, err = t.createOutputNodeFromXml(n, resolvePort)
+		if err != nil {
+			return
+		}
 		t.outputNodes = append(t.outputNodes, nnode)
 		t.nodes = append(t.nodes, nnode)
 	}
@@ -183,6 +198,8 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, resolv
 		if err != nil {
 			dump, _ := g.Write()
 			log.Println("createSignalGraphTypeFromXml error:")
+			log.Printf("edge = %v\n", c)
+			log.Printf("node = %v, missing port = %s\n", n1, c.FromPort)
 			log.Fatal(fmt.Sprintf("invalid edge %d outPortFromName failed: %s\n%s", i, err, dump))
 		}
 		p2, err := n2.(*node).inPortFromName(c.ToPort)
@@ -236,38 +253,52 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 	return
 }
 
-func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode, resolvePort func(portname string, dir PortDirection) *portType) *node {
+func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
+	resolvePort func(portname string, dir PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret, err := NodeNew(nName, nt, t)
-	if err != nil {
-		log.Fatal("signalGraphType.createInputNodeFromXml: TODO: error handling")
-	}
 	pt := resolvePort(n.NPort, InPort)
 	if pt != nil {
-		//ret.addInPort(pt)
-		ret.addOutPort(pt)
+		if len(nt.OutPorts()) == 0 {
+			ptCopy := &portType{pt.signalType, "", OutPort}
+			nt.AddNamedPortType(ptCopy)
+		}
+	}
+	ret, err = NodeNew(nName, nt, t)
+	if err != nil {
+		err = fmt.Errorf("signalGraphType.createInputNodeFromXml: %s", err)
+		return
+	}
+	if pt != nil {
+		// add link to pt
 	}
 	ret.position = image.Point{n.Hint.X, n.Hint.Y}
-	return ret
+	return
 }
 
-func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode, resolvePort func(portname string, dir PortDirection) *portType) *node {
+func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
+	resolvePort func(portname string, dir PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
-	ret, err := NodeNew(nName, nt, t)
-	if err != nil {
-		log.Fatal("signalGraphType.createOutputNodeFromXml: TODO: error handling")
-	}
 	pt := resolvePort(n.NPort, OutPort) // matches also empty names
 	if pt != nil {
-		ret.addInPort(pt)
-		//ret.addOutPort(pt)
+		if len(nt.InPorts()) == 0 {
+			ptCopy := &portType{pt.signalType, "", InPort}
+			nt.AddNamedPortType(ptCopy)
+		}
+	}
+	ret, err = NodeNew(nName, nt, t)
+	if err != nil {
+		err = fmt.Errorf("signalGraphType.createOutputNodeFromXml: %s", err)
+		return
+	}
+	if pt != nil {
+		// add link to pt
 	}
 	ret.position = image.Point{n.Hint.X, n.Hint.Y}
-	return ret
+	return
 }
 
 func (g *signalGraphType) addInputNodeFromPortType(p PortType) {

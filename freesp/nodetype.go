@@ -169,7 +169,7 @@ func (t *nodeType) doResolvePort(name string, dir PortDirection) *portType {
 	return nil
 }
 
-func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
+func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context Context) *nodeType {
 	nt := NodeTypeNew(n.TypeName, filename)
 	for _, p := range n.InPort {
 		pType, ok := signalTypes[p.PType]
@@ -193,7 +193,7 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 			} else {
 				iType = NodeTypeElement
 			}
-			impl := ImplementationNew(i.Name, iType)
+			impl := ImplementationNew(i.Name, iType, context)
 			nt.implementation.Append(impl)
 			switch iType {
 			case NodeTypeElement:
@@ -203,7 +203,7 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string) *nodeType {
 				var resolvePort = func(name string, dir PortDirection) *portType {
 					return nt.doResolvePort(name, dir)
 				}
-				impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, resolvePort)
+				impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, context, resolvePort)
 				if err != nil {
 					log.Fatal(err)
 				}

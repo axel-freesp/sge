@@ -25,35 +25,39 @@ func (p *Port) UserObj() PortObject {
  *	Drawer interface
  */
 
-func (p *Port) Draw(context *cairo.Context) {
-	var r, g, b float64
-	switch p.userObj.(freesp.Directioner).Direction() {
-	case freesp.InPort:
-		if p.selected {
-			r, g, b = ColorOption(SelectInPort)
-		} else if p.highlighted {
-			r, g, b = ColorOption(HighlightInPort)
-		} else {
-			r, g, b = ColorOption(InputPort)
+func (p *Port) Draw(ctxt interface{}){
+    switch ctxt.(type) {
+    case *cairo.Context:
+		context := ctxt.(*cairo.Context)
+		var r, g, b float64
+		switch p.userObj.(freesp.Directioner).Direction() {
+		case freesp.InPort:
+			if p.selected {
+				r, g, b = ColorOption(SelectInPort)
+			} else if p.highlighted {
+				r, g, b = ColorOption(HighlightInPort)
+			} else {
+				r, g, b = ColorOption(InputPort)
+			}
+		case freesp.OutPort:
+			if p.selected {
+				r, g, b = ColorOption(SelectOutPort)
+			} else if p.highlighted {
+				r, g, b = ColorOption(HighlightOutPort)
+			} else {
+				r, g, b = ColorOption(OutputPort)
+			}
 		}
-	case freesp.OutPort:
-		if p.selected {
-			r, g, b = ColorOption(SelectOutPort)
-		} else if p.highlighted {
-			r, g, b = ColorOption(HighlightOutPort)
-		} else {
-			r, g, b = ColorOption(OutputPort)
-		}
+		x := float64(p.BBox().Min.X)
+		y := float64(p.BBox().Min.Y)
+		w := float64(p.BBox().Size().X)
+		h := float64(p.BBox().Size().Y)
+		context.SetSourceRGB(r, g, b)
+		context.Rectangle(x, y, w, h)
+		context.FillPreserve()
+		context.SetSourceRGB(ColorOption(BoxFrame))
+		context.Stroke()
 	}
-	x := float64(p.BBox().Min.X)
-	y := float64(p.BBox().Min.Y)
-	w := float64(p.BBox().Size().X)
-	h := float64(p.BBox().Size().Y)
-	context.SetSourceRGB(r, g, b)
-	context.Rectangle(x, y, w, h)
-	context.FillPreserve()
-	context.SetSourceRGB(ColorOption(BoxFrame))
-	context.Stroke()
 }
 
 /*

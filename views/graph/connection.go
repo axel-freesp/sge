@@ -60,19 +60,23 @@ var _ SelectableBox = (*Connection)(nil)
  *	Drawer interface
  */
 
-func (c *Connection) Draw(context *cairo.Context){
-    var r, g, b float64
-    if c.selected {
-	r, g, b = ColorOption(SelectLine)
-    } else if c.highlighted {
-	r, g, b = ColorOption(HighlightLine)
-    } else {
-	r, g, b = ColorOption(NormalLine)
+func (c *Connection) Draw(ctxt interface{}){
+    switch ctxt.(type) {
+    case *cairo.Context:
+	context := ctxt.(*cairo.Context)
+	var r, g, b float64
+	if c.selected {
+	    r, g, b = ColorOption(SelectLine)
+	} else if c.highlighted {
+	    r, g, b = ColorOption(HighlightLine)
+	} else {
+	    r, g, b = ColorOption(NormalLine)
+	}
+	context.SetLineWidth(2)
+	context.SetSourceRGB(r, g, b)
+	p1, p2 := c.connectionPoints()
+	DrawArrow(context, p1, p2)
     }
-    context.SetLineWidth(2)
-    context.SetSourceRGB(r, g, b)
-    p1, p2 := c.connectionPoints()
-    DrawArrow(context, p1, p2)
 }
 
 /*

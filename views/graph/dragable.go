@@ -1,11 +1,8 @@
 package graph
 
 import (
-	//"fmt"
-	//"log"
 	"image"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/gotk3/gotk3/cairo"
 )
 
 // user objects
@@ -54,14 +51,7 @@ type ConnectIf interface {
 type SelectableBox interface {
 	BBoxer
 	Selecter
-	Hitter
 }
-
-type Dragable interface {
-	freesp.Namer
-    SelectableBox
-}
-
 
 type BBoxer interface {
 	BBox() image.Rectangle
@@ -70,14 +60,12 @@ type BBoxer interface {
 type Selecter interface {
 	Select() bool
 	Deselect() bool
-}
-
-type Hitter interface {
+	IsSelected() bool
 	CheckHit(image.Point) (hit, modified bool)
 }
 
 type Drawer interface {
-	Draw(*cairo.Context)
+	Draw(context interface{})
 }
 
 
@@ -130,6 +118,10 @@ func (b *SelectableObject) Deselect() (selected bool) {
 	return
 }
 
+func (b *SelectableObject) IsSelected() bool {
+	return b.selected
+}
+
 func (b *SelectableObject) CheckHit(p image.Point) (hit, modified bool) {
 	test := image.Rectangle{p, p}
 	hit = b.BBox().Overlaps(test)
@@ -139,13 +131,19 @@ func (b *SelectableObject) CheckHit(p image.Point) (hit, modified bool) {
 }
 
 
-// Check if a given object (index idx) would overlap with any other
+// Check if the selected object would overlap with any other
 // if we move it to p coordinates:
-func Overlaps(drg []NodeIf, idx int, p image.Point) bool {
-	box := drg[idx].BBox()
+func Overlaps(drg []NodeIf, p image.Point) bool {
+	var box image.Rectangle
+	for _, n := range drg {
+		if n.IsSelected() {
+			box = n.BBox()
+			break
+		}
+	}
 	newBox := box.Add(p.Sub(box.Min))
-	for i, d := range drg {
-		if i != idx && newBox.Overlaps(d.BBox()) {
+	for _, n := range drg {
+		if !n.IsSelected() && newBox.Overlaps(n.BBox()) {
 			return true
 		}
 	}

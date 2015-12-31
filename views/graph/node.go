@@ -6,6 +6,7 @@ import (
 	"image"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/tool"
 )
 
 type ColorMode int
@@ -17,6 +18,11 @@ const (
 	NumColorMode
 )
 
+var (
+	nodeWidth  = NumericOption(NodeWidth)
+	nodeHeight = NumericOption(NodeHeight)
+)
+
 type Node struct {
 	SelectableObject
 	userObj  NodeObject
@@ -26,7 +32,9 @@ type Node struct {
 
 var _ NodeIf = (*Node)(nil)
 
-func NodeNew(box image.Rectangle, n freesp.Node) (ret *Node) {
+func NodeNew(pos image.Point, n freesp.Node) (ret *Node) {
+	dy := NumericOption(PortDY)
+	box := image.Rect(pos.X, pos.Y, pos.X + nodeWidth, pos.Y + nodeHeight + numPorts(n)*dy)
 	ret = &Node{SelectableObject{box, false, false}, n, nil, -1}
 	portBox := image.Rect(0, 0, global.portW, global.portH)
 	portBox = portBox.Add(box.Min)
@@ -141,47 +149,27 @@ func (n *Node) SetPosition(pos image.Point) {
 var _ Drawer  = (*Node)(nil)
 var _ Drawer  = (*Port)(nil)
 
-func (n *Node) Draw(context *cairo.Context){
-	x, y, w, h := boxToDraw(n)
-	var mode ColorMode
-	if n.selected {
-		mode = SelectedMode
-	} else if n.highlighted {
-		mode = HighlightMode
-	} else {
-		mode = NormalMode
-	}
-	drawBody(context, x, y, w, h, n.Name(), mode)
-	context.SetLineWidth(1)
-	for _, p := range n.ports {
-		p.Draw(context)
-	}
-}
-
-
-/*
- *      Hitter interface
- */
-
-var _ Hitter  = (*Node)(nil)
-var _ Hitter  = (*Port)(nil)
-
-func (n *Node) CheckHit(pos image.Point) (hit, modified bool) {
-	test := image.Rectangle{pos, pos}
-	hit = n.BBox().Overlaps(test)
-	modified = n.highlighted != hit
-	n.highlighted = hit
-	if hit {
-		n.selectedPort = -1
-		for i, p := range n.ports {
-			phit, _ := p.CheckHit(pos)
-			if phit {
-				n.selectedPort = i
-			}
+func (n *Node) Draw(ctxt interface{}){
+    switch ctxt.(type) {
+    case *cairo.Context:
+		context := ctxt.(*cairo.Context)
+		x, y, w, h := boxToDraw(n)
+		var mode ColorMode
+		if n.selected {
+			mode = SelectedMode
+		} else if n.highlighted {
+			mode = HighlightMode
+		} else {
+			mode = NormalMode
+		}
+		drawBody(context, x, y, w, h, n.Name(), mode)
+		context.SetLineWidth(1)
+		for _, p := range n.ports {
+			p.Draw(context)
 		}
 	}
-	return
 }
+
 
 
 /*
@@ -209,6 +197,24 @@ func (n *Node) Deselect() (selected bool) {
 	n.selected = false
 	for _, p := range n.ports {
 		p.Deselect()
+	}
+	return
+}
+
+func (n *Node) CheckHit(pos image.Point) (hit, modified bool) {
+	test := image.Rectangle{pos, pos}
+	hit = n.BBox().Overlaps(test)
+	modified = n.highlighted != hit
+	n.highlighted = hit
+	if hit {
+		n.selectedPort = -1
+		for i, p := range n.ports {
+			phit, mod := p.CheckHit(pos)
+			if phit {
+				n.selectedPort = i
+			}
+			modified = modified || mod
+		}
 	}
 	return
 }
@@ -261,6 +267,12 @@ func boxToDraw(b BBoxer) (x, y, w, h float64) {
 	w = w0 - float64(2*dx)
 	h = h0 - float64(2*dy)
 	return
+}
+
+func numPorts(n freesp.Porter) int {
+	npi := n.NumInPorts()
+	npo := n.NumOutPorts()
+	return tool.MaxInt(npi, npo)
 }
 
 

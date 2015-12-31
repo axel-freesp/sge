@@ -56,8 +56,8 @@ func (p *port) Node() Node {
 	return p.node
 }
 
-func (p *port) AddConnection(c Port) error {
-	return PortConnect(p, c)
+func (p *port) AddConnection(c Connection) error {
+	return portConnect(p, c.(*connection))
 }
 
 func (p *port) RemoveConnection(c Port) {
@@ -80,27 +80,26 @@ func (p *port) Connection(c Port) Connection {
 	return p.conn[index]
 }
 
-func PortConnect(port1, port2 Port) error {
-	p1, p2 := port1.(*port), port2.(*port)
+func portConnect(port1 Port, c *connection) error {
+	p1 := port1.(*port)
+	var port2 Port
+	var p2 *port
+	if c.from.(*port) == p1 {
+		port2 = c.to
+	} else if c.to.(*port) == p1 {
+		port2 = c.from
+	}
+	p2 = port2.(*port)
 	if port1.SignalType().TypeName() != port2.SignalType().TypeName() {
 		return fmt.Errorf("type mismatch")
 	}
 	if port1.Direction() == port2.Direction() {
 		return fmt.Errorf("direction mismatch")
 	}
-	var from, to Port
-	if port1.Direction() == InPort {
-		from = port2
-		to = port1
-	} else {
-		from = port1
-		to = port2
-	}
-	conn := &connection{from, to}
 	p1.connected.Append(port2)
-	p1.conn = append(p1.conn, conn)
+	p1.conn = append(p1.conn, c)
 	p2.connected.Append(port1)
-	p2.conn = append(p2.conn, conn)
+	p2.conn = append(p2.conn, c)
 	return nil
 }
 
@@ -193,7 +192,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		}
 		contextCursor := tree.Parent(tree.Parent(cursor))
 
-		thisPort.AddConnection(otherPort)
+		thisPort.AddConnection(conn)
 		newCursor = p.treeAddNewObject(tree, cursor, conn, otherPort)
 
 		context := tree.Object(contextCursor)

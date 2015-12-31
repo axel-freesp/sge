@@ -208,7 +208,7 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d inPortFromName failed: %s\n%s", i, err, dump))
 		}
-		err = PortConnect(p1, p2)
+		err = p1.AddConnection(ConnectionNew(p1, p2))
 		if err != nil {
 			dump, _ := g.Write()
 			log.Println("createSignalGraphTypeFromXml error:")

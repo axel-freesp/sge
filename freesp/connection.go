@@ -9,6 +9,10 @@ type connection struct {
 	from, to Port
 }
 
+func ConnectionNew(from, to Port) *connection {
+	return &connection{from, to}
+}
+
 func (c *connection) From() Port {
 	return c.from
 }

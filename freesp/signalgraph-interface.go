@@ -120,7 +120,7 @@ type Port interface {
 	Connections() []Port
 	Node() Node
 	Connection(Port) Connection
-	AddConnection(Port) error
+	AddConnection(Connection) error
 	RemoveConnection(c Port)
 }
 

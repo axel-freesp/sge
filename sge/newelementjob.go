@@ -87,7 +87,15 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		for _, p := range ports {
 			s := fmt.Sprintf("%s/%s", p.Node().Name(), p.Name())
 			if j.input[iPortSelect] == s {
-				ret = parentObject.(freesp.Port).Connection(p)
+				var from, to freesp.Port
+				if p.Direction() == freesp.InPort {
+					from = parentObject.(freesp.Port)
+					to = p
+				} else {
+					from = p
+					to = parentObject.(freesp.Port)
+				}
+				ret = freesp.ConnectionNew(from, to)
 				break
 			}
 		}

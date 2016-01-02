@@ -43,6 +43,38 @@ func NodeNew(name string, ntype NodeType, context SignalGraphType) (ret *node, e
 	return
 }
 
+func InputNodeNew(name string, stypeName string, context SignalGraphType) (ret *node, err error) {
+	st, ok := signalTypes[stypeName]
+	if !ok {
+		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
+		return
+	}
+	ntName := createInputNodeTypeName(stypeName)
+	nt, ok := nodeTypes[ntName]
+	if !ok {
+		nt = NodeTypeNew(ntName, "")
+		nt.addOutPort("", st)
+		nodeTypes[ntName] = nt
+	}
+	return NodeNew(name, nt, context)
+}
+
+func OutputNodeNew(name string, stypeName string, context SignalGraphType) (ret *node, err error) {
+	st, ok := signalTypes[stypeName]
+	if !ok {
+		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
+		return
+	}
+	ntName := createOutputNodeTypeName(stypeName)
+	nt, ok := nodeTypes[ntName]
+	if !ok {
+		nt = NodeTypeNew(ntName, "")
+		nt.addInPort("", st)
+		nodeTypes[ntName] = nt
+	}
+	return NodeNew(name, nt, context)
+}
+
 func (n *node) ItsType() NodeType {
 	return n.nodetype
 }

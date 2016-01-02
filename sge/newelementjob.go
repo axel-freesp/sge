@@ -39,7 +39,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		log.Fatal("NewElementJob.CreateObject error: referenced parentObject run away...")
 	}
 	switch j.elemType {
-	case eNode:
+	case eNode, eInputNode, eOutputNode:
 		var context freesp.SignalGraphType
 		switch parentObject.(type) {
 		case freesp.Node:
@@ -58,11 +58,17 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject wrong type...")
 		}
-		ntype, ok := freesp.GetNodeTypeByName(j.input[iNodeTypeSelect])
-		if !ok {
-			log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject type wrong...")
+		if j.elemType == eNode {
+			ntype, ok := freesp.GetNodeTypeByName(j.input[iNodeTypeSelect])
+			if !ok {
+				log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject type wrong...")
+			}
+			ret, err = freesp.NodeNew(j.input[iNodeName], ntype, context)
+		} else if j.elemType == eInputNode {
+			ret, err = freesp.InputNodeNew(j.input[iInputNodeName], j.input[iInputTypeSelect], context)
+		} else {
+			ret, err = freesp.OutputNodeNew(j.input[iOutputNodeName], j.input[iOutputTypeSelect], context)
 		}
-		ret, err = freesp.NodeNew(j.input[iNodeName], ntype, context)
 
 	case eNodeType:
 		var context string

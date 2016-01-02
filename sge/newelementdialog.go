@@ -12,12 +12,16 @@ type inputElement string
 
 const (
 	iNodeName           inputElement = "NodeName"
+	iInputNodeName                   = "InputNodeName"
+	iOutputNodeName                  = "OutputNodeName"
 	iTypeName                        = "TypeName"
 	iPortName                        = "PortName"
 	iImplName                        = "ImplName"
 	iSignalTypeName                  = "SignalTypeName"
 	iNodeTypeSelect                  = "NodeTypeSelect"
 	iSignalTypeSelect                = "SignalTypeSelect"
+	iInputTypeSelect                 = "InputTypeSelect"
+	iOutputTypeSelect                = "OutputTypeSelect"
 	iImplementationType              = "ImplementationType"
 	iPortSelect                      = "PortSelect"
 	iCType                           = "CType"
@@ -32,6 +36,8 @@ type elementType string
 const (
 	eSignalGraph    elementType = "SignalGraph"
 	eNode                       = "Node"
+	eInputNode                  = "InputNode"
+	eOutputNode                 = "OutputNode"
 	eNodeType                   = "NodeType"
 	ePort                       = "Port"
 	ePortType                   = "PortType"
@@ -42,8 +48,8 @@ const (
 )
 
 var choiceMap = map[elementType][]elementType{
-	eSignalGraph:    {eNode},
-	eNode:           {eNode},
+	eSignalGraph:    {eNode, eInputNode, eOutputNode},
+	eNode:           {eNode, eInputNode, eOutputNode},
 	eNodeType:       {eNodeType, ePortType, eImplementation},
 	ePort:           {eConnection},
 	ePortType:       {ePortType},
@@ -55,6 +61,8 @@ var choiceMap = map[elementType][]elementType{
 
 var inputElementMap = map[elementType][]inputElement{
 	eNode:           {iNodeName, iNodeTypeSelect},
+	eInputNode:      {iInputNodeName, iInputTypeSelect},
+	eOutputNode:     {iOutputNodeName, iOutputTypeSelect},
 	eNodeType:       {iTypeName},
 	ePortType:       {iPortName, iSignalTypeSelect, iDirection},
 	eConnection:     {iPortSelect},
@@ -70,6 +78,8 @@ type NewElementDialog struct {
 
 	nodeTypeSelector       *gtk.ComboBoxText
 	signalTypeSelector     *gtk.ComboBoxText
+	inputTypeSelector      *gtk.ComboBoxText
+	outputTypeSelector     *gtk.ComboBoxText
 	scopeSelector          *gtk.ComboBoxText
 	modeSelector           *gtk.ComboBoxText
 	directionSelector      *gtk.ComboBoxText
@@ -77,6 +87,8 @@ type NewElementDialog struct {
 	portSelector           *gtk.ComboBoxText
 
 	nodeNameEntry       *gtk.Entry
+	inputNodeNameEntry  *gtk.Entry
+	outputNodeNameEntry *gtk.Entry
 	typeNameEntry       *gtk.Entry
 	portNameEntry       *gtk.Entry
 	implNameEntry       *gtk.Entry
@@ -90,7 +102,7 @@ func NewElementDialogNew(fts *models.FilesTreeStore) (dialog *NewElementDialog, 
 	if err != nil {
 		return
 	}
-	dialog = &NewElementDialog{d, fts, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+	dialog = &NewElementDialog{d, fts, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 	err = dialog.init(fts)
 	return
 }
@@ -203,6 +215,22 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return newEntry(&dialog.nodeNameEntry)
 		},
 	},
+	iInputNodeName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.inputNodeNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.inputNodeNameEntry)
+		},
+	},
+	iOutputNodeName: {"Name:",
+		func(dialog *NewElementDialog) string {
+			return getText(dialog.outputNodeNameEntry)
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.outputNodeNameEntry)
+		},
+	},
 	iTypeName: {"Name:",
 		func(dialog *NewElementDialog) string {
 			return getText(dialog.typeNameEntry)
@@ -249,6 +277,22 @@ var inputHandling = map[inputElement]inputElementHandling{
 		},
 		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
 			return newComboBox(&dialog.signalTypeSelector, freesp.GetRegisteredSignalTypes())
+		},
+	},
+	iInputTypeSelect: {"Select signal type:",
+		func(dialog *NewElementDialog) string {
+			return dialog.inputTypeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.inputTypeSelector, freesp.GetRegisteredSignalTypes())
+		},
+	},
+	iOutputTypeSelect: {"Select signal type:",
+		func(dialog *NewElementDialog) string {
+			return dialog.outputTypeSelector.GetActiveText()
+		},
+		func(dialog *NewElementDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.outputTypeSelector, freesp.GetRegisteredSignalTypes())
 		},
 	},
 	iImplementationType: {"Implementation type:",
@@ -353,6 +397,8 @@ func (dialog *NewElementDialog) fillBox(box *gtk.Box, e elementType, fts *models
 // List of keys into the named stack
 var stackAlternatives = []elementType{
 	eNode,
+	eInputNode,
+	eOutputNode,
 	eNodeType,
 	ePortType,
 	eConnection,

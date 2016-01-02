@@ -28,7 +28,13 @@ type Context interface {
 	SelectConnect(conn freesp.Connection) // single click selection
 }
 
-type GraphView struct {
+type GraphView interface {
+	Widget() *gtk.Widget
+	Sync()
+	Select(obj freesp.TreeElement)
+}
+
+type graphView struct {
 	layoutBox   *gtk.Box
 	scene       *ScrolledView
 	area        *gtk.DrawingArea
@@ -43,9 +49,8 @@ type GraphView struct {
 	scale          float64
 }
 
-func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) (viewer *GraphView, err error) {
-	viewer = &GraphView{nil, nil, nil, nil, nil, nil, g, context, image.Point{}, false,
-		1.0}
+func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) (viewer *graphView, err error) {
+	viewer = &graphView{nil, nil, nil, nil, nil, nil, g, context, image.Point{}, false, 1.0}
 	err = viewer.init(width, height)
 	if err != nil {
 		return
@@ -54,11 +59,11 @@ func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) 
 	return
 }
 
-func (v *GraphView) Widget() *gtk.Widget {
+func (v *graphView) Widget() *gtk.Widget {
 	return (*gtk.Widget)(unsafe.Pointer(v.layoutBox))
 }
 
-func (v *GraphView) init(width, height int) (err error) {
+func (v *graphView) init(width, height int) (err error) {
 	v.layoutBox, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return
@@ -89,7 +94,7 @@ func (v *GraphView) init(width, height int) (err error) {
 	return
 }
 
-func (v *GraphView) Sync() {
+func (v *graphView) Sync() {
 	g := v.sgType
 	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 
@@ -125,7 +130,7 @@ func (v *GraphView) Sync() {
  *		Handle selection in treeview
  */
 
-func (v *GraphView) Select(obj freesp.TreeElement) {
+func (v *graphView) Select(obj freesp.TreeElement) {
 	switch obj.(type) {
 	case freesp.Node:
 		v.deselectConnects()
@@ -142,7 +147,7 @@ func (v *GraphView) Select(obj freesp.TreeElement) {
 	}
 }
 
-func (v *GraphView) selectNode(obj freesp.Node) (ret graph.NodeIf, ok bool) {
+func (v *graphView) selectNode(obj freesp.Node) (ret graph.NodeIf, ok bool) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
 		if obj == n.UserObj().(freesp.Node) {
@@ -160,7 +165,7 @@ func (v *GraphView) selectNode(obj freesp.Node) (ret graph.NodeIf, ok bool) {
 	return
 }
 
-func (v *GraphView) deselectNodes() {
+func (v *graphView) deselectNodes() {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
 		if n.Deselect() {
@@ -169,7 +174,7 @@ func (v *GraphView) deselectNodes() {
 	}
 }
 
-func (v *GraphView) selectConnect(obj freesp.Connection) {
+func (v *graphView) selectConnect(obj freesp.Connection) {
 	n1 := v.findNode(obj.From().Node().Name())
 	n2 := v.findNode(obj.To().Node().Name())
 	for _, c := range v.connections {
@@ -187,7 +192,7 @@ func (v *GraphView) selectConnect(obj freesp.Connection) {
 	}
 }
 
-func (v *GraphView) deselectConnects() {
+func (v *graphView) deselectConnects() {
 	for _, c := range v.connections {
 		if c.Deselect() {
 			v.repaintConnection(c)
@@ -199,7 +204,7 @@ func (v *GraphView) deselectConnects() {
  *		scaleValueCallback
  */
 
-func scaleValueCallback(r *gtk.Scale, v *GraphView) {
+func scaleValueCallback(r *gtk.Scale, v *graphView) {
 	oldScale := v.scale
 	oldX := v.scene.hadj.GetValue()
 	oldY := v.scene.vadj.GetValue()
@@ -216,11 +221,11 @@ func scaleValueCallback(r *gtk.Scale, v *GraphView) {
 	v.scene.vadj.SetValue((oldY+visMy)*v.scale/oldScale - visMy)
 }
 
-func (v *GraphView) calcSceneWidth() int {
+func (v *graphView) calcSceneWidth() int {
 	return int(float64(v.bBox().Max.X+50) * v.scale)
 }
 
-func (v *GraphView) calcSceneHeight() int {
+func (v *graphView) calcSceneHeight() int {
 	return int(float64(v.bBox().Max.Y+50) * v.scale)
 }
 
@@ -228,7 +233,7 @@ func (v *GraphView) calcSceneHeight() int {
  *		areaButtonCallback
  */
 
-func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
+func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
 	ev := gdk.EventButton{event}
 	pos := image.Point{int(ev.X() / v.scale), int(ev.Y() / v.scale)}
 	switch ev.Type() {
@@ -252,7 +257,7 @@ func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 	}
 }
 
-func (v *GraphView) handleNodeSelect(pos image.Point) {
+func (v *graphView) handleNodeSelect(pos image.Point) {
 	for _, n := range v.nodes {
 		hit, _ := n.CheckHit(pos)
 		if hit {
@@ -272,7 +277,7 @@ func (v *GraphView) handleNodeSelect(pos image.Point) {
 	}
 }
 
-func (v *GraphView) handleConnectSelect(pos image.Point) {
+func (v *graphView) handleConnectSelect(pos image.Point) {
 	for _, c := range v.connections {
 		hit, _ := c.CheckHit(pos)
 		if hit {
@@ -295,7 +300,7 @@ func (v *GraphView) handleConnectSelect(pos image.Point) {
  *		areaMotionCallback
  */
 
-func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
+func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
 	ev := gdk.EventMotion{event}
 	x, y := ev.MotionVal()
 	pos := image.Point{int(x / v.scale), int(y / v.scale)}
@@ -306,7 +311,7 @@ func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *GraphView) {
 	}
 }
 
-func (v *GraphView) handleDrag(pos image.Point) {
+func (v *graphView) handleDrag(pos image.Point) {
 	for _, n := range v.nodes {
 		if n.IsSelected() {
 			box := n.BBox()
@@ -321,7 +326,7 @@ func (v *GraphView) handleDrag(pos image.Point) {
 	}
 }
 
-func (v *GraphView) handleMouseover(pos image.Point) {
+func (v *graphView) handleMouseover(pos image.Point) {
 	for _, n := range v.nodes {
 		_, mod := n.CheckHit(pos)
 		if mod {
@@ -340,7 +345,7 @@ func (v *GraphView) handleMouseover(pos image.Point) {
  *		areaDrawCallback
  */
 
-func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *GraphView) bool {
+func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *graphView) bool {
 	context.Scale(v.scale, v.scale)
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
@@ -349,7 +354,7 @@ func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *GraphVie
 	return true
 }
 
-func (v *GraphView) drawConnections(context *cairo.Context, r image.Rectangle) {
+func (v *graphView) drawConnections(context *cairo.Context, r image.Rectangle) {
 	for _, c := range v.connections {
 		box := c.BBox()
 		if r.Overlaps(box) {
@@ -358,7 +363,7 @@ func (v *GraphView) drawConnections(context *cairo.Context, r image.Rectangle) {
 	}
 }
 
-func (v *GraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
+func (v *graphView) drawNodes(context *cairo.Context, r image.Rectangle) {
 	for _, o := range v.nodes {
 		if !o.IsSelected() && o.BBox().Overlaps(r) {
 			o.Draw(context)
@@ -375,7 +380,7 @@ func (v *GraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
  *		Private functions
  */
 
-func (v *GraphView) findNode(name string) *graph.Node {
+func (v *graphView) findNode(name string) *graph.Node {
 	for _, d := range v.nodes {
 		if d.Name() == name {
 			return d.(*graph.Node)
@@ -384,7 +389,7 @@ func (v *GraphView) findNode(name string) *graph.Node {
 	return nil
 }
 
-func (v *GraphView) scaleCoord(x int, roundUp bool) int {
+func (v *graphView) scaleCoord(x int, roundUp bool) int {
 	if roundUp {
 		return int(math.Ceil(float64(x) * v.scale))
 	} else {
@@ -392,11 +397,11 @@ func (v *GraphView) scaleCoord(x int, roundUp bool) int {
 	}
 }
 
-func (v *GraphView) drawAll() {
+func (v *graphView) drawAll() {
 	v.drawScene(v.bBox())
 }
 
-func (v *GraphView) bBox() (box image.Rectangle) {
+func (v *graphView) bBox() (box image.Rectangle) {
 	emptyRect := image.Rectangle{}
 	for _, o := range v.nodes {
 		if box == emptyRect {
@@ -408,13 +413,13 @@ func (v *GraphView) bBox() (box image.Rectangle) {
 	return
 }
 
-func (v *GraphView) drawScene(r image.Rectangle) {
+func (v *graphView) drawScene(r image.Rectangle) {
 	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
 	v.area.QueueDrawArea(v.scaleCoord(x, false), v.scaleCoord(y, false), v.scaleCoord(w, true)+1, v.scaleCoord(h, true)+1)
 	return
 }
 
-func (v *GraphView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
+func (v *graphView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
 	ret := n.BBox()
 	for _, c := range v.connections {
 		if c.IsLinked(n.Name()) {
@@ -424,10 +429,10 @@ func (v *GraphView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
 	return ret
 }
 
-func (v *GraphView) repaintNode(n graph.NodeIf) {
+func (v *graphView) repaintNode(n graph.NodeIf) {
 	v.drawScene(v.nodeDrawBox(n))
 }
 
-func (v *GraphView) repaintConnection(c graph.ConnectIf) {
+func (v *graphView) repaintConnection(c graph.ConnectIf) {
 	v.drawScene(c.BBox())
 }

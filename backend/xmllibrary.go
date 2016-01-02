@@ -15,7 +15,7 @@ type XmlLibrary struct {
 }
 
 func XmlLibraryNew() *XmlLibrary {
-	return &XmlLibrary{xml.Name{freespNamespace, "signal-graph"}, "1.0", nil, nil, nil}
+	return &XmlLibrary{xml.Name{freespNamespace, "library"}, "1.0", nil, nil, nil}
 }
 
 func (g *XmlLibrary) Read(data []byte) error {

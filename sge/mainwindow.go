@@ -21,15 +21,16 @@ const (
 type Global struct {
 	win          *GoAppWindow
 	jl           *jobList
-	graphview    []*views.GraphView
+	graphview    []views.GraphView
 	xmlview      *views.XmlTextView
 	fts          *models.FilesTreeStore
 	ftv          *views.FilesTreeView
-	graphviewMap map[freesp.Implementation]*views.GraphView
+	graphviewMap map[freesp.Implementation]views.GraphView
 	libraryMap   map[string]freesp.Library
 }
 
 var _ views.Context = (*Global)(nil)
+var _ freesp.Context = (*Global)(nil)
 
 func (g *Global) SelectNode(node graph.NodeObject) {
 	n := node.(freesp.Node)
@@ -121,7 +122,7 @@ func main() {
 	gtk.Init(&unhandledArgs)
 	backend.Init()
 	freesp.Init()
-	global.graphviewMap = make(map[freesp.Implementation]*views.GraphView)
+	global.graphviewMap = make(map[freesp.Implementation]views.GraphView)
 	global.libraryMap = make(map[string]freesp.Library)
 
 	var err error

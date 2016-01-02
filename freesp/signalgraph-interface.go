@@ -14,6 +14,7 @@ type SignalGraphType interface {
 	ProcessingNodes() []Node
 	AddNode(Node) error
 	RemoveNode(n Node)
+	Context() Context
 }
 
 type SignalGraph interface {

@@ -5,6 +5,7 @@ import (
 	"github.com/axel-freesp/sge/backend"
 	"image"
 	"log"
+	"strings"
 )
 
 type signalGraphType struct {
@@ -54,16 +55,18 @@ func (t *signalGraphType) ProcessingNodes() []Node {
 
 func (t *signalGraphType) AddNode(n Node) error {
 	nType := n.ItsType()
-	libname := nType.DefinedAt()
-	if len(libname) == 0 {
-		return fmt.Errorf("signalGraphType.AddNode error: node type %s has no DefinedAt...", nType.TypeName())
-	}
-	if !t.containsLibRef(libname) {
-		lib := libraries[libname]
-		if lib == nil {
-			return fmt.Errorf("signalGraphType.AddNode error: library %s not registered", libname)
+	if !isAutoType(nType) {
+		libname := nType.DefinedAt()
+		if len(libname) == 0 {
+			return fmt.Errorf("signalGraphType.AddNode error: node type %s has no DefinedAt...", nType.TypeName())
 		}
-		t.libraries = append(t.libraries, lib)
+		if !t.containsLibRef(libname) {
+			lib := libraries[libname]
+			if lib == nil {
+				return fmt.Errorf("signalGraphType.AddNode error: library %s not registered", libname)
+			}
+			t.libraries = append(t.libraries, lib)
+		}
 	}
 	return t.addNode(n)
 }
@@ -79,6 +82,10 @@ func (t *signalGraphType) RemoveNode(n Node) {
 	RemNode(&t.outputNodes, n.(*node))
 	RemNode(&t.processingNodes, n.(*node))
 	n.ItsType().(*nodeType).removeInstance(n.(*node))
+}
+
+func (t *signalGraphType) Context() Context {
+	return t.context
 }
 
 func (t *signalGraphType) containsLibRef(libname string) bool {
@@ -232,6 +239,16 @@ func createInputNodeTypeName(name string) string {
 
 func createOutputNodeTypeName(name string) string {
 	return fmt.Sprintf("autoOutputNodeType-%s", name)
+}
+
+func isAutoType(nt NodeType) bool {
+	if strings.HasPrefix(nt.TypeName(), "autoInputNodeType-") {
+		return true
+	}
+	if strings.HasPrefix(nt.TypeName(), "autoOutputNodeType-") {
+		return true
+	}
+	return false
 }
 
 func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {

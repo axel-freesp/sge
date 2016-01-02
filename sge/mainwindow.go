@@ -226,3 +226,14 @@ func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
 	}
 	return
 }
+
+func (g *Global) RenameLibrary(oldName, newName string) {
+	lib, ok := g.libraryMap[oldName]
+	if !ok {
+		log.Fatalf("Global.RenameLibrary error: library %s not found\n", oldName)
+	}
+	delete(g.libraryMap, oldName)
+	g.libraryMap[newName] = lib
+}
+
+

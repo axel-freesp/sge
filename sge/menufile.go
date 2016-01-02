@@ -124,7 +124,9 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 	case freesp.SignalGraph:
 		obj.(freesp.SignalGraph).SetFilename(filenameToShow(filename))
 	case freesp.Library:
+		oldName := obj.(freesp.Library).Filename()
 		obj.(freesp.Library).SetFilename(filenameToShow(filename))
+		global.RenameLibrary(oldName, filenameToShow(filename))
 	default:
 		log.Fatalf("fileSaveAs error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
 	}

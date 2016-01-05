@@ -27,12 +27,24 @@ func (t *portType) Name() string {
 	return t.name
 }
 
+func (t *portType) SetName(newName string) {
+	t.name = newName
+}
+
 func (t *portType) SignalType() SignalType {
 	return t.signalType
 }
 
+func (t *portType) SetSignalType(newSignalType SignalType) {
+	t.signalType = newSignalType
+}
+
 func (t *portType) Direction() PortDirection {
 	return t.direction
+}
+
+func (t *portType) SetDirection(newDir PortDirection) {
+	t.direction = newDir
 }
 
 func (t *portType) String() (s string) {

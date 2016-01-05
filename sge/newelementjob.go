@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// TODO: should go to separate module
 type NewElementJob struct {
 	parentId, newId string
 	elemType        elementType
@@ -119,13 +118,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 			err = fmt.Errorf("NewElementJob.CreateObject(ePortType) error: referenced signal type wrong...")
 			return
 		}
-		var dir freesp.PortDirection
-		if j.input[iDirection] == "InPort" {
-			dir = freesp.InPort
-		} else {
-			dir = freesp.OutPort
-		}
-		ret = freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], dir)
+		ret = freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], string2direction[j.input[iDirection]])
 
 	case eSignalType:
 		switch parentObject.(type) {
@@ -138,18 +131,8 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		name := j.input[iSignalTypeName]
 		cType := j.input[iCType]
 		channelId := j.input[iChannelId]
-		var scope freesp.Scope
-		if j.input[iScope] == "Local" {
-			scope = freesp.Local
-		} else {
-			scope = freesp.Global
-		}
-		var mode freesp.Mode
-		if j.input[iSignalMode] == "Asynchronous" {
-			mode = freesp.Asynchronous
-		} else {
-			mode = freesp.Synchronous
-		}
+		scope := string2scope[j.input[iScope]]
+		mode := string2mode[j.input[iSignalMode]]
 		ret, err = freesp.SignalTypeNew(name, cType, channelId, scope, mode)
 		if err != nil {
 			log.Printf("NewElementJob.CreateObject(eSignalType) error: SignalTypeNew failed: %s\n", err)
@@ -164,12 +147,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		var implType freesp.ImplementationType
-		if j.input[iImplementationType] == "Elementary Type" {
-			implType = freesp.NodeTypeElement
-		} else {
-			implType = freesp.NodeTypeGraph
-		}
+		implType := string2implType[j.input[iImplementationType]]
 		ret = freesp.ImplementationNew(j.input[iImplName], implType, &global)
 
 	default:

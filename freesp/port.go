@@ -48,6 +48,10 @@ func (p *port) Direction() PortDirection {
 	return p.itsType.Direction()
 }
 
+func (p *port) SetDirection(PortDirection) {
+	log.Panicf("port.SetDirection() is not allowed!\n")
+}
+
 func (p *port) Connections() []Port {
 	return p.connected.Ports()
 }

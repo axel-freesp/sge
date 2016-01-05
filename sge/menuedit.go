@@ -14,6 +14,7 @@ func MenuEditInit(menu *GoAppMenu) {
 	menu.editUndo.Connect("activate", func() { editUndo(menu, fts, jl, ftv) })
 	menu.editRedo.Connect("activate", func() { editRedo(menu, fts, jl, ftv) })
 	menu.editNew.Connect("activate", func() { editNew(menu, fts, jl, ftv) })
+	menu.editEdit.Connect("activate", func() { editEdit(menu, fts, jl, ftv) })
 	menu.editCopy.Connect("activate", func() { editCopy(fts) })
 	menu.editDelete.Connect("activate", func() { editDelete(menu, fts, jl, ftv) })
 }
@@ -23,6 +24,7 @@ func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	prop := fts.Property(cursor)
 	menu.editNew.SetSensitive(prop.MayAddObject())
 	menu.editDelete.SetSensitive(prop.MayRemove())
+	menu.editEdit.SetSensitive(prop.MayEdit())
 	menu.editUndo.SetSensitive(jl.CanUndo())
 	menu.editRedo.SetSensitive(jl.CanRedo())
 	for _, v := range global.graphview {
@@ -31,7 +33,7 @@ func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 }
 
 func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	log.Println("editUndo")
+	//log.Println("editUndo")
 	defer MenuEditCurrent(menu, fts, jl)
 	state, ok := jl.Undo()
 	if ok {
@@ -46,7 +48,7 @@ func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *vie
 }
 
 func editRedo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	log.Println("editRedo")
+	//log.Println("editRedo")
 	defer MenuEditCurrent(menu, fts, jl)
 	state, ok := jl.Redo()
 	if ok {
@@ -61,7 +63,7 @@ func editRedo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *vie
 }
 
 func editNew(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	log.Println("editNew")
+	//log.Println("editNew")
 	defer MenuEditCurrent(menu, fts, jl)
 	dialog, err := NewElementDialogNew(fts)
 	if err != nil {
@@ -81,7 +83,31 @@ func editNew(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *view
 			ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
 		}
 	}
-	log.Println("editNew finished")
+	//log.Println("editNew finished")
+}
+
+func editEdit(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
+	//log.Println("editEdit")
+	defer MenuEditCurrent(menu, fts, jl)
+	dialog, err := EditDialogNew(fts)
+	if err != nil {
+		log.Println("editEdit error: ", err)
+		return
+	}
+	job, ok := dialog.Run(fts)
+	if ok {
+		state, ok := jl.Apply(job)
+		if ok {
+			path, err := gtk.TreePathNewFromString(state.(string))
+			if err != nil {
+				log.Println("editEdit error: TreePathNewFromString failed:", err)
+				return
+			}
+			ftv.TreeView().ExpandToPath(path)
+			ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
+		}
+	}
+	//log.Println("editEdit finished")
 }
 
 func editCopy(fts *models.FilesTreeStore) {
@@ -89,7 +115,7 @@ func editCopy(fts *models.FilesTreeStore) {
 }
 
 func editDelete(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {
-	log.Println("editDelete")
+	//log.Println("editDelete")
 	defer MenuEditCurrent(menu, fts, jl)
 	job := DeleteObjectJobNew(fts.GetCurrentId())
 	state, ok := jl.Apply(EditorJobNew(JobDeleteObject, job))

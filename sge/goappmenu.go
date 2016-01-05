@@ -21,6 +21,7 @@ type GoAppMenu struct {
 	editUndo   *gtk.MenuItem
 	editRedo   *gtk.MenuItem
 	editNew    *gtk.MenuItem
+	editEdit   *gtk.MenuItem
 	editCopy   *gtk.MenuItem
 	editDelete *gtk.MenuItem
 	menuAbout  *gtk.Menu
@@ -33,7 +34,7 @@ type GoAppMenu struct {
 
 func GoAppMenuNew() *GoAppMenu {
 	return &GoAppMenu{nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 }
 
 func (m *GoAppMenu) Init() {
@@ -113,6 +114,10 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
 	}
+	m.editEdit, err = gtk.MenuItemNewWithMnemonic("_Edit")
+	if err != nil {
+		log.Fatal("Unable to create filemenu:", err)
+	}
 	m.editCopy, err = gtk.MenuItemNewWithMnemonic("_Copy")
 	if err != nil {
 		log.Fatal("Unable to create filemenu:", err)
@@ -126,6 +131,7 @@ func (m *GoAppMenu) Init() {
 	x, _ = gtk.SeparatorMenuItemNew()
 	m.menuEdit.Append(x)
 	m.menuEdit.Append(m.editNew)
+	m.menuEdit.Append(m.editEdit)
 	m.menuEdit.Append(m.editCopy)
 	m.menuEdit.Append(m.editDelete)
 	m.editmenu.SetSubmenu(m.menuEdit)

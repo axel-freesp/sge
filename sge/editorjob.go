@@ -12,6 +12,7 @@ type JobType int
 const (
 	JobNewElement JobType = iota
 	JobDeleteObject
+	JobEdit
 )
 
 type EditorJob struct {
@@ -19,15 +20,18 @@ type EditorJob struct {
 	jobDetail    fmt.Stringer
 	newElement   *NewElementJob
 	deleteObject *DeleteObjectJob
+	edit         *EditJob
 }
 
 func EditorJobNew(jobType JobType, jobDetail fmt.Stringer) *EditorJob {
-	ret := &EditorJob{jobType, jobDetail, nil, nil}
+	ret := &EditorJob{jobType, jobDetail, nil, nil, nil}
 	switch jobType {
 	case JobNewElement:
 		ret.newElement = jobDetail.(*NewElementJob)
 	case JobDeleteObject:
 		ret.deleteObject = jobDetail.(*DeleteObjectJob)
+	case JobEdit:
+		ret.edit = jobDetail.(*EditJob)
 	}
 	return ret
 }
@@ -39,6 +43,8 @@ func (e *EditorJob) String() string {
 		kind = "NewElement"
 	case JobDeleteObject:
 		kind = "DeleteObject"
+	case JobEdit:
+		kind = "Edit"
 	}
 	return fmt.Sprintf("EditorJob( %s( %v ) )", kind, e.jobDetail)
 }
@@ -62,7 +68,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 		var object freesp.TreeElement
 		object, err = job.newElement.CreateObject(a.fts)
 		if err != nil {
-			log.Printf("jobApplier.Apply error: %s\n", err)
+			log.Printf("jobApplier.Apply error (JobNewElement): %s\n", err)
 			return
 		}
 		job.newElement.newId, err = a.fts.AddNewObject(job.newElement.parentId, -1, object)
@@ -70,7 +76,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 			state = job.newElement.newId
 		} else {
 			state = a.fts.GetCurrentId()
-			log.Printf("jobApplier.Apply error: %s\n", err)
+			log.Printf("jobApplier.Apply error (JobNewElement): %s\n", err)
 		}
 	case JobDeleteObject:
 		job.deleteObject.deletedObjects, err = a.fts.DeleteObject(job.deleteObject.id)
@@ -79,7 +85,12 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 			state = d.ParentId
 		} else {
 			state = a.fts.GetCurrentId()
-			log.Printf("jobApplier.Apply: error: %s\n", err)
+			log.Printf("jobApplier.Apply (JobDeleteObject): error: %s\n", err)
+		}
+	case JobEdit:
+		state, err = job.edit.EditObject(a.fts, EditJobForward)
+		if err != nil {
+			log.Printf("jobApplier.Apply (JobEdit): error: %s\n", err)
 		}
 	}
 	return
@@ -95,7 +106,7 @@ func (a *jobApplier) Revert(jobI interface{}) (state interface{}, err error) {
 			state = del[0].ParentId
 		} else {
 			state = a.fts.GetCurrentId()
-			log.Printf("jobApplier.Revert: error: %s\n", err)
+			log.Printf("jobApplier.Revert (JobNewElement): error: %s\n", err)
 		}
 	case JobDeleteObject:
 		d := job.deleteObject.deletedObjects[len(job.deleteObject.deletedObjects)-1]
@@ -105,9 +116,14 @@ func (a *jobApplier) Revert(jobI interface{}) (state interface{}, err error) {
 			_, err = a.fts.AddNewObject(d.ParentId, d.Position, d.Object)
 			if err != nil {
 				state = a.fts.GetCurrentId()
-				log.Printf("jobApplier.Revert: error: %s\n", err)
+				log.Printf("jobApplier.Revert (JobDeleteObject): error: %s\n", err)
 				return
 			}
+		}
+	case JobEdit:
+		state, err = job.edit.EditObject(a.fts, EditJobRevert)
+		if err != nil {
+			log.Printf("jobApplier.Revert (JobEdit): error: %s\n", err)
 		}
 	}
 	return

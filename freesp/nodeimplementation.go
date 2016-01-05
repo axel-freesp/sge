@@ -29,6 +29,10 @@ func (n *implementation) ElementName() string {
 	return n.elementName
 }
 
+func (n *implementation) SetElemName(newName string) {
+	n.elementName = newName
+}
+
 func (n *implementation) Graph() SignalGraphType {
 	return n.graph
 }

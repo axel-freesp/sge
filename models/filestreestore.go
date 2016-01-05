@@ -183,8 +183,6 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObje
 	fmt.Sscanf(id[li+1:], "%d", &position)
 
 	cursor := freesp.Cursor{id, freesp.AppendCursor}
-	log.Println("FilesTreeStore.DeleteObject cursor =", cursor)
-
 	switch parent.(type) {
 	case freesp.NodeType:
 	case freesp.SignalGraphType:

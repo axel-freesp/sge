@@ -126,6 +126,16 @@ func main() {
 	global.libraryMap = make(map[string]freesp.Library)
 
 	var err error
+	iconPath := os.Getenv("SGE_ICON_PATH")
+	if len(iconPath) == 0 {
+		log.Println("WARNING: Missing environment variable SGE_ICON_PATH")
+	} else {
+		err = gtk.WindowSetDefaultIconFromFile(fmt.Sprintf("%s/%s", iconPath, "sge-logo.png"))
+		if err != nil {
+			log.Printf("WARNING: Failed to set default icon: %s.\n", err)
+		}
+	}
+
 	// Create a new toplevel window.
 	global.win, err = GoAppWindowNew(width, height)
 	if err != nil {
@@ -235,5 +245,3 @@ func (g *Global) RenameLibrary(oldName, newName string) {
 	delete(g.libraryMap, oldName)
 	g.libraryMap[newName] = lib
 }
-
-

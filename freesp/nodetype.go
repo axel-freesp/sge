@@ -108,6 +108,10 @@ func (t *nodeType) TypeName() string {
 	return t.name
 }
 
+func (t *nodeType) SetTypeName(newTypeName string) {
+	t.name = newTypeName
+}
+
 func (t *nodeType) DefinedAt() string {
 	return t.definedAt
 }

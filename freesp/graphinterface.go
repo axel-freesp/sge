@@ -11,6 +11,7 @@ type Positioner interface {
 
 type Namer interface {
 	Name() string
+	SetName(string)
 }
 
 type Porter interface {
@@ -22,4 +23,5 @@ type Porter interface {
 
 type Directioner interface {
 	Direction() PortDirection
+	SetDirection(PortDirection)
 }

@@ -122,6 +122,10 @@ func (n *Node) Name() string {
 	return n.userObj.Name()
 }
 
+func (n *Node) SetName(newName string) {
+	n.userObj.SetName(newName)
+}
+
 var _ freesp.Namer  = (*Node)(nil)
 
 /*

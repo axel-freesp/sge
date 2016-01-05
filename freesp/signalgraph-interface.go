@@ -47,6 +47,7 @@ type Library interface {
 type NodeType interface {
 	TreeElement
 	TypeName() string
+	SetTypeName(string)
 	DefinedAt() string
 	InPorts() []PortType
 	OutPorts() []PortType
@@ -62,6 +63,7 @@ type Implementation interface {
 	TreeElement
 	ImplementationType() ImplementationType
 	ElementName() string
+	SetElemName(string)
 	Graph() SignalGraphType
 	// missing: input mapping, output mapping
 }
@@ -100,17 +102,23 @@ const (
 type SignalType interface {
 	TreeElement
 	TypeName() string
+	SetTypeName(string)
 	CType() string
+	SetCType(string)
 	ChannelId() string
+	SetChannelId(string)
 	Scope() Scope
+	SetScope(Scope)
 	Mode() Mode
+	SetMode(Mode)
 }
 
 type PortType interface {
 	TreeElement
+	Namer
+	Directioner
 	SignalType() SignalType
-	Name() string
-	Direction() PortDirection
+	SetSignalType(SignalType)
 }
 
 type Port interface {

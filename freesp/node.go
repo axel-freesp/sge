@@ -288,6 +288,10 @@ func (n *node) Name() string {
 	return n.name
 }
 
+func (n *node) SetName(newName string) {
+	n.name = newName
+}
+
 var _ Namer = (*node)(nil)
 
 /*

@@ -48,20 +48,41 @@ func (t *signalType) TypeName() string {
 	return t.name
 }
 
+func (t *signalType) SetTypeName(newName string) {
+	// TODO: how to make this consistent in all cases?
+	log.Println("signalType.SetTypeName WARNING: this is not yet implemented!")
+}
+
 func (t *signalType) CType() string {
 	return t.ctype
+}
+
+func (t *signalType) SetCType(newCType string) {
+	t.ctype = newCType
 }
 
 func (t *signalType) ChannelId() string {
 	return t.msgid
 }
 
+func (t *signalType) SetChannelId(newChannelId string) {
+	t.msgid = newChannelId
+}
+
 func (t *signalType) Scope() Scope {
 	return t.scope
 }
 
+func (t *signalType) SetScope(newScope Scope) {
+	t.scope = newScope
+}
+
 func (t *signalType) Mode() Mode {
 	return t.mode
+}
+
+func (t *signalType) SetMode(newMode Mode) {
+	t.mode = newMode
 }
 
 /*

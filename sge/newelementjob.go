@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
+	"image"
 	"log"
 	"strings"
 )
@@ -12,10 +13,11 @@ type NewElementJob struct {
 	parentId, newId string
 	elemType        elementType
 	input           map[inputElement]string
+	extra           string // used for pasting nodes and connections
 }
 
 func NewElementJobNew(context string, t elementType) *NewElementJob {
-	return &NewElementJob{context, "", t, make(map[inputElement]string)}
+	return &NewElementJob{context, "", t, make(map[inputElement]string), ""}
 }
 
 func (j *NewElementJob) String() string {
@@ -68,6 +70,15 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		} else {
 			ret, err = freesp.OutputNodeNew(j.input[iOutputNodeName], j.input[iOutputTypeSelect], context)
 		}
+		if len(j.extra) > 0 {
+			coords := strings.Split(j.extra, "|")
+			var x, y int
+			fmt.Sscanf(coords[0], "%d", &x)
+			fmt.Sscanf(coords[1], "%d", &y)
+			pos := image.Point{x, y}
+			//log.Printf("NewElementJob.CreateObject(eNode) setting position %s: %v\n", j.extra, pos)
+			ret.(freesp.Node).SetPosition(pos)
+		}
 
 	case eNodeType:
 		var context string
@@ -85,8 +96,42 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 	case eConnection:
 		switch parentObject.(type) {
 		case freesp.Port:
+		case freesp.SignalGraphType:
+			fromTo := strings.Split(j.extra, "/")
+			var n freesp.Node
+			for _, n = range parentObject.(freesp.SignalGraphType).Nodes() {
+				if n.Name() == fromTo[0] {
+					for _, parentObject = range n.OutPorts() {
+						if parentObject.(freesp.Port).Name() == fromTo[1] {
+							break
+						}
+					}
+					break
+				}
+			}
+			if parentObject == nil {
+				log.Fatalf("NewElementJob.CreateObject(eNodeType) error: no valid FROM port for edge job %v\n", j)
+			}
+			_ = parentObject.(freesp.Port)
+		case freesp.Implementation:
+			fromTo := strings.Split(j.extra, "/")
+			var n freesp.Node
+			for _, n = range parentObject.(freesp.Implementation).Graph().Nodes() {
+				if n.Name() == fromTo[0] {
+					for _, parentObject = range n.OutPorts() {
+						if parentObject.(freesp.Port).Name() == fromTo[1] {
+							break
+						}
+					}
+					break
+				}
+			}
+			if parentObject == nil {
+				log.Fatalf("NewElementJob.CreateObject(eNodeType) error: no valid FROM port for edge job %v\n", j)
+			}
+			_ = parentObject.(freesp.Port)
 		default:
-			log.Fatal("NewElementJob.CreateObject(eConnection) error: referenced parentObject wrong type...")
+			log.Fatalf("NewElementJob.CreateObject(eConnection) error: referenced parentObject wrong type %T\n", parentObject)
 		}
 		ports := getMatchingPorts(fts, parentObject)
 		for _, p := range ports {

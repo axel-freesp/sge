@@ -1,0 +1,5 @@
+TODO:
+
+File->close
+README.md
+shift layout border

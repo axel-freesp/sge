@@ -132,13 +132,7 @@ func parseNode(text, context string, graph freesp.SignalGraphType) (job *PasteJo
 		}
 		xmln.NName = createNextNameCandidate(xmln.NName)
 	}
-	nodeTypes := freesp.GetRegisteredNodeTypes()
-	validType := false
-	for _, reg := range nodeTypes {
-		if reg == xmln.NType {
-			validType = true
-		}
-	}
+	_, validType := freesp.GetNodeTypeByName(xmln.NType)
 	var njob *NewElementJob
 	switch {
 	case validType:
@@ -180,15 +174,9 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 	if xmlerr != nil {
 		return
 	}
-	nodeTypes := freesp.GetRegisteredNodeTypes()
 	for true {
-		valid := true
-		for _, reg := range nodeTypes {
-			if reg == xmlnt.TypeName {
-				valid = false
-			}
-		}
-		if valid {
+		_, exist := freesp.GetNodeTypeByName(xmlnt.TypeName)
+		if !exist {
 			break
 		}
 		xmlnt.TypeName = createNextNameCandidate(xmlnt.TypeName)
@@ -224,28 +212,94 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 			j.input[iImplementationType] = implType2string[freesp.NodeTypeElement]
 		} else {
 			j.input[iImplementationType] = implType2string[freesp.NodeTypeGraph]
-			// TODO: create graph objects
 			// nodes: (no need for i/o nodes linked to ports...)
+			// TODO: how to set position? Info is in XML, but not in job...
+			// Add IO nodes, handle them specifically ??
+			// TODO: Check names of IO nodes! We have a strong name scheming. Make consistent renaming (edges!)
 			for _, n := range impl.SignalGraph[0].ProcessingNodes {
 				nj := NewElementJobNew("", eNode)
 				nj.input[iNodeName] = n.NName
-				validNodeType := false
-				for _, nt := range nodeTypes {
-					if nt == n.NType {
-						validNodeType = true
-					}
-				}
+				_, validNodeType := freesp.GetNodeTypeByName(n.NType)
 				if !validNodeType {
 					fmt.Printf("parseNodeType error: referenced node type %s not registered.\n", n.NType)
 					return
 				}
 				nj.input[iNodeTypeSelect] = n.NType
+				nj.extra = fmt.Sprintf("%d|%d", n.Hint.X, n.Hint.Y)
+				//fmt.Printf("parseNodeType: fill hint of implementation graph node: %s\n", nj.extra)
 				njob := PasteJobNew()
 				njob.newElements = append(njob.newElements, nj)
 				pj.children = append(pj.children, njob)
 			}
 			for _, e := range impl.SignalGraph[0].Connections {
-				_ = e // TODO: how to navigate to port during apply???
+				// TODO: put validity check of edges somewhere else...
+				var fromPort *backend.XmlOutPort
+				var toPort *backend.XmlInPort
+				var p1, p2 freesp.PortType
+				for _, n := range impl.SignalGraph[0].InputNodes {
+					if n.NName == e.From {
+						for _, p := range n.OutPort {
+							if p.PName == e.FromPort {
+								fromPort = &p
+								break
+							}
+						}
+						break
+					}
+				}
+				for _, n := range impl.SignalGraph[0].ProcessingNodes {
+					if n.NName == e.From {
+						nType, good := freesp.GetNodeTypeByName(n.NType)
+						if !good {
+							fmt.Printf("parseNodeType error: node type %s not registered.\n", n.NType)
+							return
+						}
+						for _, p := range nType.OutPorts() {
+							if p.Name() == e.FromPort {
+								p1 = p
+								break
+							}
+						}
+						break
+					}
+				}
+				for _, n := range impl.SignalGraph[0].ProcessingNodes {
+					if n.NName == e.To {
+						nType, good := freesp.GetNodeTypeByName(n.NType)
+						if !good {
+							fmt.Printf("parseNodeType error: node type %s not registered.\n", n.NType)
+							return
+						}
+						for _, p := range nType.InPorts() {
+							if p.Name() == e.ToPort {
+								p2 = p
+								break
+							}
+						}
+						break
+					}
+				}
+				for _, n := range impl.SignalGraph[0].OutputNodes {
+					if n.NName == e.To {
+						for _, p := range n.InPort {
+							if p.PName == e.ToPort {
+								toPort = &p
+								break
+							}
+						}
+						break
+					}
+				}
+				if (fromPort == nil && p1 == nil) || (toPort == nil && p2 == nil) {
+					fmt.Printf("parseNodeType error: invalid edge %v in implementation.\n", e)
+					return
+				}
+				nj := NewElementJobNew("", eConnection)
+				nj.input[iPortSelect] = fmt.Sprintf("%s/%s", e.To, e.ToPort)
+				nj.extra = fmt.Sprintf("%s/%s", e.From, e.FromPort)
+				njob := PasteJobNew()
+				njob.newElements = append(njob.newElements, nj)
+				pj.children = append(pj.children, njob)
 			}
 		}
 		pj.newElements = append(pj.newElements, j)
@@ -261,7 +315,6 @@ func parseSignalGraph(text, context string) (job *PasteJob, ok bool) {
 	if xmlerr != nil {
 		return
 	}
-	nodeTypes := freesp.GetRegisteredNodeTypes()
 	for _, l := range xmlsg.Libraries {
 		_, err := global.GetLibrary(l.Name)
 		if err != nil {
@@ -275,12 +328,7 @@ func parseSignalGraph(text, context string) (job *PasteJob, ok bool) {
 	job.context = context
 	job.newElements = append(job.newElements, njob)
 	for _, xmln := range xmlsg.ProcessingNodes {
-		validNodeType := false
-		for _, reg := range nodeTypes {
-			if reg == xmln.NType {
-				validNodeType = true
-			}
-		}
+		_, validNodeType := freesp.GetNodeTypeByName(xmln.NType)
 		if !validNodeType {
 			fmt.Printf("parseSignalGraph error: node type %s not registered.\n", xmln.NType)
 			return

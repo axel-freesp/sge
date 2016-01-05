@@ -99,6 +99,13 @@ func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeEleme
 			log.Fatalf("implementation.AddNewObject error: cannot add node to elementary implementation.\n")
 		}
 
+	case Connection:
+		if impl.ImplementationType() == NodeTypeGraph {
+			return impl.Graph().AddNewObject(tree, cursor, obj)
+		} else {
+			log.Fatalf("implementation.AddNewObject error: cannot add connection to elementary implementation.\n")
+		}
+
 	default:
 		log.Fatalf("implementation.AddNewObject error: invalid type %T\n", obj)
 	}

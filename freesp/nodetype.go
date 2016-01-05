@@ -167,6 +167,7 @@ func (t *nodeType) doResolvePort(name string, dir PortDirection) *portType {
 	}
 	for _, p := range list.PortTypes() {
 		if name == p.Name() {
+			log.Printf("nodeType.doResolvePort(%s): success\n", name)
 			return p.(*portType)
 		}
 	}
@@ -178,39 +179,37 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context Conte
 	for _, p := range n.InPort {
 		pType, ok := signalTypes[p.PType]
 		if !ok {
-			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: signal type '%s' not found\n", p.PType)
 		}
 		nt.addInPort(p.PName, pType)
 	}
 	for _, p := range n.OutPort {
 		pType, ok := signalTypes[p.PType]
 		if !ok {
-			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: signal type '%s' not found\n", p.PType)
 		}
 		nt.addOutPort(p.PName, pType)
 	}
-	if len(n.Implementation) > 0 {
-		for _, i := range n.Implementation {
-			var iType ImplementationType
-			if len(i.SignalGraph) == 1 {
-				iType = NodeTypeGraph
-			} else {
-				iType = NodeTypeElement
+	for _, i := range n.Implementation {
+		var iType ImplementationType
+		if len(i.SignalGraph) == 1 {
+			iType = NodeTypeGraph
+		} else {
+			iType = NodeTypeElement
+		}
+		impl := ImplementationNew(i.Name, iType, context)
+		nt.implementation.Append(impl)
+		switch iType {
+		case NodeTypeElement:
+			impl.elementName = i.Name
+		default:
+			var err error
+			var resolvePort = func(name string, dir PortDirection) *portType {
+				return nt.doResolvePort(name, dir)
 			}
-			impl := ImplementationNew(i.Name, iType, context)
-			nt.implementation.Append(impl)
-			switch iType {
-			case NodeTypeElement:
-				impl.elementName = i.Name
-			default:
-				var err error
-				var resolvePort = func(name string, dir PortDirection) *portType {
-					return nt.doResolvePort(name, dir)
-				}
-				impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, context, resolvePort)
-				if err != nil {
-					log.Fatal(err)
-				}
+			impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, context, resolvePort)
+			if err != nil {
+				log.Fatal(err)
 			}
 		}
 	}

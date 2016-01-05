@@ -64,6 +64,10 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 }
 
 func (s *FilesTreeStore) GetCurrentId() (id string) {
+	if s.currentSelection == nil {
+		id = ""
+		return
+	}
 	p, err := s.treestore.GetPath(s.currentSelection)
 	if err != nil {
 		id = ""

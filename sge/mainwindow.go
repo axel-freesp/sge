@@ -8,6 +8,7 @@ import (
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
 	"github.com/axel-freesp/sge/views/graph"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ type Global struct {
 	ftv          *views.FilesTreeView
 	graphviewMap map[freesp.Implementation]views.GraphView
 	libraryMap   map[string]freesp.Library
+	clp          *gtk.Clipboard
 }
 
 var _ views.Context = (*Global)(nil)
@@ -134,6 +136,12 @@ func main() {
 		if err != nil {
 			log.Printf("WARNING: Failed to set default icon: %s.\n", err)
 		}
+	}
+
+	atom := gdk.GdkAtomIntern("CLIPBOARD", false)
+	global.clp, err = gtk.ClipboardGet(atom)
+	if err != nil {
+		log.Println("WARNING: Failed to get clipboard CLIPBOARD")
 	}
 
 	// Create a new toplevel window.

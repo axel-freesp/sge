@@ -13,6 +13,7 @@ const (
 	JobNewElement JobType = iota
 	JobDeleteObject
 	JobEdit
+	JobPaste
 )
 
 type EditorJob struct {
@@ -21,10 +22,11 @@ type EditorJob struct {
 	newElement   *NewElementJob
 	deleteObject *DeleteObjectJob
 	edit         *EditJob
+	paste        *PasteJob
 }
 
 func EditorJobNew(jobType JobType, jobDetail fmt.Stringer) *EditorJob {
-	ret := &EditorJob{jobType, jobDetail, nil, nil, nil}
+	ret := &EditorJob{jobType, jobDetail, nil, nil, nil, nil}
 	switch jobType {
 	case JobNewElement:
 		ret.newElement = jobDetail.(*NewElementJob)
@@ -32,6 +34,8 @@ func EditorJobNew(jobType JobType, jobDetail fmt.Stringer) *EditorJob {
 		ret.deleteObject = jobDetail.(*DeleteObjectJob)
 	case JobEdit:
 		ret.edit = jobDetail.(*EditJob)
+	case JobPaste:
+		ret.paste = jobDetail.(*PasteJob)
 	}
 	return ret
 }
@@ -45,6 +49,8 @@ func (e *EditorJob) String() string {
 		kind = "DeleteObject"
 	case JobEdit:
 		kind = "Edit"
+	case JobPaste:
+		kind = "Paste"
 	}
 	return fmt.Sprintf("EditorJob( %s( %v ) )", kind, e.jobDetail)
 }
@@ -92,6 +98,22 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 		if err != nil {
 			log.Printf("jobApplier.Apply (JobEdit): error: %s\n", err)
 		}
+	case JobPaste:
+		for _, j := range job.paste.newElements {
+			j.parentId = job.paste.context
+			state, err = a.Apply(EditorJobNew(JobNewElement, j))
+			if err != nil {
+				log.Printf("jobApplier.Apply (JobPaste): error: %s\n", err)
+				return
+			}
+			for _, ch := range job.paste.children {
+				ch.context = state.(string)
+				_, err = a.Apply(EditorJobNew(JobPaste, ch))
+				if err != nil {
+					log.Printf("jobApplier.Apply (JobPaste): error: %s\n", err)
+				}
+			}
+		}
 	}
 	return
 }
@@ -124,6 +146,12 @@ func (a *jobApplier) Revert(jobI interface{}) (state interface{}, err error) {
 		state, err = job.edit.EditObject(a.fts, EditJobRevert)
 		if err != nil {
 			log.Printf("jobApplier.Revert (JobEdit): error: %s\n", err)
+		}
+	case JobPaste:
+		state, err = a.Revert(EditorJobNew(JobNewElement, job.paste.newElements[0]))
+		if err != nil {
+			log.Printf("jobApplier.Apply (JobPaste): error: %s\n", err)
+			return
 		}
 	}
 	return

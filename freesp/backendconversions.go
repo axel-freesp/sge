@@ -1,9 +1,84 @@
 package freesp
 
 import (
+	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"strings"
 )
+
+func CreateXML(object interface{}) (buf []byte, err error) {
+	if object != nil {
+		switch object.(type) {
+		case SignalGraph:
+			s := object.(SignalGraph)
+			xmlsignalgraph := CreateXmlSignalGraph(s)
+			buf, err = xmlsignalgraph.Write()
+		case SignalGraphType:
+			s := object.(SignalGraphType)
+			xmlsignalgraph := CreateXmlSignalGraphType(s)
+			buf, err = xmlsignalgraph.Write()
+		case Node:
+			n := object.(Node)
+			if len(n.InPorts()) == 0 {
+				xmlnode := CreateXmlInputNode(n)
+				buf, err = xmlnode.Write()
+			} else if len(n.OutPorts()) == 0 {
+				xmlnode := CreateXmlOutputNode(n)
+				buf, err = xmlnode.Write()
+			} else {
+				xmlnode := CreateXmlProcessingNode(n)
+				buf, err = xmlnode.Write()
+			}
+		case NodeType:
+			t := object.(NodeType)
+			xmlnodetype := CreateXmlNodeType(t)
+			buf, err = xmlnodetype.Write()
+		case Port:
+			p := object.(Port)
+			if p.Direction() == OutPort {
+				xmlport := CreateXmlOutPort(p)
+				buf, err = xmlport.Write()
+			} else {
+				xmlport := CreateXmlInPort(p)
+				buf, err = xmlport.Write()
+			}
+		case PortType:
+			t := object.(PortType)
+			if t.Direction() == InPort {
+				xmlporttype := CreateXmlNamedInPort(t)
+				buf, err = xmlporttype.Write()
+			} else {
+				xmlporttype := CreateXmlNamedOutPort(t)
+				buf, err = xmlporttype.Write()
+			}
+		case Connection:
+			xmlconn := CreateXmlConnection(object.(Connection))
+			buf, err = xmlconn.Write()
+		case SignalType:
+			s := object.(SignalType)
+			if s != nil {
+				xmlsignaltype := CreateXmlSignalType(s)
+				buf, err = xmlsignaltype.Write()
+			}
+		case Library:
+			l := object.(Library)
+			xmllib := CreateXmlLibrary(l)
+			buf, err = xmllib.Write()
+		case Implementation:
+			impl := object.(Implementation)
+			switch impl.ImplementationType() {
+			case NodeTypeElement:
+				// TODO
+			default:
+				xmlImpl := CreateXmlSignalGraphType(impl.Graph())
+				buf, err = xmlImpl.Write()
+			}
+		default:
+			err = fmt.Errorf("CreateXML: invalid data type %T (%v)\n", object, object)
+		}
+	}
+	return
+}
 
 func CreateXmlInPort(p Port) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())

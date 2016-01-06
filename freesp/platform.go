@@ -44,7 +44,16 @@ func (p *platform) SetFilename(newFilename string) {
 	// TODO
 }
 
-//func (p *platform) Read(data []byte) error
+func (p *platform) Read(data []byte) (err error) {
+	xmlp := backend.XmlPlatformNew()
+	err = xmlp.Read(data)
+	if err != nil {
+		err = fmt.Errorf("platform.Read: %v", err)
+		return
+	}
+	err = p.createPlatformFromXml(xmlp)
+	return
+}
 
 func (p *platform) ReadFile(filepath string) (err error) {
 	xmlp := backend.XmlPlatformNew()

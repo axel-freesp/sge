@@ -28,19 +28,16 @@ func (s *signalGraph) ItsType() SignalGraphType {
 	return s.itsType
 }
 
-/*
 func (s *signalGraph) Read(data []byte) error {
 	g := backend.XmlSignalGraphNew()
 	err := g.Read(data)
 	if err != nil {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
 	}
-	fmt.Println("signalGraph.Read: call createSignalGraphTypeFromXml")
-	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename,
+	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
 		func(_ string, _ PortDirection) *portType { return nil })
 	return err
 }
-*/
 
 func (s *signalGraph) ReadFile(filepath string) error {
 	g := backend.XmlSignalGraphNew()

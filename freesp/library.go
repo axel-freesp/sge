@@ -74,28 +74,26 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 	return nil
 }
 
-/*
-func (s *library) Read(data []byte) error {
-	l := backend.XmlLibraryNew()
-	err := l.Read(data)
+func (l *library) Read(data []byte) error {
+	xmllib := backend.XmlLibraryNew()
+	err := xmllib.Read(data)
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l, s.context)
+	return l.createLibFromXml(xmllib)
 }
-*/
 
-func (s *library) ReadFile(filepath string) error {
-	l := backend.XmlLibraryNew()
-	err := l.ReadFile(filepath)
+func (l *library) ReadFile(filepath string) error {
+	xmllib := backend.XmlLibraryNew()
+	err := xmllib.ReadFile(filepath)
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l)
+	return l.createLibFromXml(xmllib)
 }
 
-func (s *library) Write() (data []byte, err error) {
-	xmllib := CreateXmlLibrary(s)
+func (l *library) Write() (data []byte, err error) {
+	xmllib := CreateXmlLibrary(l)
 	data, err = xmllib.Write()
 	return
 }

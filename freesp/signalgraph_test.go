@@ -37,14 +37,14 @@ func TestGraph(t *testing.T) {
 
 	for i, c := range case1 {
 		Init()
-		var l Library = LibraryNew("test.alml")
+		var l Library = LibraryNew("test.alml", nil)
 		buf := copyBuf(c.library)
 		err := l.Read(buf)
 		if err != nil {
 			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
 			return
 		}
-		var sg SignalGraph = SignalGraphNew("test.sml")
+		var sg SignalGraph = SignalGraphNew("test.sml", nil)
 		buf = copyBuf(c.graph)
 		err = sg.Read(buf)
 		if err != nil {

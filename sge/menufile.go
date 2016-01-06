@@ -66,7 +66,7 @@ func setCursorNewId(ftv *views.FilesTreeView, newId string) {
 
 func fileNewLib(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	log.Println("fileNewLib")
-	cursor, err := fts.AddLibraryFile("new-file.alml", freesp.LibraryNew("new-file.alml"))
+	cursor, err := fts.AddLibraryFile("new-file.alml", freesp.LibraryNew("new-file.alml", &global))
 	if err != nil {
 		log.Println("Warning: ftv.AddLibraryFile('new-file.alml') failed.")
 	}
@@ -81,13 +81,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	switch tool.Suffix(filename) {
 	case "sml":
-		sg := freesp.SignalGraphNew(filename, &global)
+		sg := freesp.SignalGraphNew(filenameToShow(filename), &global)
 		err := sg.ReadFile(filename)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		sg.SetFilename(filenameToShow(filename))
+		//sg.SetFilename(filenameToShow(filename))
 		newId, err := fts.AddSignalGraphFile(filename, sg)
 		if err != nil {
 			log.Println(err)
@@ -109,6 +109,19 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		}
 		cursor := fts.Cursor(lib)
 		setCursorNewId(ftv, cursor.Path)
+	case "spml":
+		p := freesp.PlatformNew(filenameToShow(filename))
+		err := p.ReadFile(filename)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		newId, err := fts.AddPlatformFile(filename, p)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		setCursorNewId(ftv, newId)
 	default:
 	}
 }

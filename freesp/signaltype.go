@@ -113,7 +113,7 @@ func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
 	}
 	err := tree.AddEntry(cursor, SymbolSignalType, t.TypeName(), t, prop)
 	if err != nil {
-		log.Fatal("signalType.AddToTree error: AddEntry failed: %s", err)
+		log.Fatalf("signalType.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 

@@ -1,5 +1,8 @@
 TODO:
 
 File->close
-README.md
+README.md + tutorial
 shift layout border
+graphics lifting
+testing
+

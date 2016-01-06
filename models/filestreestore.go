@@ -148,6 +148,13 @@ func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (cu
 	return
 }
 
+func (s *FilesTreeStore) AddPlatformFile(filename string, plat freesp.Platform) (newId string, err error) {
+	cursor := s.Append(rootCursor)
+	plat.AddToTree(s, cursor)
+	newId = cursor.Path
+	return
+}
+
 func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj freesp.TreeElement) (newId string, err error) {
 	parent, _, err := tree.getObjAndIterById(parentId)
 	if err != nil {

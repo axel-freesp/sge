@@ -73,6 +73,31 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlImpl := CreateXmlSignalGraphType(impl.Graph())
 				buf, err = xmlImpl.Write()
 			}
+		case Platform:
+			p := object.(Platform)
+			xmlp := CreateXmlPlatform(p)
+			buf, err = xmlp.Write()
+		case Arch:
+			a := object.(Arch)
+			xmla := CreateXmlArch(a)
+			buf, err = xmla.Write()
+		case IOType:
+			t := object.(IOType)
+			xmlt := CreateXmlIOType(t)
+			buf, err = xmlt.Write()
+		case Process:
+			p := object.(Process)
+			xmlp := CreateXmlProcess(p)
+			buf, err = xmlp.Write()
+		case Channel:
+			ch := object.(Channel)
+			if ch.Direction() == InPort {
+				xmlc := CreateXmlInChannel(ch)
+				buf, err = xmlc.Write()
+			} else {
+				xmlc := CreateXmlOutChannel(ch)
+				buf, err = xmlc.Write()
+			}
 		default:
 			err = fmt.Errorf("CreateXML: invalid data type %T (%v)\n", object, object)
 		}
@@ -105,11 +130,10 @@ func CreateXmlInputNode(n Node) *backend.XmlInputNode {
 	ret := backend.XmlInputNodeNew(n.Name(), tName, pos.X, pos.Y)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
-	} // else {
+	}
 	for _, p := range n.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
 	}
-	//}
 	return ret
 }
 
@@ -122,11 +146,10 @@ func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
 	ret := backend.XmlOutputNodeNew(n.Name(), tName, pos.X, pos.Y)
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
-	} // else {
+	}
 	for _, p := range n.InPorts() {
 		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
 	}
-	//}
 	return ret
 }
 
@@ -232,4 +255,49 @@ func CreateXmlSignalGraphType(t SignalGraphType) *backend.XmlSignalGraph {
 
 func CreateXmlLibraryRef(l Library) *backend.XmlLibraryRef {
 	return backend.XmlLibraryRefNew(l.Filename())
+}
+
+func CreateXmlPlatform(p Platform) *backend.XmlPlatform {
+	ret := backend.XmlPlatformNew()
+	ret.PlatformId = p.PlatformId()
+	for _, a := range p.Arch() {
+		ret.Arch = append(ret.Arch, *CreateXmlArch(a))
+	}
+	return ret
+}
+
+func CreateXmlArch(a Arch) *backend.XmlArch {
+	ret := backend.XmlArchNew(a.Name())
+	for _, t := range a.IOTypes() {
+		ret.IOType = append(ret.IOType, *CreateXmlIOType(t))
+	}
+	for _, p := range a.Processes() {
+		ret.Processes = append(ret.Processes, *CreateXmlProcess(p))
+	}
+	return ret
+}
+
+func CreateXmlIOType(t IOType) *backend.XmlIOType {
+	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.Mode()])
+}
+
+func CreateXmlProcess(p Process) *backend.XmlProcess {
+	ret := backend.XmlProcessNew(p.Name())
+	for _, c := range p.InChannels() {
+		ret.InputChannels = append(ret.InputChannels, *CreateXmlInChannel(c))
+	}
+	for _, c := range p.OutChannels() {
+		ret.OutputChannels = append(ret.OutputChannels, *CreateXmlOutChannel(c))
+	}
+	return ret
+}
+
+func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
+	return backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(),
+		ch.(*channel).linkText)
+}
+
+func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
+	return backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(),
+		ch.(*channel).linkText)
 }

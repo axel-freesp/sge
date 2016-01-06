@@ -10,18 +10,28 @@ type library struct {
 	filename    string
 	signalTypes signalTypeList
 	nodeTypes   nodeTypeList
+	context     Context
 }
 
 var _ Library = (*library)(nil)
 
-func LibraryNew(filename string) *library {
-	ret := &library{filename, signalTypeListInit(), nodeTypeListInit()}
+func LibraryNew(filename string, context Context) *library {
+	ret := &library{filename, signalTypeListInit(), nodeTypeListInit(), context}
 	libraries[filename] = ret
 	return ret
 }
 
 func (l *library) Filename() string {
 	return l.filename
+}
+
+func (s *library) SetFilename(filename string) {
+	delete(libraries, s.filename)
+	s.filename = filename
+	for _, t := range s.NodeTypes() {
+		t.(*nodeType).definedAt = filename
+	}
+	libraries[filename] = s
 }
 
 func (l *library) SignalTypes() []SignalType {
@@ -32,7 +42,7 @@ func (l *library) NodeTypes() []NodeType {
 	return l.nodeTypes.NodeTypes()
 }
 
-func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary, context Context) error {
+func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 	for _, st := range xmlLib.SignalTypes {
 		var scope Scope
 		var mode Mode
@@ -55,7 +65,7 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary, context Context) 
 		l.AddSignalType(sType)
 	}
 	for _, n := range xmlLib.NodeTypes {
-		nType := createNodeTypeFromXml(n, l.Filename(), context)
+		nType := createNodeTypeFromXml(n, l.Filename(), l.context)
 		err := l.AddNodeType(nType)
 		if err != nil {
 			log.Println("library.Read warning:", err)
@@ -71,17 +81,17 @@ func (s *library) Read(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l, context)
+	return s.createLibFromXml(l, s.context)
 }
 */
 
-func (s *library) ReadFile(filepath string, context Context) error {
+func (s *library) ReadFile(filepath string) error {
 	l := backend.XmlLibraryNew()
 	err := l.ReadFile(filepath)
 	if err != nil {
 		return fmt.Errorf("library.Read: %v", err)
 	}
-	return s.createLibFromXml(l, context)
+	return s.createLibFromXml(l)
 }
 
 func (s *library) Write() (data []byte, err error) {
@@ -93,15 +103,6 @@ func (s *library) Write() (data []byte, err error) {
 func (s *library) WriteFile(filepath string) error {
 	xmllib := CreateXmlLibrary(s)
 	return xmllib.WriteFile(filepath)
-}
-
-func (s *library) SetFilename(filename string) {
-	delete(libraries, s.filename)
-	s.filename = filename
-	for _, t := range s.NodeTypes() {
-		t.(*nodeType).definedAt = filename
-	}
-	libraries[filename] = s
 }
 
 func (l *library) AddNodeType(t NodeType) error {
@@ -172,9 +173,9 @@ func (l *library) RemoveSignalType(st SignalType) {
 var _ TreeElement = (*library)(nil)
 
 func (l *library) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l, mayAddObject|mayEdit)
+	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l, mayAddObject)
 	if err != nil {
-		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
+		log.Fatalf("Library.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	for _, t := range l.SignalTypes() {
 		child := tree.Append(cursor)

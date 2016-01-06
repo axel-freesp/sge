@@ -25,3 +25,12 @@ type Directioner interface {
 	Direction() PortDirection
 	SetDirection(PortDirection)
 }
+
+type Filenamer interface {
+	Filename() string
+	SetFilename(string)
+	//Read(data []byte) error
+	ReadFile(filepath string) error
+	Write() (data []byte, err error)
+	WriteFile(filepath string) error
+}

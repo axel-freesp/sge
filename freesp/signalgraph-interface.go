@@ -1,5 +1,9 @@
 package freesp
 
+/*
+ *  Behaviour Model
+ */
+
 type Context interface {
 	GetLibrary(libname string) (lib Library, err error)
 }
@@ -19,29 +23,19 @@ type SignalGraphType interface {
 
 type SignalGraph interface {
 	TreeElement
-	Filename() string
+	Filenamer
 	ItsType() SignalGraphType
-	//Read(data []byte) error
-	ReadFile(filepath string) error
-	Write() (data []byte, err error)
-	WriteFile(filepath string) error
-	SetFilename(string)
 }
 
 type Library interface {
 	TreeElement
-	Filename() string
+	Filenamer
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
-	//Read(data []byte) error
-	ReadFile(filepath string, context Context) error
-	Write() (data []byte, err error)
-	WriteFile(filepath string) error
 	AddNodeType(NodeType) error
 	RemoveNodeType(t NodeType)
 	AddSignalType(SignalType) bool
 	RemoveSignalType(t SignalType)
-	SetFilename(string)
 }
 
 type NodeType interface {
@@ -163,4 +157,54 @@ func GetNodeTypeByName(typeName string) (nType NodeType, ok bool) {
 func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 	sType, ok = signalTypes[typeName]
 	return
+}
+
+/*
+ *  Platform Model
+ */
+
+type Platform interface {
+	TreeElement
+	Filenamer
+	PlatformId() string
+	SetPlatformId(string)
+	Arch() []Arch
+}
+
+type Arch interface {
+	TreeElement
+	Namer
+	IOTypes() []IOType
+	Processes() []Process
+}
+
+type IOType interface {
+	TreeElement
+	Namer
+	Mode() IOMode
+	SetMode(IOMode)
+}
+
+type IOMode string
+
+const (
+	IOModeShmem IOMode = "Shared Memory"
+	IOModeAsync IOMode = "Asynchronous"
+	IOModeSync  IOMode = "Isochronous"
+)
+
+type Process interface {
+	TreeElement
+	Namer
+	InChannels() []Channel
+	OutChannels() []Channel
+}
+
+type Channel interface {
+	TreeElement
+	Namer
+	Directioner
+	Process() Process
+	IOType() IOType
+	Link() Channel
 }

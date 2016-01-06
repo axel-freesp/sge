@@ -49,6 +49,12 @@ const (
 	SymbolProcessingNode
 	SymbolNodeType
 	SymbolSignalGraph
+	SymbolPlatform
+	SymbolArch
+	SymbolProcess
+	SymbolIOType
+	SymbolInChannel
+	SymbolOutChannel
 )
 
 type Property interface {

@@ -203,6 +203,20 @@ func main() {
 				}
 			case "alml":
 				_, err = global.GetLibrary(p)
+			case "spml":
+				pl := freesp.PlatformNew(p)
+				err := pl.ReadFile(filepath)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				_, err = global.fts.AddPlatformFile(p, pl)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				log.Printf("Platform %s successfully loaded\n", p)
+
 			default:
 				log.Println("Warning: unknown suffix", tool.Suffix(p))
 			}
@@ -226,9 +240,9 @@ func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
 	if ok {
 		return
 	}
-	lib = freesp.LibraryNew(libname)
+	lib = freesp.LibraryNew(libname, g)
 	for _, try := range backend.XmlSearchPaths() {
-		err = lib.ReadFile(fmt.Sprintf("%s/%s", try, libname), g)
+		err = lib.ReadFile(fmt.Sprintf("%s/%s", try, libname))
 		if err == nil {
 			break
 		}

@@ -54,6 +54,12 @@ var sConfig = []symbolConfig{
 	{freesp.SymbolProcessingNode, makeFilename("node")},
 	{freesp.SymbolNodeType, makeFilename("node-type")},
 	{freesp.SymbolSignalGraph, makeFilename("test1")},
+	{freesp.SymbolPlatform, makeFilename("test0")},
+	{freesp.SymbolArch, makeFilename("test0")},
+	{freesp.SymbolProcess, makeFilename("test0")},
+	{freesp.SymbolIOType, makeFilename("test0")},
+	{freesp.SymbolInChannel, makeFilename("inport-green")},
+	{freesp.SymbolOutChannel, makeFilename("outport-red")},
 }
 
 var normalTable, readonlyTable map[freesp.Symbol]*gdk.Pixbuf

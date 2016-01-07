@@ -405,7 +405,7 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return newComboBox(&dialog.implementationSelector, implTypeStrings)
 		},
 	},
-	iIOModeSelect: {"Implementation type:",
+	iIOModeSelect: {"Transmission mode:",
 		func(dialog *EditMenuDialog) string {
 			return dialog.ioModeSelector.GetActiveText()
 		},

@@ -27,6 +27,14 @@ func (c *channel) IOType() IOType {
 	return c.iotype
 }
 
+func (c *channel) SetIOType(newIOType IOType) {
+	c.iotype = newIOType
+	// update link
+	if c.link != nil {
+		c.link.(*channel).iotype = newIOType
+	}
+}
+
 func (c *channel) Link() Channel {
 	return c.link
 }

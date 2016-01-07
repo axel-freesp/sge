@@ -19,14 +19,15 @@ var ioXmlModeMap = map[IOMode]backend.XmlIOMode{
 }
 
 type iotype struct {
-	name string
-	mode IOMode
+	name     string
+	mode     IOMode
+	platform Platform
 }
 
 var _ IOType = (*iotype)(nil)
 
-func IOTypeNew(name string, mode IOMode) (t *iotype, err error) {
-	newT := &iotype{name, mode}
+func IOTypeNew(name string, mode IOMode, platform Platform) (t *iotype, err error) {
+	newT := &iotype{name, mode, platform}
 	ioType := ioTypes[name]
 	if ioType != nil {
 		if (*newT) != (*ioType) {
@@ -53,6 +54,10 @@ func (t *iotype) SetMode(newMode IOMode) {
 	t.mode = newMode
 }
 
+func (t *iotype) Platform() Platform {
+	return t.platform
+}
+
 /*
  *  Namer API
  */
@@ -61,7 +66,16 @@ func (t *iotype) Name() string {
 	return t.name
 }
 
-func (t *iotype) SetName(string) {
+func (t *iotype) SetName(newName string) {
+	if ioTypes[newName] != nil {
+		log.Printf("iotype.SetName error: cannot rename to existing iotype.\n")
+		return
+	}
+	registeredIOTypes.Remove(t.name)
+	delete(ioTypes, t.name)
+	t.name = newName
+	ioTypes[t.name] = t
+	registeredIOTypes.Append(t.name)
 }
 
 /*

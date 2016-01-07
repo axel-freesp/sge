@@ -207,14 +207,17 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		ret = freesp.ArchNew(j.input[iArchName], parentObject.(freesp.Platform))
 
 	case eIOType:
+		var p freesp.Platform
 		switch parentObject.(type) {
 		case freesp.IOType:
 			j.parentId = getParentId(j.parentId)
+			p = parentObject.(freesp.IOType).Platform()
 		case freesp.Arch:
+			p = parentObject.(freesp.Arch).Platform()
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], freesp.IOMode(j.input[iIOModeSelect]))
+		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], freesp.IOMode(j.input[iIOModeSelect]), p)
 
 	case eProcess:
 		switch parentObject.(type) {

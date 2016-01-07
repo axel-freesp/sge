@@ -99,6 +99,38 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		dialog.modeSelector.SetActive(int(st.Mode()))
 	case freesp.Implementation:
 		dialog.implNameEntry.SetText(obj.(freesp.Implementation).ElementName())
+	case freesp.Arch:
+		dialog.archNameEntry.SetText(obj.(freesp.Arch).Name())
+	case freesp.Process:
+		dialog.processNameEntry.SetText(obj.(freesp.Process).Name())
+	case freesp.IOType:
+		dialog.ioTypeNameEntry.SetText(obj.(freesp.IOType).Name())
+		for i, t = range ioModeStrings {
+			if string(obj.(freesp.IOType).Mode()) == t {
+				break
+			}
+		}
+		dialog.ioModeSelector.SetActive(i)
+	case freesp.Channel:
+		if obj.(freesp.Channel).Direction() == freesp.OutPort {
+			dialog.channelDirectionSelector.SetActive(1)
+		}
+		dialog.channelDirectionSelector.SetSensitive(false)
+		for i, t = range freesp.GetRegisteredIOTypes() {
+			if obj.(freesp.Channel).IOType().Name() == t {
+				break
+			}
+		}
+		dialog.ioTypeSelector.SetActive(i)
+		pr := getOtherProcesses(dialog.fts, obj)
+		var p freesp.Process
+		for i, p = range pr {
+			if obj.(freesp.Channel).Link().Process() == p {
+				break
+			}
+		}
+		dialog.processSelector.SetActive(i)
+		dialog.processSelector.SetSensitive(false)
 	default:
 		log.Fatalf("editdialog.go: getActiveElementType error: invalid active object type %T\n", obj)
 	}
@@ -147,6 +179,14 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 		if obj.(freesp.Implementation).ImplementationType() == freesp.NodeTypeGraph {
 			log.Fatalf("editdialog.go: getActiveElementType error: Implementation/graph is read-only\n")
 		}
+	case freesp.Arch:
+		e = eArch
+	case freesp.Process:
+		e = eProcess
+	case freesp.IOType:
+		e = eIOType
+	case freesp.Channel:
+		e = eChannel
 	default:
 		log.Fatalf("editdialog.go: getActiveElementType error: invalid active object type %T\n", obj)
 	}

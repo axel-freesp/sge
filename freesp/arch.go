@@ -23,7 +23,7 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 	a.name = xmla.Name
 	for _, xmlt := range xmla.IOType {
 		var t IOType
-		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode])
+		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
 		if err != nil {
 			return
 		}

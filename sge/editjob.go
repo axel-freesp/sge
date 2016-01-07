@@ -119,6 +119,78 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		(*old)[iImplName] = impl.ElementName()
 		impl.SetElemName((*detail)[iImplName])
 		fts.SetValueById(j.objId, (*detail)[iImplName])
+	case eArch:
+		a := obj.(freesp.Arch)
+		(*old)[iArchName] = a.Name()
+		a.SetName((*detail)[iArchName])
+		for _, p := range a.Processes() {
+			for _, c := range p.InChannels() {
+				link := c.Link()
+				id := fts.Cursor(link)
+				fts.SetValueById(id.Path, link.Name())
+			}
+			for _, c := range p.OutChannels() {
+				link := c.Link()
+				id := fts.Cursor(link)
+				fts.SetValueById(id.Path, link.Name())
+			}
+		}
+		fts.SetValueById(j.objId, a.Name())
+	case eProcess:
+		p := obj.(freesp.Process)
+		(*old)[iProcessName] = p.Name()
+		p.SetName((*detail)[iProcessName])
+		for _, c := range p.InChannels() {
+			link := c.Link()
+			id := fts.Cursor(link)
+			fts.SetValueById(id.Path, link.Name())
+		}
+		for _, c := range p.OutChannels() {
+			link := c.Link()
+			id := fts.Cursor(link)
+			fts.SetValueById(id.Path, link.Name())
+		}
+		fts.SetValueById(j.objId, p.Name())
+	case eIOType:
+		t := obj.(freesp.IOType)
+		(*old)[iIOTypeName] = t.Name()
+		t.SetName((*detail)[iIOTypeName])
+		for _, a := range t.Platform().Arch() {
+			aCursor := fts.Cursor(a)
+			for _, p := range a.Processes() {
+				pCursor := fts.CursorAt(aCursor, p)
+				for _, c := range p.InChannels() {
+					if t == c.IOType() {
+						cCursor := fts.CursorAt(pCursor, c)
+						fts.SetValueById(cCursor.Path, c.Name())
+					}
+				}
+				for _, c := range p.OutChannels() {
+					if t == c.IOType() {
+						cCursor := fts.CursorAt(pCursor, c)
+						fts.SetValueById(cCursor.Path, c.Name())
+					}
+				}
+			}
+		}
+		(*old)[iIOModeSelect] = string(t.Mode())
+		t.SetMode(freesp.IOMode((*detail)[iIOModeSelect]))
+		fts.SetValueById(j.objId, t.Name())
+	case eChannel:
+		c := obj.(freesp.Channel)
+		//(*old)[iChannelDirection] = direction2string[c.Direction()]
+		//c.SetDirection(string2direction[(*detail)[iChannelDirection]])
+		(*old)[iIOTypeSelect] = c.IOType().Name()
+		iot, ok := freesp.GetIOTypeByName((*detail)[iIOTypeSelect])
+		if ok {
+			c.SetIOType(iot)
+		} else {
+			log.Printf("jobApplier.Apply(JobEdit): ERROR: IOType %s not registered.\n", (*detail)[iIOTypeSelect])
+		}
+		fts.SetValueById(j.objId, c.Name())
+		link := c.Link()
+		id := fts.Cursor(link)
+		fts.SetValueById(id.Path, link.Name())
 	default:
 		log.Printf("jobApplier.Apply(JobEdit): error: invalid job description\n")
 	}

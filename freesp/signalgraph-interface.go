@@ -184,6 +184,7 @@ type IOType interface {
 	Namer
 	Mode() IOMode
 	SetMode(IOMode)
+	Platform() Platform
 }
 
 type IOMode string
@@ -208,6 +209,7 @@ type Channel interface {
 	Directioner
 	Process() Process
 	IOType() IOType
+	SetIOType(IOType)
 	Link() Channel
 }
 

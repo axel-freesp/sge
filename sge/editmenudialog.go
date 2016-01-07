@@ -34,6 +34,13 @@ const (
 	iScope                           = "Scope"
 	iSignalMode                      = "SignalMode"
 	iDirection                       = "Direction"
+	iChannelDirection                = "ChannelDirection"
+	iIOTypeSelect                    = "IOTypeSelect"
+	iChannelLinkSelect               = "ChannelLinkSelect"
+	iIOTypeName                      = "IOTypeName"
+	iIOModeSelect                    = "IOModeSelect"
+	iProcessName                     = "ProcessName"
+	iArchName                        = "ArchName"
 )
 
 type elementType string
@@ -50,6 +57,11 @@ const (
 	eSignalType                 = "SignalType"
 	eLibrary                    = "Library"
 	eImplementation             = "Implementation"
+	ePlatform                   = "Platform"
+	eArch                       = "Arch"
+	eProcess                    = "Process"
+	eIOType                     = "IOType"
+	eChannel                    = "Channel"
 )
 
 var inputElementMap = map[elementType][]inputElement{
@@ -61,12 +73,21 @@ var inputElementMap = map[elementType][]inputElement{
 	eConnection:     {iPortSelect},
 	eSignalType:     {iSignalTypeName, iCType, iChannelId, iScope, iSignalMode},
 	eImplementation: {iImplName, iImplementationType},
+	eChannel:        {iChannelDirection, iIOTypeSelect, iChannelLinkSelect},
+	eIOType:         {iIOTypeName, iIOModeSelect},
+	eProcess:        {iProcessName},
+	eArch:           {iArchName},
 }
 
 var scopeStrings = []string{"Local", "Global"}
 var modeStrings = []string{"Isochronous", "Asynchronous"}
 var directionStrings = []string{"InPort", "OutPort"}
 var implTypeStrings = []string{"Elementary Type", "Signal Graph"}
+var ioModeStrings = []string{
+	string(freesp.IOModeShmem),
+	string(freesp.IOModeAsync),
+	string(freesp.IOModeSync),
+}
 
 var scope2string = map[freesp.Scope]string{
 	freesp.Local:  scopeStrings[freesp.Local],
@@ -82,6 +103,7 @@ var direction2string = map[freesp.PortDirection]string{
 	freesp.InPort:  directionStrings[0],
 	freesp.OutPort: directionStrings[1],
 }
+
 var implType2string = map[freesp.ImplementationType]string{
 	freesp.NodeTypeElement: implTypeStrings[freesp.NodeTypeElement],
 	freesp.NodeTypeGraph:   implTypeStrings[freesp.NodeTypeGraph],
@@ -112,15 +134,19 @@ type EditMenuDialog struct {
 	fts    *models.FilesTreeStore
 	stack  *gtk.Stack
 
-	nodeTypeSelector       *gtk.ComboBoxText
-	signalTypeSelector     *gtk.ComboBoxText
-	inputTypeSelector      *gtk.ComboBoxText
-	outputTypeSelector     *gtk.ComboBoxText
-	scopeSelector          *gtk.ComboBoxText
-	modeSelector           *gtk.ComboBoxText
-	directionSelector      *gtk.ComboBoxText
-	implementationSelector *gtk.ComboBoxText
-	portSelector           *gtk.ComboBoxText
+	nodeTypeSelector         *gtk.ComboBoxText
+	signalTypeSelector       *gtk.ComboBoxText
+	inputTypeSelector        *gtk.ComboBoxText
+	outputTypeSelector       *gtk.ComboBoxText
+	scopeSelector            *gtk.ComboBoxText
+	modeSelector             *gtk.ComboBoxText
+	directionSelector        *gtk.ComboBoxText
+	implementationSelector   *gtk.ComboBoxText
+	portSelector             *gtk.ComboBoxText
+	channelDirectionSelector *gtk.ComboBoxText
+	ioTypeSelector           *gtk.ComboBoxText
+	processSelector          *gtk.ComboBoxText
+	ioModeSelector           *gtk.ComboBoxText
 
 	nodeNameEntry       *gtk.Entry
 	inputNodeNameEntry  *gtk.Entry
@@ -131,11 +157,16 @@ type EditMenuDialog struct {
 	signalTypeNameEntry *gtk.Entry
 	cTypeEntry          *gtk.Entry
 	channelIdEntry      *gtk.Entry
+	ioTypeNameEntry     *gtk.Entry
+	processNameEntry    *gtk.Entry
+	archNameEntry       *gtk.Entry
 }
 
-func EditMenuDialogInit(d *gtk.Dialog, fts *models.FilesTreeStore) EditMenuDialog {
-	return EditMenuDialog{d, fts, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+func EditMenuDialogInit(d *gtk.Dialog, fts *models.FilesTreeStore) (ret EditMenuDialog) {
+	ret = EditMenuDialog{}
+	ret.dialog = d
+	ret.fts = fts
+	return
 }
 
 func (dialog *EditMenuDialog) Dialog() *gtk.Dialog {
@@ -218,6 +249,27 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	return
 }
 
+func getOtherProcesses(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.Process) {
+	var thisProcess freesp.Process
+	switch object.(type) {
+	case freesp.Channel:
+		thisProcess = object.(freesp.Channel).Process()
+	case freesp.Process:
+		thisProcess = object.(freesp.Process)
+	default:
+		log.Fatalf("getOtherProcesses error: invalid type %T\n", object)
+	}
+	platform := thisProcess.Arch().Platform()
+	for _, a := range platform.Arch() {
+		for _, p := range a.Processes() {
+			if p != thisProcess {
+				ret = append(ret, p)
+			}
+		}
+	}
+	return
+}
+
 type inputElementHandling struct {
 	label         string
 	readOut       func(dialog *EditMenuDialog) string
@@ -281,6 +333,30 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return newEntry(&dialog.signalTypeNameEntry)
 		},
 	},
+	iIOTypeName: {"Name:",
+		func(dialog *EditMenuDialog) string {
+			return getText(dialog.ioTypeNameEntry)
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.ioTypeNameEntry)
+		},
+	},
+	iProcessName: {"Name:",
+		func(dialog *EditMenuDialog) string {
+			return getText(dialog.processNameEntry)
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.processNameEntry)
+		},
+	},
+	iArchName: {"Name:",
+		func(dialog *EditMenuDialog) string {
+			return getText(dialog.archNameEntry)
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newEntry(&dialog.archNameEntry)
+		},
+	},
 	iNodeTypeSelect: {"Select node type:",
 		func(dialog *EditMenuDialog) string {
 			return dialog.nodeTypeSelector.GetActiveText()
@@ -313,12 +389,28 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return newComboBox(&dialog.outputTypeSelector, freesp.GetRegisteredSignalTypes())
 		},
 	},
+	iIOTypeSelect: {"Select IO type:",
+		func(dialog *EditMenuDialog) string {
+			return dialog.ioTypeSelector.GetActiveText()
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.ioTypeSelector, freesp.GetRegisteredIOTypes())
+		},
+	},
 	iImplementationType: {"Implementation type:",
 		func(dialog *EditMenuDialog) string {
 			return dialog.implementationSelector.GetActiveText()
 		},
 		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
 			return newComboBox(&dialog.implementationSelector, implTypeStrings)
+		},
+	},
+	iIOModeSelect: {"Implementation type:",
+		func(dialog *EditMenuDialog) string {
+			return dialog.ioModeSelector.GetActiveText()
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.ioModeSelector, ioModeStrings)
 		},
 	},
 	iPortSelect: {"Select port to connect:",
@@ -340,6 +432,27 @@ var inputHandling = map[inputElement]inputElementHandling{
 				choices = append(choices, fmt.Sprintf("%s/%s", p.Node().Name(), p.Name()))
 			}
 			return newComboBox(&dialog.portSelector, choices)
+		},
+	},
+	iChannelLinkSelect: {"Select arch/process to connect:",
+		func(dialog *EditMenuDialog) string {
+			return dialog.processSelector.GetActiveText()
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			fts := dialog.fts
+			var choices []string
+			object := fts.Object(fts.Current())
+			switch object.(type) {
+			case freesp.Process:
+			case freesp.Channel:
+				object = fts.Object(fts.Parent(fts.Current()))
+			default:
+				return
+			}
+			for _, p := range getOtherProcesses(dialog.fts, object) {
+				choices = append(choices, fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name()))
+			}
+			return newComboBox(&dialog.processSelector, choices)
 		},
 	},
 	iCType: {"C type:",
@@ -380,6 +493,14 @@ var inputHandling = map[inputElement]inputElementHandling{
 		},
 		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
 			return newComboBox(&dialog.directionSelector, directionStrings)
+		},
+	},
+	iChannelDirection: {"Direction:",
+		func(dialog *EditMenuDialog) string {
+			return dialog.channelDirectionSelector.GetActiveText()
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			return newComboBox(&dialog.channelDirectionSelector, directionStrings)
 		},
 	},
 }
@@ -449,6 +570,10 @@ var stackAlternatives = []elementType{
 	eConnection,
 	eSignalType,
 	eImplementation,
+	eArch,
+	eIOType,
+	eProcess,
+	eChannel,
 }
 
 func (dialog *EditMenuDialog) fillStack() error {

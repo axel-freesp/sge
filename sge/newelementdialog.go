@@ -47,6 +47,11 @@ var choiceMap = map[elementType][]elementType{
 	eSignalType:     {eSignalType},
 	eLibrary:        {eSignalType, eNodeType},
 	eImplementation: {eImplementation, eNode},
+	ePlatform:       {eArch},
+	eArch:           {eArch, eIOType, eProcess},
+	eIOType:         {eIOType},
+	eProcess:        {eProcess, eChannel},
+	eChannel:        {eChannel},
 }
 
 // Lookup current selection in fts, choose which pageset to show.
@@ -75,6 +80,16 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		activeElem = eLibrary
 	case freesp.Implementation:
 		activeElem = eImplementation
+	case freesp.Platform:
+		activeElem = ePlatform
+	case freesp.Arch:
+		activeElem = eArch
+	case freesp.IOType:
+		activeElem = eIOType
+	case freesp.Process:
+		activeElem = eProcess
+	case freesp.Channel:
+		activeElem = eChannel
 	default:
 		return []elementType{}
 	}

@@ -1,12 +1,11 @@
 package freesp
 
 import (
-	//"fmt"
+	"fmt"
 	"log"
 )
 
 type channel struct {
-	name      string
 	direction PortDirection
 	iotype    IOType
 	link      Channel
@@ -16,8 +15,8 @@ type channel struct {
 
 var _ Channel = (*channel)(nil)
 
-func ChannelNew(name string, dir PortDirection, iotype IOType, process Process, linkText string) *channel {
-	return &channel{name, dir, iotype, nil, process, linkText}
+func ChannelNew(dir PortDirection, iotype IOType, process Process, linkText string) *channel {
+	return &channel{dir, iotype, nil, process, linkText}
 }
 
 func (c *channel) Process() Process {
@@ -49,11 +48,34 @@ func (c *channel) SetDirection(newDir PortDirection) {
  */
 
 func (c *channel) Name() string {
-	return c.name
+	if c.link != nil {
+		return channelMakeName(c.iotype, c.link.Process())
+	} else {
+		return fmt.Sprintf("%s-%s", c.iotype.Name(), c.linkText)
+	}
+}
+
+func channelMakeName(iotype IOType, link Process) string {
+	return fmt.Sprintf("%s-%s/%s", iotype.Name(), link.Arch().Name(), link.Name())
 }
 
 func (c *channel) SetName(newName string) {
-	c.name = newName
+	log.Panicf("channel.SetName is forbidden.\n")
+}
+
+/*
+ *  fmt.Stringer API
+ */
+
+func (c *channel) String() string {
+	var dirtext string
+	if c.Direction() == InPort {
+		dirtext = "in"
+	} else {
+		dirtext = "out"
+	}
+	return fmt.Sprintf("Channel(%s, %s, Link %s/%s, '%s')",
+		dirtext, c.Name(), c.link.Process().Arch().Name(), c.link.Process().Name(), c.linkText)
 }
 
 /*
@@ -67,17 +89,19 @@ func (c *channel) AddToTree(tree Tree, cursor Cursor) {
 	} else {
 		symbol = SymbolOutChannel
 	}
-	err := tree.AddEntry(cursor, symbol, c.Name(), c, mayEdit|mayRemove)
+	err := tree.AddEntry(cursor, symbol, c.Name(), c, mayEdit|mayAddObject|mayRemove)
 	if err != nil {
 		log.Fatalf("channel.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 
 func (c *channel) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+	log.Fatalf("channel.AddNewObject error: nothing to add\n")
 	return
 }
 
 func (c *channel) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatalf("channel.RemoveObject error: nothing to remove\n")
 	return
 }
 
@@ -121,9 +145,9 @@ func (l *channelList) Channels() []Channel {
 	return l.channels
 }
 
-func (l *channelList) Find(linkText string) (c Channel, ok bool) {
+func (l *channelList) Find(name string) (c Channel, ok bool) {
 	for _, c = range l.channels {
-		if c.(*channel).linkText == linkText {
+		if c.Name() == name {
 			ok = true
 			return
 		}

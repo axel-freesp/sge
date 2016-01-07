@@ -10,22 +10,27 @@ type arch struct {
 	name      string
 	iotypes   ioTypeList
 	processes processList
+	platform  Platform
 }
 
 var _ Arch = (*arch)(nil)
 
-func ArchNew(name string) *arch {
-	return &arch{name, ioTypeListInit(), processListInit()}
+func ArchNew(name string, platform Platform) *arch {
+	return &arch{name, ioTypeListInit(), processListInit(), platform}
 }
 
 func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 	a.name = xmla.Name
 	for _, xmlt := range xmla.IOType {
-		t := IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode])
+		var t IOType
+		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode])
+		if err != nil {
+			return
+		}
 		a.iotypes.Append(t)
 	}
 	for _, xmlp := range xmla.Processes {
-		p := ProcessNew(xmlp.Name)
+		p := ProcessNew(xmlp.Name, a)
 		err = p.createProcessFromXml(xmlp, a.IOTypes())
 		if err != nil {
 			err = fmt.Errorf("arch.createArchFromXml error: %s\n", err)
@@ -33,6 +38,10 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 		a.processes.Append(p)
 	}
 	return
+}
+
+func (a *arch) Platform() Platform {
+	return a.platform
 }
 
 func (a *arch) IOTypes() []IOType {
@@ -60,6 +69,7 @@ func (a *arch) SetName(newName string) {
  */
 
 func (a *arch) AddToTree(tree Tree, cursor Cursor) {
+	//log.Printf("arch.AddToTree: %s\n", a.Name())
 	err := tree.AddEntry(cursor, SymbolArch, a.Name(), a, mayAddObject|mayEdit|mayRemove)
 	if err != nil {
 		log.Fatalf("arch.AddToTree error: AddEntry failed: %s", err)
@@ -75,10 +85,104 @@ func (a *arch) AddToTree(tree Tree, cursor Cursor) {
 }
 
 func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+	if obj == nil {
+		err = fmt.Errorf("arch.AddNewObject error: nil object")
+		return
+	}
+	switch obj.(type) {
+	case IOType:
+		t := obj.(IOType)
+		_, ok := a.iotypes.Find(t.Name())
+		if ok {
+			err = fmt.Errorf("arch.AddNewObject warning: duplicate ioType name %s (abort)\n", t.Name())
+			return
+		}
+		a.iotypes.Append(t)
+		cursor.Position = len(a.IOTypes()) - 1
+		newCursor = tree.Insert(cursor)
+		t.AddToTree(tree, newCursor)
+
+	case Process:
+		p := obj.(Process)
+		_, ok := a.processes.Find(p.Name())
+		if ok {
+			err = fmt.Errorf("arch.AddNewObject warning: duplicate process name %s (abort)\n", p.Name())
+			return
+		}
+		a.processes.Append(p)
+		newCursor = tree.Insert(cursor)
+		p.AddToTree(tree, newCursor)
+		//log.Printf("arch.AddNewObject: successfully added process %v\n", p)
+
+	default:
+		log.Fatalf("arch.AddNewObject error: invalid type %T\n", obj)
+	}
 	return
 }
 
 func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	parent := tree.Parent(cursor)
+	if a != tree.Object(parent) {
+		log.Printf("arch.RemoveObject error: not removing child of mine.")
+		return
+	}
+	obj := tree.Object(cursor)
+	switch obj.(type) {
+	case IOType:
+		t := obj.(IOType)
+		_, ok := a.iotypes.Find(t.Name())
+		if ok {
+			a.iotypes.Remove(t)
+		} else {
+			log.Printf("arch.RemoveObject error: iotype to be removed not found.\n")
+		}
+		prefix, index := tree.Remove(cursor)
+		removed = append(removed, IdWithObject{prefix, index, t})
+
+	case Process:
+		p := obj.(Process)
+		if p.Arch() != a {
+			log.Printf("arch.RemoveObject error: process to be removed is no child of mine.")
+		}
+		_, ok := a.processes.Find(p.Name())
+		if ok {
+			a.processes.Remove(p)
+		} else {
+			log.Printf("arch.RemoveObject error: process to be removed not found.\n")
+		}
+		for _, c := range p.InChannels() {
+			cc := c.Link()
+			pp := cc.Process()
+			ppCursor := tree.Cursor(pp) // TODO: better search over platform...
+			ccCursor := tree.CursorAt(ppCursor, cc)
+			//log.Printf("arch.RemoveObject: remove %v\n", cc)
+			pp.(*process).outChannels.Remove(cc)
+			prefix, index := tree.Remove(ccCursor)
+			removed = append(removed, IdWithObject{prefix, index, cc})
+		}
+		for _, c := range p.InChannels() {
+			p.(*process).inChannels.Remove(c)
+		}
+		for _, c := range p.OutChannels() {
+			cc := c.Link()
+			pp := cc.Process()
+			ppCursor := tree.Cursor(pp) // TODO: better search over platform...
+			ccCursor := tree.CursorAt(ppCursor, cc)
+			//log.Printf("arch.RemoveObject: remove %v\n", cc)
+			pp.(*process).inChannels.Remove(cc)
+			prefix, index := tree.Remove(ccCursor)
+			removed = append(removed, IdWithObject{prefix, index, cc})
+		}
+		for _, c := range p.OutChannels() {
+			p.(*process).outChannels.Remove(c)
+		}
+		prefix, index := tree.Remove(cursor)
+		removed = append(removed, IdWithObject{prefix, index, p})
+		//log.Printf("arch.RemoveObject: successfully removed process %v\n", p)
+
+	default:
+		log.Fatalf("arch.AddNewObject error: invalid type %T\n", obj)
+	}
 	return
 }
 

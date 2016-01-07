@@ -68,7 +68,7 @@ func (p *platform) ReadFile(filepath string) (err error) {
 
 func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) {
 	for _, xmla := range xmlp.Arch {
-		a := ArchNew(xmla.Name)
+		a := ArchNew(xmla.Name, p)
 		err = a.createArchFromXml(xmla)
 		if err != nil {
 			err = fmt.Errorf("platform.createPlatformFromXml error: %s", err)
@@ -78,7 +78,6 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 	}
 	for _, a := range p.archlist.Archs() {
 		for _, pr := range a.Processes() {
-			ownLinkText := fmt.Sprintf("%s/%s", a.Name(), pr.Name())
 			for _, c := range pr.InChannels() {
 				link := strings.Split(c.(*channel).linkText, "/")
 				if len(link) != 2 {
@@ -99,7 +98,8 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no process found)\n", c.(*channel).linkText)
 					return
 				}
-				cc, ok = pp.(*process).outChannels.Find(ownLinkText)
+				cName := channelMakeName(c.IOType(), pr)
+				cc, ok = pp.(*process).outChannels.Find(cName)
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no channel found)\n", c.(*channel).linkText)
 					return
@@ -126,7 +126,8 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no process found)\n", c.(*channel).linkText)
 					return
 				}
-				cc, ok = pp.(*process).inChannels.Find(ownLinkText)
+				cName := channelMakeName(c.IOType(), pr)
+				cc, ok = pp.(*process).inChannels.Find(cName)
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no channel found)\n", c.(*channel).linkText)
 					return
@@ -166,9 +167,55 @@ func (p *platform) AddToTree(tree Tree, cursor Cursor) {
 }
 
 func (p *platform) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+	if obj == nil {
+		err = fmt.Errorf("platform.AddNewObject error: nil object")
+		return
+	}
+	switch obj.(type) {
+	case Arch:
+		a := obj.(Arch)
+		_, ok := p.archlist.Find(a.Name())
+		if ok {
+			err = fmt.Errorf("platform.AddNewObject warning: duplicate arch name %s (abort)\n", a.Name())
+			return
+		}
+		p.archlist.Append(a)
+		newCursor = tree.Insert(cursor)
+		a.AddToTree(tree, newCursor)
+
+	default:
+		log.Fatalf("platform.AddNewObject error: invalid type %T\n", obj)
+	}
 	return
 }
 
 func (p *platform) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	parent := tree.Parent(cursor)
+	if p != tree.Object(parent) {
+		log.Fatal("platform.RemoveObject error: not removing child of mine.")
+	}
+	obj := tree.Object(cursor)
+	switch obj.(type) {
+	case Arch:
+		a := obj.(Arch)
+		_, ok := p.archlist.Find(a.Name())
+		if ok {
+			p.archlist.Remove(a)
+		} else {
+			log.Printf("platform.RemoveObject warning: arch name %s not found\n", a.Name())
+		}
+		for _, pr := range a.Processes() {
+			prCursor := tree.CursorAt(cursor, pr)
+			del := a.RemoveObject(tree, prCursor)
+			for _, d := range del {
+				removed = append(removed, d)
+			}
+		}
+		prefix, index := tree.Remove(cursor)
+		removed = append(removed, IdWithObject{prefix, index, a})
+
+	default:
+		log.Fatalf("platform.RemoveObject error: invalid type %T\n", obj)
+	}
 	return
 }

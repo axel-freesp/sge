@@ -195,6 +195,64 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		implType := string2implType[j.input[iImplementationType]]
 		ret = freesp.ImplementationNew(j.input[iImplName], implType, &global)
 
+	case eArch:
+		switch parentObject.(type) {
+		case freesp.Arch:
+			j.parentId = getParentId(j.parentId)
+			parentObject = parentObject.(freesp.Arch).Platform()
+		case freesp.Platform:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eArch) error: referenced parentObject wrong type %T\n", parentObject)
+		}
+		ret = freesp.ArchNew(j.input[iArchName], parentObject.(freesp.Platform))
+
+	case eIOType:
+		switch parentObject.(type) {
+		case freesp.IOType:
+			j.parentId = getParentId(j.parentId)
+		case freesp.Arch:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
+		}
+		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], freesp.IOMode(j.input[iIOModeSelect]))
+
+	case eProcess:
+		switch parentObject.(type) {
+		case freesp.Process:
+			j.parentId = getParentId(j.parentId)
+			parentObject = parentObject.(freesp.Process).Arch()
+		case freesp.Arch:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eProcess) error: referenced parentObject wrong type %T\n", parentObject)
+		}
+		ret = freesp.ProcessNew(j.input[iProcessName], parentObject.(freesp.Arch))
+
+	case eChannel:
+		switch parentObject.(type) {
+		case freesp.Channel:
+			j.parentId = getParentId(j.parentId)
+			parentObject = parentObject.(freesp.Channel).Process()
+		case freesp.Process:
+		default:
+			log.Fatalf("NewElementJob.CreateObject(eChannel) error: referenced parentObject wrong type %T\n", parentObject)
+		}
+		processes := getOtherProcesses(fts, parentObject)
+		var p freesp.Process
+		for _, p = range processes {
+			s := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
+			if s == j.input[iChannelLinkSelect] {
+				break
+			}
+		}
+		if p == nil {
+			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen process\n", j.input[iChannelLinkSelect])
+		}
+		ioType, ok := freesp.GetIOTypeByName(j.input[iIOTypeSelect])
+		if !ok {
+			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen ioType\n", j.input[iIOTypeSelect])
+		}
+		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect])
+
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)
 	}

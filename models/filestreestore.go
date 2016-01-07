@@ -161,17 +161,6 @@ func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj free
 		return
 	}
 	cursor := freesp.Cursor{parentId, position}
-	switch parent.(type) {
-	case freesp.NodeType:
-	case freesp.SignalGraphType:
-	case freesp.SignalGraph:
-	case freesp.Port:
-	case freesp.Library:
-	case freesp.Implementation:
-	default:
-		err = fmt.Errorf("FilesTreeStore.AddNewObject: invalid parent type %T\n", parent)
-		return
-	}
 	cursor, err = parent.AddNewObject(tree, cursor, obj)
 	newId = cursor.Path
 	return
@@ -194,17 +183,6 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObje
 	fmt.Sscanf(id[li+1:], "%d", &position)
 
 	cursor := freesp.Cursor{id, freesp.AppendCursor}
-	switch parent.(type) {
-	case freesp.NodeType:
-	case freesp.SignalGraphType:
-	case freesp.SignalGraph:
-	case freesp.Port:
-	case freesp.Library:
-	case freesp.Implementation:
-	default:
-		err = fmt.Errorf("FilesTreeStore.DeleteObject: invalid parent type %T\n", parent)
-		return
-	}
 	deleted = parent.RemoveObject(tree, cursor)
 	return
 }
@@ -333,7 +311,7 @@ func (s *FilesTreeStore) CursorAt(start freesp.Cursor, obj freesp.TreeElement) (
 	path, ok := s.getIdFromObjectRecursive(start.Path, obj)
 	if !ok {
 		log.Println("FilesTreeStore.CursorAt: start =", start)
-		log.Fatalf("FilesTreeStore.CursorAt: obj %T: %v not found.\n", obj, obj)
+		log.Panicf("FilesTreeStore.CursorAt: obj %T: %v not found.\n", obj, obj)
 	}
 	return freesp.Cursor{path, freesp.AppendCursor}
 }

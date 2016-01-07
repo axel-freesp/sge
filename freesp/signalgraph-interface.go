@@ -174,6 +174,7 @@ type Platform interface {
 type Arch interface {
 	TreeElement
 	Namer
+	Platform() Platform
 	IOTypes() []IOType
 	Processes() []Process
 }
@@ -196,6 +197,7 @@ const (
 type Process interface {
 	TreeElement
 	Namer
+	Arch() Arch
 	InChannels() []Channel
 	OutChannels() []Channel
 }
@@ -207,4 +209,13 @@ type Channel interface {
 	Process() Process
 	IOType() IOType
 	Link() Channel
+}
+
+func GetRegisteredIOTypes() []string {
+	return registeredIOTypes.Strings()
+}
+
+func GetIOTypeByName(name string) (ioType IOType, ok bool) {
+	ioType, ok = ioTypes[name]
+	return
 }

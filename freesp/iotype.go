@@ -1,7 +1,7 @@
 package freesp
 
 import (
-	//"fmt"
+	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"log"
 )
@@ -25,8 +25,24 @@ type iotype struct {
 
 var _ IOType = (*iotype)(nil)
 
-func IOTypeNew(name string, mode IOMode) *iotype {
-	return &iotype{name, mode}
+func IOTypeNew(name string, mode IOMode) (t *iotype, err error) {
+	newT := &iotype{name, mode}
+	ioType := ioTypes[name]
+	if ioType != nil {
+		if (*newT) != (*ioType) {
+			err = fmt.Errorf(`IOTypeNew error: adding existing
+				io type %s, which is incompatible`, name)
+			return
+		}
+		log.Printf(`IOTypeNew: warning: adding existing
+			io type definition %s (taking the existing)`, name)
+		t = ioType
+	} else {
+		t = newT
+		ioTypes[name] = t
+		registeredIOTypes.Append(name)
+	}
+	return
 }
 
 func (t *iotype) Mode() IOMode {
@@ -53,17 +69,19 @@ func (t *iotype) SetName(string) {
  */
 
 func (t *iotype) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolIOType, t.Name(), t, mayEdit|mayRemove)
+	err := tree.AddEntry(cursor, SymbolIOType, t.Name(), t, mayEdit|mayAddObject|mayRemove)
 	if err != nil {
 		log.Fatalf("iotype.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 
 func (t *iotype) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+	log.Fatalf("iotype.AddNewObject error: nothing to add\n")
 	return
 }
 
 func (t *iotype) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+	log.Fatalf("iotype.RemoveObject error: nothing to remove\n")
 	return
 }
 
@@ -105,4 +123,14 @@ func (l *ioTypeList) Remove(st IOType) {
 
 func (l *ioTypeList) IoTypes() []IOType {
 	return l.ioTypes
+}
+
+func (l *ioTypeList) Find(name string) (t IOType, ok bool) {
+	for _, t = range l.ioTypes {
+		if t.Name() == name {
+			ok = true
+			return
+		}
+	}
+	return
 }

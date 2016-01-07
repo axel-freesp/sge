@@ -10,15 +10,6 @@ import (
 	"image"
 	"log"
 	"math"
-	"unsafe"
-)
-
-const (
-	scaleMin   = -4.0
-	scaleMax   = 3.0
-	scaleStep  = 0.01
-	scalePStep = 1.0
-	scalePage  = 1.0
 )
 
 type Context interface {
@@ -35,10 +26,8 @@ type GraphView interface {
 }
 
 type graphView struct {
-	layoutBox   *gtk.Box
-	scene       *ScrolledView
+	parent      *ScaledView
 	area        *gtk.DrawingArea
-	scaler      *gtk.Scale
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	sgType      freesp.SignalGraphType
@@ -46,12 +35,13 @@ type graphView struct {
 
 	dragOffs       image.Point
 	button1Pressed bool
-	scale          float64
 }
 
+var _ ScaledScene = (*graphView)(nil)
+
 func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) (viewer *graphView, err error) {
-	viewer = &graphView{nil, nil, nil, nil, nil, nil, g, context, image.Point{}, false, 1.0}
-	err = viewer.init(width, height)
+	viewer = &graphView{nil, nil, nil, nil, g, context, image.Point{}, false}
+	err = viewer.init()
 	if err != nil {
 		return
 	}
@@ -60,15 +50,11 @@ func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) 
 }
 
 func (v *graphView) Widget() *gtk.Widget {
-	return (*gtk.Widget)(unsafe.Pointer(v.layoutBox))
+	return v.parent.Widget()
 }
 
-func (v *graphView) init(width, height int) (err error) {
-	v.layoutBox, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return
-	}
-	v.scene, err = ScrolledViewNew(width, height)
+func (v *graphView) init() (err error) {
+	v.parent, err = ScaledViewNew(v)
 	if err != nil {
 		return
 	}
@@ -76,21 +62,12 @@ func (v *graphView) init(width, height int) (err error) {
 	if err != nil {
 		return
 	}
-	var adj *gtk.Adjustment
-	adj, err = gtk.AdjustmentNew(0.0, scaleMin, scaleMax, scaleStep, scalePStep, scalePage)
-	v.scaler, err = gtk.ScaleNew(gtk.ORIENTATION_HORIZONTAL, adj)
-	if err != nil {
-		return
-	}
 	v.area.Connect("draw", areaDrawCallback, v)
 	v.area.Connect("motion-notify-event", areaMotionCallback, v)
 	v.area.Connect("button-press-event", areaButtonCallback, v)
 	v.area.Connect("button-release-event", areaButtonCallback, v)
-	v.scaler.Connect("value-changed", scaleValueCallback, v)
 	v.area.SetEvents(int(gdk.POINTER_MOTION_MASK | gdk.BUTTON_PRESS_MASK | gdk.BUTTON_RELEASE_MASK))
-	v.layoutBox.Add(v.scene.Widget())
-	v.layoutBox.Add(v.scaler)
-	v.scene.scrolled.Add(v.area)
+	v.parent.Container().Add(v.area)
 	return
 }
 
@@ -201,32 +178,23 @@ func (v *graphView) deselectConnects() {
 }
 
 /*
- *		scaleValueCallback
+ *		ScaledScene interface
  */
 
-func scaleValueCallback(r *gtk.Scale, v *graphView) {
-	oldScale := v.scale
-	oldX := v.scene.hadj.GetValue()
-	oldY := v.scene.vadj.GetValue()
-	visMx := float64(v.layoutBox.GetAllocatedWidth()) / 2.0
-	visMy := float64(v.layoutBox.GetAllocatedHeight()) / 2.0
-	v.scale = math.Exp2(r.GetValue())
-	newW := v.calcSceneWidth()
-	newH := v.calcSceneHeight()
-	v.area.SetSizeRequest(newW, newH)
-	v.area.QueueDrawArea(0, 0, newW, newH)
-	v.scene.hadj.SetUpper(float64(newW))
-	v.scene.vadj.SetUpper(float64(newH))
-	v.scene.hadj.SetValue((oldX+visMx)*v.scale/oldScale - visMx)
-	v.scene.vadj.SetValue((oldY+visMy)*v.scale/oldScale - visMy)
+func (v *graphView) Update() (width, height int) {
+	width = v.calcSceneWidth()
+	height = v.calcSceneHeight()
+	v.area.SetSizeRequest(width, height)
+	v.area.QueueDrawArea(0, 0, width, height)
+	return
 }
 
 func (v *graphView) calcSceneWidth() int {
-	return int(float64(v.bBox().Max.X+50) * v.scale)
+	return int(float64(v.bBox().Max.X+50) * v.parent.Scale())
 }
 
 func (v *graphView) calcSceneHeight() int {
-	return int(float64(v.bBox().Max.Y+50) * v.scale)
+	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
 }
 
 /*
@@ -235,7 +203,7 @@ func (v *graphView) calcSceneHeight() int {
 
 func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
 	ev := gdk.EventButton{event}
-	pos := image.Point{int(ev.X() / v.scale), int(ev.Y() / v.scale)}
+	pos := image.Point{int(ev.X() / v.parent.Scale()), int(ev.Y() / v.parent.Scale())}
 	switch ev.Type() {
 	case gdk.EVENT_BUTTON_PRESS:
 		v.button1Pressed = true
@@ -303,7 +271,7 @@ func (v *graphView) handleConnectSelect(pos image.Point) {
 func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
 	ev := gdk.EventMotion{event}
 	x, y := ev.MotionVal()
-	pos := image.Point{int(x / v.scale), int(y / v.scale)}
+	pos := image.Point{int(x / v.parent.Scale()), int(y / v.parent.Scale())}
 	if v.button1Pressed {
 		v.handleDrag(pos)
 	} else {
@@ -346,7 +314,7 @@ func (v *graphView) handleMouseover(pos image.Point) {
  */
 
 func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *graphView) bool {
-	context.Scale(v.scale, v.scale)
+	context.Scale(v.parent.Scale(), v.parent.Scale())
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
 	v.drawNodes(context, r)
@@ -391,9 +359,9 @@ func (v *graphView) findNode(name string) *graph.Node {
 
 func (v *graphView) scaleCoord(x int, roundUp bool) int {
 	if roundUp {
-		return int(math.Ceil(float64(x) * v.scale))
+		return int(math.Ceil(float64(x) * v.parent.Scale()))
 	} else {
-		return int(float64(x) * v.scale)
+		return int(float64(x) * v.parent.Scale())
 	}
 }
 

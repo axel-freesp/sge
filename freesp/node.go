@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type node struct {
@@ -87,6 +88,14 @@ func (n *node) OutPorts() []Port {
 	return n.outPort.Ports()
 }
 
+func (n *node) GetInPorts() []interfaces.PortObject {
+	return n.inPort.Exports()
+}
+
+func (n *node) GetOutPorts() []interfaces.PortObject {
+	return n.outPort.Exports()
+}
+
 func (n *node) Context() SignalGraphType {
 	return n.context
 }
@@ -159,7 +168,7 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			removed = append(removed, IdWithObject{cursor.Path, index, conn})
 		}
 		var list portTypeList
-		if p.Direction() == InPort {
+		if p.Direction() == interfaces.InPort {
 			list = nt.(*nodeType).inPorts
 		} else {
 			list = nt.(*nodeType).outPorts
@@ -232,7 +241,7 @@ func (n *node) addOutPort(pt PortType) {
 
 func (n *node) removePort(pt PortType) {
 	var list *portList
-	if pt.Direction() == InPort {
+	if pt.Direction() == interfaces.InPort {
 		list = &n.inPort
 	} else {
 		list = &n.outPort
@@ -278,7 +287,7 @@ func (n *node) SetPosition(p image.Point) {
 	n.position = p
 }
 
-var _ Positioner = (*node)(nil)
+var _ interfaces.Positioner = (*node)(nil)
 
 /*
  *      Namer API
@@ -292,19 +301,11 @@ func (n *node) SetName(newName string) {
 	n.name = newName
 }
 
-var _ Namer = (*node)(nil)
+var _ interfaces.Namer = (*node)(nil)
 
 /*
  *      Porter API
  */
-
-func (n *node) NumInPorts() int {
-	return len(n.InPorts())
-}
-
-func (n *node) NumOutPorts() int {
-	return len(n.OutPorts())
-}
 
 func (n *node) InPortIndex(portName string) int {
 	_, ok, index := n.inPort.Find(n.Name(), portName)
@@ -322,7 +323,7 @@ func (n *node) OutPortIndex(portName string) int {
 	return -1
 }
 
-var _ Porter = (*node)(nil)
+var _ interfaces.Porter = (*node)(nil)
 
 /*
  *      nodeList

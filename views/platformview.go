@@ -14,7 +14,7 @@ import (
 
 type platformView struct {
 	parent *ScaledView
-	area   *gtk.DrawingArea
+	area   DrawArea
 
 	p       freesp.Platform
 	context Context
@@ -27,7 +27,7 @@ var _ ScaledScene = (*platformView)(nil)
 var _ GraphView = (*platformView)(nil)
 
 func PlatformViewNew(p freesp.Platform, context Context) (viewer *platformView, err error) {
-	viewer = &platformView{nil, nil, p, context, image.Point{}, false}
+	viewer = &platformView{nil, DrawArea{}, p, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -45,15 +45,10 @@ func (v *platformView) init() (err error) {
 	if err != nil {
 		return
 	}
-	v.area, err = gtk.DrawingAreaNew()
+	v.area, err = DrawAreaInit(v)
 	if err != nil {
 		return
 	}
-	v.area.Connect("draw", platformDrawCallback, v)
-	v.area.Connect("motion-notify-event", platformMotionCallback, v)
-	v.area.Connect("button-press-event", platformButtonCallback, v)
-	v.area.Connect("button-release-event", platformButtonCallback, v)
-	v.area.SetEvents(int(gdk.POINTER_MOTION_MASK | gdk.BUTTON_PRESS_MASK | gdk.BUTTON_RELEASE_MASK))
 	v.parent.Container().Add(v.area)
 	return
 }
@@ -98,10 +93,9 @@ func (v *platformView) calcSceneHeight() int {
  *		platformButtonCallback
  */
 
-func platformButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *platformView) {
-	ev := gdk.EventButton{event}
-	pos := image.Point{int(ev.X() / v.parent.Scale()), int(ev.Y() / v.parent.Scale())}
-	switch ev.Type() {
+func (v *platformView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
+	pos := v.parent.Position(position)
+	switch evType {
 	case gdk.EVENT_BUTTON_PRESS:
 		v.button1Pressed = true
 		v.dragOffs = pos
@@ -118,10 +112,8 @@ func platformButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *platform
  *		platformMotionCallback
  */
 
-func platformMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *platformView) {
-	ev := gdk.EventMotion{event}
-	x, y := ev.MotionVal()
-	pos := image.Point{int(x / v.parent.Scale()), int(y / v.parent.Scale())}
+func (v *platformView) MotionCallback(area DrawArea, position image.Point) {
+	pos := v.parent.Position(position)
 	if v.button1Pressed {
 		v.handleDrag(pos)
 	} else {
@@ -167,14 +159,13 @@ func (v *platformView) handleMouseover(pos image.Point) {
  *		platformDrawCallback
  */
 
-func platformDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *platformView) bool {
+func (v *platformView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
 	//v.drawNodes(context, r)
 	//v.drawConnections(context, r)
 	_ = r
-	return true
 }
 
 /*

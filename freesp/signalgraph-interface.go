@@ -1,5 +1,9 @@
 package freesp
 
+import (
+	interfaces "github.com/axel-freesp/sge/interface"
+)
+
 /*
  *  Behaviour Model
  */
@@ -71,9 +75,9 @@ const (
 
 type Node interface {
 	TreeElement
-	Namer
-	Positioner
-	Porter
+	interfaces.Namer
+	interfaces.Positioner
+	interfaces.Porter
 	ItsType() NodeType
 	InPorts() []Port
 	OutPorts() []Port
@@ -109,15 +113,15 @@ type SignalType interface {
 
 type PortType interface {
 	TreeElement
-	Namer
-	Directioner
+	interfaces.Namer
+	interfaces.Directioner
 	SignalType() SignalType
 	SetSignalType(SignalType)
 }
 
 type Port interface {
 	TreeElement
-	Directioner
+	interfaces.Directioner
 	Name() string
 	SignalType() SignalType
 	Connections() []Port
@@ -159,7 +163,7 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 type Platform interface {
 	TreeElement
 	Filenamer
-	Shaper
+	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)
 	Arch() []Arch
@@ -167,9 +171,9 @@ type Platform interface {
 
 type Arch interface {
 	TreeElement
-	Namer
-	Positioner
-	Shaper
+	interfaces.Namer
+	interfaces.Positioner
+	interfaces.Shaper
 	Platform() Platform
 	IOTypes() []IOType
 	Processes() []Process
@@ -177,7 +181,7 @@ type Arch interface {
 
 type IOType interface {
 	TreeElement
-	Namer
+	interfaces.Namer
 	Mode() IOMode
 	SetMode(IOMode)
 	Platform() Platform
@@ -193,8 +197,8 @@ const (
 
 type Process interface {
 	TreeElement
-	Namer
-	Positioner
+	interfaces.Namer
+	interfaces.Positioner
 	//Shaper
 	Arch() Arch
 	InChannels() []Channel
@@ -203,8 +207,8 @@ type Process interface {
 
 type Channel interface {
 	TreeElement
-	Namer
-	Directioner
+	interfaces.Namer
+	interfaces.Directioner
 	Process() Process
 	IOType() IOType
 	SetIOType(IOType)

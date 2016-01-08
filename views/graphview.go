@@ -2,21 +2,22 @@ package views
 
 import (
 	//	"fmt"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/views/graph"
-	"github.com/gotk3/gotk3/cairo"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
 	"image"
 	"log"
 	"math"
+	"github.com/gotk3/gotk3/cairo"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/views/graph"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type Context interface {
-	SelectNode(node graph.NodeObject)     // single click selection
-	EditNode(node graph.NodeObject)       // double click selection
-	SelectPort(port freesp.Port)          // single click selection
-	SelectConnect(conn freesp.Connection) // single click selection
+	SelectNode(node interfaces.NodeObject)     // single click selection
+	EditNode(node interfaces.NodeObject)       // double click selection
+	SelectPort(port interfaces.PortObject)          // single click selection
+	SelectConnect(conn interfaces.ConnectionObject) // single click selection
 }
 
 type GraphView interface {
@@ -27,7 +28,7 @@ type GraphView interface {
 
 type graphView struct {
 	parent      *ScaledView
-	area        *gtk.DrawingArea
+	area        DrawArea
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	sgType      freesp.SignalGraphType
@@ -41,7 +42,7 @@ var _ ScaledScene = (*graphView)(nil)
 var _ GraphView = (*graphView)(nil)
 
 func GraphViewNew(g freesp.SignalGraphType, context Context) (viewer *graphView, err error) {
-	viewer = &graphView{nil, nil, nil, nil, g, context, image.Point{}, false}
+	viewer = &graphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -59,15 +60,10 @@ func (v *graphView) init() (err error) {
 	if err != nil {
 		return
 	}
-	v.area, err = gtk.DrawingAreaNew()
+	v.area, err = DrawAreaInit(v)
 	if err != nil {
 		return
 	}
-	v.area.Connect("draw", areaDrawCallback, v)
-	v.area.Connect("motion-notify-event", areaMotionCallback, v)
-	v.area.Connect("button-press-event", areaButtonCallback, v)
-	v.area.Connect("button-release-event", areaButtonCallback, v)
-	v.area.SetEvents(int(gdk.POINTER_MOTION_MASK | gdk.BUTTON_PRESS_MASK | gdk.BUTTON_RELEASE_MASK))
 	v.parent.Container().Add(v.area)
 	return
 }
@@ -110,25 +106,25 @@ func (v *graphView) Sync() {
 
 func (v *graphView) Select(obj freesp.TreeElement) {
 	switch obj.(type) {
-	case freesp.Node:
+	case interfaces.NodeObject:
 		v.deselectConnects()
-		v.selectNode(obj.(freesp.Node))
-	case freesp.Port:
+		v.selectNode(obj.(interfaces.NodeObject))
+	case interfaces.PortObject:
 		v.deselectConnects()
-		n, ok := v.selectNode(obj.(freesp.Port).Node())
+		n, ok := v.selectNode(obj.(interfaces.PortObject).NodeObject())
 		if ok {
-			n.(*graph.Node).SelectPort(obj.(freesp.Port))
+			n.(*graph.Node).SelectPort(obj.(interfaces.PortObject))
 		}
-	case freesp.Connection:
+	case interfaces.ConnectionObject:
 		v.deselectNodes()
-		v.selectConnect(obj.(freesp.Connection))
+		v.selectConnect(obj.(interfaces.ConnectionObject))
 	}
 }
 
-func (v *graphView) selectNode(obj freesp.Node) (ret graph.NodeIf, ok bool) {
+func (v *graphView) selectNode(obj interfaces.NodeObject) (ret graph.NodeIf, ok bool) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
-		if obj == n.UserObj().(freesp.Node) {
+		if obj == n.UserObj() {
 			if !n.Select() {
 				v.repaintNode(n)
 			}
@@ -152,13 +148,13 @@ func (v *graphView) deselectNodes() {
 	}
 }
 
-func (v *graphView) selectConnect(obj freesp.Connection) {
-	n1 := v.findNode(obj.From().Node().Name())
-	n2 := v.findNode(obj.To().Node().Name())
+func (v *graphView) selectConnect(conn interfaces.ConnectionObject) {
+	n1 := v.findNode(conn.FromObject().NodeObject().Name())
+	n2 := v.findNode(conn.ToObject().NodeObject().Name())
 	for _, c := range v.connections {
 		if n1 == c.From() && n2 == c.To() &&
-			n1.GetOutPort(c.FromId()) == obj.From() &&
-			n2.GetInPort(c.ToId()) == obj.To() {
+			n1.GetOutPorts()[c.FromId()] == conn.FromObject() &&
+			n2.GetInPorts()[c.ToId()] == conn.ToObject() {
 			if !c.Select() {
 				v.repaintConnection(c)
 			}
@@ -202,10 +198,9 @@ func (v *graphView) calcSceneHeight() int {
  *		areaButtonCallback
  */
 
-func areaButtonCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
-	ev := gdk.EventButton{event}
-	pos := image.Point{int(ev.X() / v.parent.Scale()), int(ev.Y() / v.parent.Scale())}
-	switch ev.Type() {
+func (v *graphView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
+	pos := v.parent.Position(position)
+	switch evType {
 	case gdk.EVENT_BUTTON_PRESS:
 		v.button1Pressed = true
 		v.dragOffs = pos
@@ -236,7 +231,7 @@ func (v *graphView) handleNodeSelect(pos image.Point) {
 			v.context.SelectNode(n.UserObj())
 			ok, port := n.(*graph.Node).GetSelectedPort()
 			if ok {
-				v.context.SelectPort(port.(freesp.Port))
+				v.context.SelectPort(port)
 			}
 		} else {
 			if n.Deselect() {
@@ -252,10 +247,10 @@ func (v *graphView) handleConnectSelect(pos image.Point) {
 		if hit {
 			c.Select()
 			n1 := c.From()
-			p1 := n1.GetOutPort(c.FromId())
+			p1 := n1.GetOutPorts()[c.FromId()]
 			n2 := c.To()
-			p2 := n2.GetInPort(c.ToId())
-			v.context.SelectConnect(p1.(freesp.Port).Connection(p2.(freesp.Port)))
+			p2 := n2.GetInPorts()[c.ToId()]
+			v.context.SelectConnect(p1.ConnectionObject(p2))
 			v.repaintConnection(c)
 		} else {
 			if c.Deselect() {
@@ -269,10 +264,8 @@ func (v *graphView) handleConnectSelect(pos image.Point) {
  *		areaMotionCallback
  */
 
-func areaMotionCallback(area *gtk.DrawingArea, event *gdk.Event, v *graphView) {
-	ev := gdk.EventMotion{event}
-	x, y := ev.MotionVal()
-	pos := image.Point{int(x / v.parent.Scale()), int(y / v.parent.Scale())}
+func (v *graphView) MotionCallback(area DrawArea, position image.Point) {
+	pos := v.parent.Position(position)
 	if v.button1Pressed {
 		v.handleDrag(pos)
 	} else {
@@ -314,13 +307,12 @@ func (v *graphView) handleMouseover(pos image.Point) {
  *		areaDrawCallback
  */
 
-func areaDrawCallback(area *gtk.DrawingArea, context *cairo.Context, v *graphView) bool {
+func (v *graphView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
 	v.drawNodes(context, r)
 	v.drawConnections(context, r)
-	return true
 }
 
 func (v *graphView) drawConnections(context *cairo.Context, r image.Rectangle) {

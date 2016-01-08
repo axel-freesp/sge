@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"unsafe"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type port struct {
@@ -12,6 +13,8 @@ type port struct {
 	conn      []Connection
 	node      Node
 }
+
+var _ interfaces.PortObject = (*port)(nil)
 
 // TODO: Create namedPortType object first and hand it here?
 func newPort(pt PortType, n Node) *port {
@@ -22,7 +25,7 @@ func newPort(pt PortType, n Node) *port {
  *  freesp.Port API
  *
  *  type Port interface {
- *  	PortName() string
+ *  	Name() string
  *  	ItsType() PortType
  *  	Direction() PortDirection
  *  	Connections() []Port
@@ -40,15 +43,19 @@ func (p *port) Name() string {
 	return p.itsType.Name()
 }
 
+func (p *port) SetName(newName string) {
+	log.Panicf("port.SetName: not allowed.\n")
+}
+
 func (p *port) SignalType() SignalType {
 	return p.itsType.SignalType()
 }
 
-func (p *port) Direction() PortDirection {
+func (p *port) Direction() interfaces.PortDirection {
 	return p.itsType.Direction()
 }
 
-func (p *port) SetDirection(PortDirection) {
+func (p *port) SetDirection(interfaces.PortDirection) {
 	log.Panicf("port.SetDirection() is not allowed!\n")
 }
 
@@ -57,6 +64,10 @@ func (p *port) Connections() []Port {
 }
 
 func (p *port) Node() Node {
+	return p.node
+}
+
+func (p *port) NodeObject() interfaces.NodeObject {
 	return p.node
 }
 
@@ -100,11 +111,15 @@ func portConnect(port1 Port, c *connection) error {
 	if port1.Direction() == port2.Direction() {
 		return fmt.Errorf("direction mismatch")
 	}
-	p1.connected.Append(port2)
+	p1.connected.Append(port2.(*port))
 	p1.conn = append(p1.conn, c)
-	p2.connected.Append(port1)
+	p2.connected.Append(port1.(*port))
 	p2.conn = append(p2.conn, c)
 	return nil
+}
+
+func (p *port) ConnectionObject(c interfaces.PortObject) interfaces.ConnectionObject {
+	return p.Connection(c.(*port)).(*connection)
 }
 
 /*
@@ -115,17 +130,6 @@ var _ fmt.Stringer = (*port)(nil)
 func (p *port) String() (s string) {
 	s = fmt.Sprintf("%sPort of node %s(%s, %d connections)",
 		p.Direction(), p.Node().Name(), p.Name(), len(p.Connections()))
-	return
-}
-
-var _ fmt.Stringer = PortDirection(false)
-
-func (d PortDirection) String() (s string) {
-	if d == InPort {
-		s = "Input"
-	} else {
-		s = "Output"
-	}
 	return
 }
 
@@ -144,7 +148,7 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 		prop = mayAddObject
 	}
 	var kind Symbol
-	if p.Direction() == InPort {
+	if p.Direction() == interfaces.InPort {
 		kind = SymbolInputPort
 	} else {
 		kind = SymbolOutputPort
@@ -178,7 +182,7 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 	case Connection:
 		conn := obj.(Connection)
 		var thisPort, otherPort Port
-		if p.Direction() == InPort {
+		if p.Direction() == interfaces.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
 		} else {
@@ -244,7 +248,7 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	case Connection:
 		conn := obj.(Connection)
 		var thisPort, otherPort Port
-		if p.Direction() == InPort {
+		if p.Direction() == interfaces.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
 			if p != thisPort {
@@ -304,14 +308,16 @@ func findPort(list []Port, prt *port) bool {
 
 type portList struct {
 	ports []Port
+	exported []interfaces.PortObject
 }
 
 func portListInit() portList {
-	return portList{nil}
+	return portList{nil, nil}
 }
 
-func (l *portList) Append(p Port) {
+func (l *portList) Append(p *port) {
 	l.ports = append(l.ports, p)
+	l.exported = append(l.exported, p)
 }
 
 func (l *portList) Remove(p Port) {
@@ -329,12 +335,18 @@ func (l *portList) Remove(p Port) {
 	}
 	for i++; i < len(l.ports); i++ {
 		l.ports[i-1] = l.ports[i]
+		l.exported[i-1] = l.exported[i]
 	}
 	l.ports = l.ports[:len(l.ports)-1]
+	l.exported = l.exported[:len(l.exported)-1]
 }
 
 func (l *portList) Ports() []Port {
 	return l.ports
+}
+
+func (l *portList) Exports() []interfaces.PortObject {
+	return l.exported
 }
 
 func (l *portList) Find(nodeName, portName string) (p Port, ok bool, index int) {

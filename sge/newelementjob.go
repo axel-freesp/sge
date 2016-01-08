@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
 	"image"
 	"log"
 	"strings"
+	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/models"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type NewElementJob struct {
@@ -138,7 +139,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 			s := fmt.Sprintf("%s/%s", p.Node().Name(), p.Name())
 			if j.input[iPortSelect] == s {
 				var from, to freesp.Port
-				if p.Direction() == freesp.InPort {
+				if p.Direction() == interfaces.InPort {
 					from = parentObject.(freesp.Port)
 					to = p
 				} else {

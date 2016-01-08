@@ -2,8 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
 	"strings"
+	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 func CreateXML(object interface{}) (buf []byte, err error) {
@@ -35,7 +36,7 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			buf, err = xmlnodetype.Write()
 		case Port:
 			p := object.(Port)
-			if p.Direction() == OutPort {
+			if p.Direction() == interfaces.OutPort {
 				xmlport := CreateXmlOutPort(p)
 				buf, err = xmlport.Write()
 			} else {
@@ -44,7 +45,7 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			}
 		case PortType:
 			t := object.(PortType)
-			if t.Direction() == InPort {
+			if t.Direction() == interfaces.InPort {
 				xmlporttype := CreateXmlNamedInPort(t)
 				buf, err = xmlporttype.Write()
 			} else {
@@ -91,7 +92,7 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			buf, err = xmlp.Write()
 		case Channel:
 			ch := object.(Channel)
-			if ch.Direction() == InPort {
+			if ch.Direction() == interfaces.InPort {
 				xmlc := CreateXmlInChannel(ch)
 				buf, err = xmlc.Write()
 			} else {
@@ -195,7 +196,7 @@ func CreateXmlConnection(c Connection) *backend.XmlConnect {
 	fromNode := from.Node()
 	toNode := to.Node()
 	switch from.Direction() {
-	case OutPort:
+	case interfaces.OutPort:
 		return backend.XmlConnectNew(fromNode.Name(), toNode.Name(), from.Name(), to.Name())
 	default:
 		return backend.XmlConnectNew(toNode.Name(), fromNode.Name(), to.Name(), from.Name())

@@ -3,11 +3,14 @@ package freesp
 import (
 	"fmt"
 	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type connection struct {
 	from, to Port
 }
+
+var _ interfaces.ConnectionObject = (*connection)(nil)
 
 func ConnectionNew(from, to Port) *connection {
 	return &connection{from, to}
@@ -19,6 +22,14 @@ func (c *connection) From() Port {
 
 func (c *connection) To() Port {
 	return c.to
+}
+
+func (c *connection) FromObject() interfaces.PortObject {
+	return c.from.(*port)
+}
+
+func (c *connection) ToObject() interfaces.PortObject {
+	return c.to.(*port)
 }
 
 /*

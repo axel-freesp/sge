@@ -3,6 +3,7 @@ package freesp
 import (
 	"github.com/axel-freesp/sge/backend"
 	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type nodeType struct {
@@ -21,13 +22,13 @@ func NodeTypeNew(name, definedAt string) *nodeType {
 }
 
 func (t *nodeType) AddNamedPortType(p PortType) {
-	if p.Direction() == InPort {
+	if p.Direction() == interfaces.InPort {
 		t.inPorts.Append(p)
 	} else {
 		t.outPorts.Append(p)
 	}
 	for _, n := range t.instances.Nodes() {
-		if p.Direction() == InPort {
+		if p.Direction() == interfaces.InPort {
 			n.(*node).addInPort(p)
 		} else {
 			n.(*node).addOutPort(p)
@@ -35,7 +36,7 @@ func (t *nodeType) AddNamedPortType(p PortType) {
 	}
 	for _, impl := range t.implementation.Implementations() {
 		if impl.ImplementationType() == NodeTypeGraph {
-			if p.Direction() == InPort {
+			if p.Direction() == interfaces.InPort {
 				impl.Graph().(*signalGraphType).addInputNodeFromPortType(p)
 			} else {
 				impl.Graph().(*signalGraphType).addOutputNodeFromPortType(p)
@@ -47,7 +48,7 @@ func (t *nodeType) AddNamedPortType(p PortType) {
 func (t *nodeType) RemoveNamedPortType(p PortType) {
 	for _, impl := range t.implementation.Implementations() {
 		if impl.ImplementationType() == NodeTypeGraph {
-			if p.Direction() == InPort {
+			if p.Direction() == interfaces.InPort {
 				impl.Graph().(*signalGraphType).removeInputNodeFromPortType(p)
 			} else {
 				impl.Graph().(*signalGraphType).removeOutputNodeFromPortType(p)
@@ -58,7 +59,7 @@ func (t *nodeType) RemoveNamedPortType(p PortType) {
 		n.(*node).removePort(p.(*portType))
 	}
 	var list *portTypeList
-	if p.Direction() == InPort {
+	if p.Direction() == interfaces.InPort {
 		list = &t.inPorts
 	} else {
 		list = &t.outPorts
@@ -150,24 +151,23 @@ func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 
 // TODO: These are possibly redundant..
 func (t *nodeType) addInPort(name string, pType SignalType) {
-	t.inPorts.Append(PortTypeNew(name, pType.TypeName(), InPort))
+	t.inPorts.Append(PortTypeNew(name, pType.TypeName(), interfaces.InPort))
 }
 
 func (t *nodeType) addOutPort(name string, pType SignalType) {
-	t.outPorts.Append(PortTypeNew(name, pType.TypeName(), OutPort))
+	t.outPorts.Append(PortTypeNew(name, pType.TypeName(), interfaces.OutPort))
 }
 
-func (t *nodeType) doResolvePort(name string, dir PortDirection) *portType {
+func (t *nodeType) doResolvePort(name string, dir interfaces.PortDirection) *portType {
 	var list portTypeList
 	switch dir {
-	case InPort:
+	case interfaces.InPort:
 		list = t.inPorts
 	default:
 		list = t.outPorts
 	}
 	for _, p := range list.PortTypes() {
 		if name == p.Name() {
-			log.Printf("nodeType.doResolvePort(%s): success\n", name)
 			return p.(*portType)
 		}
 	}
@@ -204,7 +204,7 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context Conte
 			impl.elementName = i.Name
 		default:
 			var err error
-			var resolvePort = func(name string, dir PortDirection) *portType {
+			var resolvePort = func(name string, dir interfaces.PortDirection) *portType {
 				return nt.doResolvePort(name, dir)
 			}
 			impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, context, resolvePort)
@@ -269,7 +269,7 @@ func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (new
 				g := impl.Graph().(*signalGraphType)
 				var n Node
 				index := -len(t.Implementation())
-				if pt.Direction() == InPort {
+				if pt.Direction() == interfaces.InPort {
 					n = g.findInputNodeFromPortType(pt)
 					if cursor.Position == AppendCursor {
 						index += len(g.InputNodes())
@@ -317,7 +317,7 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 		for _, n := range t.Instances() {
 			var p Port
 			var ok bool
-			if pt.Direction() == InPort {
+			if pt.Direction() == interfaces.InPort {
 				p, ok, _ = n.(*node).inPort.Find(n.Name(), pt.Name())
 			} else {
 				p, ok, _ = n.(*node).outPort.Find(n.Name(), pt.Name())
@@ -355,7 +355,7 @@ func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 		pt := obj.(PortType)
 		t.AddNamedPortType(pt) // adds ports of all instances, linked io-nodes in graph implementation
 		// Adjust offset to insert:
-		if pt.Direction() == InPort {
+		if pt.Direction() == interfaces.InPort {
 			cursor.Position = len(t.Implementation()) + len(t.InPorts()) - 1
 		} else {
 			cursor.Position = -1
@@ -411,7 +411,7 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 				// Remove and store all edges connected to the nodes linked to the outer ports
 				g := impl.Graph().(*signalGraphType)
 				var n Node
-				if nt.Direction() == InPort {
+				if nt.Direction() == interfaces.InPort {
 					n = g.findInputNodeFromPortType(nt)
 				} else {
 					n = g.findOutputNodeFromPortType(nt)
@@ -468,7 +468,7 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 			var p Port
 			var list []Port
 			nCursor := tree.Cursor(n)
-			if nt.Direction() == InPort {
+			if nt.Direction() == interfaces.InPort {
 				list = n.InPorts()
 			} else {
 				list = n.OutPorts()

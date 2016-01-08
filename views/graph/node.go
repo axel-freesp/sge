@@ -5,8 +5,8 @@ import (
 	//"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/tool"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type ColorMode int
@@ -20,14 +20,14 @@ const (
 
 type Node struct {
 	SelectableBox
-	userObj  NodeObject
+	userObj  interfaces.NodeObject
 	ports []*Port
 	selectedPort int
 }
 
 var _ NodeIf = (*Node)(nil)
 
-func NodeNew(pos image.Point, n freesp.Node) (ret *Node) {
+func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
 	ret = &Node{SelectableBoxInit(box), n, nil, -1}
@@ -36,13 +36,13 @@ func NodeNew(pos image.Point, n freesp.Node) (ret *Node) {
 	shiftIn := image.Point{global.padX + global.portX0, global.padY + global.portY0}
 	shiftOut := image.Point{box.Size().X - global.padX - global.portW - global.portX0, global.padY + global.portY0}
 	b := portBox.Add(shiftIn)
-	for _, p := range n.InPorts() {
+	for _, p := range n.GetInPorts() {
 		p := PortNew(b, p)
 		ret.ports = append(ret.ports, p)
 		b = b.Add(image.Point{0, global.portDY})
 	}
 	b = portBox.Add(shiftOut)
-	for _, p := range n.OutPorts() {
+	for _, p := range n.GetOutPorts() {
 		p := PortNew(b, p)
 		ret.ports = append(ret.ports, p)
 		b = b.Add(image.Point{0, global.portDY})
@@ -50,23 +50,21 @@ func NodeNew(pos image.Point, n freesp.Node) (ret *Node) {
 	return
 }
 
-func (n *Node) UserObj() NodeObject {
+func (n *Node) UserObj() interfaces.NodeObject {
 	return n.userObj
 }
 
-func (n *Node) GetOutPort(index int) PortObject {
-	return n.ports[index + n.NumInPorts()].UserObj()
+func (n *Node) GetInPorts() []interfaces.PortObject {
+	return n.userObj.GetInPorts()
 }
 
-func (n *Node) GetInPort(index int) PortObject {
-	return n.ports[index].UserObj()
+func (n *Node) GetOutPorts() []interfaces.PortObject {
+	return n.userObj.GetOutPorts()
 }
 
-
-func (n *Node) SelectPort(userObj PortObject) {
-	port := userObj.(freesp.Port)
+func (n *Node) SelectPort(port interfaces.PortObject) {
 	var index int
-	if port.Direction() == freesp.InPort {
+	if port.Direction() == interfaces.InPort {
 		index = n.InPortIndex(port.Name())
 	} else {
 		index = n.OutPortIndex(port.Name())
@@ -84,7 +82,7 @@ func (n *Node) SelectPort(userObj PortObject) {
 	n.selectedPort = index
 }
 
-func (n *Node) GetSelectedPort() (ok bool, port PortObject) {
+func (n *Node) GetSelectedPort() (ok bool, port interfaces.PortObject) {
 	if n.selectedPort == -1 {
 		return
 	}
@@ -94,11 +92,11 @@ func (n *Node) GetSelectedPort() (ok bool, port PortObject) {
 }
 
 func (n *Node) NumInPorts() int {
-	return n.userObj.NumInPorts()
+	return len(n.userObj.GetInPorts())
 }
 
 func (n *Node) NumOutPorts() int {
-	return n.userObj.NumOutPorts()
+	return len(n.userObj.GetOutPorts())
 }
 
 func (n *Node) InPortIndex(portName string) int {
@@ -122,14 +120,14 @@ func (n *Node) SetName(newName string) {
 	n.userObj.SetName(newName)
 }
 
-var _ freesp.Namer  = (*Node)(nil)
+var _ interfaces.Namer  = (*Node)(nil)
 
 /*
  *      freesp.Positioner interface
  */
 
-var _ freesp.Positioner  = (*Node)(nil)
-var _ freesp.Positioner  = (*Port)(nil)
+var _ interfaces.Positioner  = (*Node)(nil)
+var _ interfaces.Positioner  = (*Port)(nil)
 
 // (overwrite DragableObject implementation)
 func (n *Node) SetPosition(pos image.Point) {
@@ -250,9 +248,9 @@ func chooseColor(mode ColorMode) (r, g, b float64) {
 	return
 }
 
-func numPorts(n freesp.Porter) int {
-	npi := n.NumInPorts()
-	npo := n.NumOutPorts()
+func numPorts(n interfaces.Porter) int {
+	npi := len(n.GetInPorts())
+	npo := len(n.GetOutPorts())
 	return tool.MaxInt(npi, npo)
 }
 

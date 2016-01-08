@@ -3,21 +3,21 @@ package graph
 import (
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	//"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type Process struct {
 	SelectableBox
-	userObj ProcessObject
+	userObj interfaces.ProcessObject
 }
 
-func ProcessNew(box image.Rectangle, userObj ProcessObject) *Process {
+func ProcessNew(box image.Rectangle, userObj interfaces.ProcessObject) *Process {
 	return &Process{SelectableBoxInit(box), userObj}
 }
 
 var _ ProcessIf = (*Process)(nil)
 
-func (p *Process) UserObj() ProcessObject {
+func (p *Process) UserObj() interfaces.ProcessObject {
 	return p.userObj
 }
 

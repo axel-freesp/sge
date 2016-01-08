@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"strings"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
-	"log"
-	"strings"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type PasteJob struct {
@@ -191,7 +192,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 		j := NewElementJobNew("", ePortType)
 		j.input[iPortName] = p.PName
 		j.input[iSignalTypeSelect] = p.PType
-		j.input[iDirection] = direction2string[freesp.InPort]
+		j.input[iDirection] = direction2string[interfaces.InPort]
 		pj.newElements = append(pj.newElements, j)
 		job.children = append(job.children, pj)
 	}
@@ -200,7 +201,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 		j := NewElementJobNew("", ePortType)
 		j.input[iPortName] = p.PName
 		j.input[iSignalTypeSelect] = p.PType
-		j.input[iDirection] = direction2string[freesp.OutPort]
+		j.input[iDirection] = direction2string[interfaces.OutPort]
 		pj.newElements = append(pj.newElements, j)
 		job.children = append(job.children, pj)
 	}

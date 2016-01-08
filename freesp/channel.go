@@ -3,10 +3,11 @@ package freesp
 import (
 	"fmt"
 	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type channel struct {
-	direction PortDirection
+	direction interfaces.PortDirection
 	iotype    IOType
 	link      Channel
 	process   Process
@@ -15,7 +16,7 @@ type channel struct {
 
 var _ Channel = (*channel)(nil)
 
-func ChannelNew(dir PortDirection, iotype IOType, process Process, linkText string) *channel {
+func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string) *channel {
 	return &channel{dir, iotype, nil, process, linkText}
 }
 
@@ -43,11 +44,11 @@ func (c *channel) Link() Channel {
  *  Directioner API
  */
 
-func (c *channel) Direction() PortDirection {
+func (c *channel) Direction() interfaces.PortDirection {
 	return c.direction
 }
 
-func (c *channel) SetDirection(newDir PortDirection) {
+func (c *channel) SetDirection(newDir interfaces.PortDirection) {
 	c.direction = newDir
 }
 
@@ -77,7 +78,7 @@ func (c *channel) SetName(newName string) {
 
 func (c *channel) String() string {
 	var dirtext string
-	if c.Direction() == InPort {
+	if c.Direction() == interfaces.InPort {
 		dirtext = "in"
 	} else {
 		dirtext = "out"
@@ -92,7 +93,7 @@ func (c *channel) String() string {
 
 func (c *channel) AddToTree(tree Tree, cursor Cursor) {
 	var symbol Symbol
-	if c.Direction() == InPort {
+	if c.Direction() == interfaces.InPort {
 		symbol = SymbolInChannel
 	} else {
 		symbol = SymbolOutChannel

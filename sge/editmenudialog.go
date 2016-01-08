@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
-	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 // Menu control wants to see this:
@@ -99,9 +100,9 @@ var mode2string = map[freesp.Mode]string{
 	freesp.Asynchronous: modeStrings[freesp.Asynchronous],
 }
 
-var direction2string = map[freesp.PortDirection]string{
-	freesp.InPort:  directionStrings[0],
-	freesp.OutPort: directionStrings[1],
+var direction2string = map[interfaces.PortDirection]string{
+	interfaces.InPort:  directionStrings[0],
+	interfaces.OutPort: directionStrings[1],
 }
 
 var implType2string = map[freesp.ImplementationType]string{
@@ -119,9 +120,9 @@ var string2mode = map[string]freesp.Mode{
 	"Asynchronous": freesp.Asynchronous,
 }
 
-var string2direction = map[string]freesp.PortDirection{
-	"InPort":  freesp.InPort,
-	"OutPort": freesp.OutPort,
+var string2direction = map[string]interfaces.PortDirection{
+	"InPort":  interfaces.InPort,
+	"OutPort": interfaces.OutPort,
 }
 
 var string2implType = map[string]freesp.ImplementationType{
@@ -235,7 +236,7 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	graph := thisNode.Context()
 	for _, n := range graph.Nodes() {
 		var ports []freesp.Port
-		if thisPort.Direction() == freesp.InPort {
+		if thisPort.Direction() == interfaces.InPort {
 			ports = n.OutPorts()
 		} else {
 			ports = n.InPorts()

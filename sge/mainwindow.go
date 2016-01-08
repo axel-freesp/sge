@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
-	"github.com/axel-freesp/sge/views/graph"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
-	"log"
-	"os"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 const (
@@ -34,7 +34,7 @@ type Global struct {
 var _ views.Context = (*Global)(nil)
 var _ freesp.Context = (*Global)(nil)
 
-func (g *Global) SelectNode(node graph.NodeObject) {
+func (g *Global) SelectNode(node interfaces.NodeObject) {
 	n := node.(freesp.Node)
 	cursor := g.fts.Cursor(n)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
@@ -42,25 +42,27 @@ func (g *Global) SelectNode(node graph.NodeObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) EditNode(node graph.NodeObject) {
+func (g *Global) EditNode(node interfaces.NodeObject) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 
-func (g *Global) SelectPort(port freesp.Port) {
-	n := port.Node()
+func (g *Global) SelectPort(port interfaces.PortObject) {
+	p := port.(freesp.Port)
+	n := p.Node()
 	cursor := g.fts.Cursor(n)
-	pCursor := g.fts.CursorAt(cursor, port)
+	pCursor := g.fts.CursorAt(cursor, p)
 	path, _ := gtk.TreePathNewFromString(pCursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectConnect(conn freesp.Connection) {
-	p := conn.From()
+func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
+	c := conn.(freesp.Connection)
+	p := c.From()
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
 	pCursor := g.fts.CursorAt(cursor, p)
-	cCursor := g.fts.CursorAt(pCursor, conn)
+	cCursor := g.fts.CursorAt(pCursor, c)
 	path, _ := gtk.TreePathNewFromString(cCursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
@@ -112,9 +114,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					gv.Widget().ShowAll()
 					log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
 				}
-				log.Println("---before v.Sync()")
 				gv.Sync()
-				log.Println("---after v.Sync()")
 			}
 		}
 	}

@@ -3,21 +3,21 @@ package graph
 import (
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	//"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type Arch struct {
 	SelectableBox
-	userObj ArchObject
+	userObj interfaces.ArchObject
 }
 
-func ArchNew(box image.Rectangle, userObj ArchObject) *Arch {
+func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
 	return &Arch{SelectableBoxInit(box), userObj}
 }
 
 var _ ArchIf = (*Arch)(nil)
 
-func (a *Arch) UserObj() ArchObject {
+func (a *Arch) UserObj() interfaces.ArchObject {
 	return a.userObj
 }
 

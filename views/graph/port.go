@@ -3,21 +3,21 @@ package graph
 import (
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type Port struct {
 	SelectableBox
-	userObj PortObject
+	userObj interfaces.PortObject
 }
 
-func PortNew(box image.Rectangle, userObj PortObject) *Port {
+func PortNew(box image.Rectangle, userObj interfaces.PortObject) *Port {
 	return &Port{SelectableBoxInit(box), userObj}
 }
 
 var _ PortIf = (*Port)(nil)
 
-func (p *Port) UserObj() PortObject {
+func (p *Port) UserObj() interfaces.PortObject {
 	return p.userObj
 }
 
@@ -30,8 +30,8 @@ func (p *Port) Draw(ctxt interface{}){
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
 		var r, g, b float64
-		switch p.userObj.(freesp.Directioner).Direction() {
-		case freesp.InPort:
+		switch p.userObj.Direction() {
+		case interfaces.InPort:
 			if p.selected {
 				r, g, b = ColorOption(SelectInPort)
 			} else if p.highlighted {
@@ -39,7 +39,7 @@ func (p *Port) Draw(ctxt interface{}){
 			} else {
 				r, g, b = ColorOption(InputPort)
 			}
-		case freesp.OutPort:
+		case interfaces.OutPort:
 			if p.selected {
 				r, g, b = ColorOption(SelectOutPort)
 			} else if p.highlighted {

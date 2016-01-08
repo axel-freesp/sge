@@ -2,10 +2,11 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
-	"image"
 	"log"
+	"image"
 	"strings"
+	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type signalGraphType struct {
@@ -137,7 +138,7 @@ func (t *signalGraphType) addNode(n Node) error {
 }
 
 func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, context Context,
-	resolvePort func(portname string, dir PortDirection) *portType) (t *signalGraphType, err error) {
+	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (t *signalGraphType, err error) {
 	t = SignalGraphTypeNew(context)
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
@@ -271,7 +272,7 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 }
 
 func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
-	resolvePort func(portname string, dir PortDirection) *portType) (ret *node, err error) {
+	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -280,18 +281,16 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
 		err = fmt.Errorf("signalGraphType.createInputNodeFromXml: %s", err)
 		return
 	}
-	pt := resolvePort(n.NPort, InPort)
+	pt := resolvePort(n.NPort, interfaces.InPort)
 	if pt != nil {
 		ret.portlink = pt
-		ptCopy := &portType{pt.signalType, n.NPort, OutPort}
-		log.Printf("signalGraphType.createInputNodeFromXml: adding port %v to node %v\n", ptCopy, ret)
 	}
 	ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return
 }
 
 func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
-	resolvePort func(portname string, dir PortDirection) *portType) (ret *node, err error) {
+	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -300,11 +299,9 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 		err = fmt.Errorf("signalGraphType.createOutputNodeFromXml: %s", err)
 		return
 	}
-	pt := resolvePort(n.NPort, OutPort) // matches also empty names
+	pt := resolvePort(n.NPort, interfaces.OutPort) // matches also empty names
 	if pt != nil {
 		ret.portlink = pt
-		ptCopy := &portType{pt.signalType, n.NPort, InPort}
-		log.Printf("signalGraphType.createOutputNodeFromXml: adding port %vto node %v\n", ptCopy, ret)
 	}
 	ret.position = image.Point{n.Hint.X, n.Hint.Y}
 	return

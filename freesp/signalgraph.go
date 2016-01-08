@@ -2,8 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
 	"log"
+	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 func SignalGraphNew(filename string, context Context) *signalGraph {
@@ -35,7 +36,7 @@ func (s *signalGraph) Read(data []byte) error {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
-		func(_ string, _ PortDirection) *portType { return nil })
+		func(_ string, _ interfaces.PortDirection) *portType { return nil })
 	return err
 }
 
@@ -46,7 +47,7 @@ func (s *signalGraph) ReadFile(filepath string) error {
 		return newSignalGraphError(fmt.Sprintf("signalGraph.ReadFile: %v", err))
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
-		func(_ string, _ PortDirection) *portType { return nil })
+		func(_ string, _ interfaces.PortDirection) *portType { return nil })
 	return err
 }
 

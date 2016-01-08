@@ -2,10 +2,11 @@ package main
 
 import (
 	//"fmt"
+	"log"
 	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
-	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type EditDialog struct {
@@ -80,7 +81,7 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		dialog.typeNameEntry.SetText(obj.(freesp.NodeType).TypeName())
 	case freesp.PortType:
 		dialog.portNameEntry.SetText(obj.(freesp.PortType).Name())
-		if obj.(freesp.PortType).Direction() == freesp.OutPort {
+		if obj.(freesp.PortType).Direction() == interfaces.OutPort {
 			dialog.directionSelector.SetActive(1)
 		}
 		for i, t = range freesp.GetRegisteredSignalTypes() {
@@ -112,7 +113,7 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		}
 		dialog.ioModeSelector.SetActive(i)
 	case freesp.Channel:
-		if obj.(freesp.Channel).Direction() == freesp.OutPort {
+		if obj.(freesp.Channel).Direction() == interfaces.OutPort {
 			dialog.channelDirectionSelector.SetActive(1)
 		}
 		dialog.channelDirectionSelector.SetSensitive(false)

@@ -1,10 +1,9 @@
 package views
 
 import (
-	"github.com/gotk3/gotk3/gtk"
-	//"log"
 	"math"
-	//"unsafe"
+	"image"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 const (
@@ -43,6 +42,10 @@ func (v *ScaledView) Scale() float64 {
 
 func (v *ScaledView) Container() *gtk.Container {
 	return &v.scene.scrolled.Bin.Container
+}
+
+func (v *ScaledView) Position(pos image.Point) image.Point {
+	return image.Point{int(float64(pos.X) / v.Scale()), int(float64(pos.Y) / v.Scale())}
 }
 
 func (v *ScaledView) init() (err error) {

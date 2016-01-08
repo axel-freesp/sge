@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"log"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 // portType
@@ -10,12 +11,12 @@ import (
 type portType struct {
 	signalType SignalType
 	name       string
-	direction  PortDirection
+	direction  interfaces.PortDirection
 }
 
 var _ PortType = (*portType)(nil)
 
-func PortTypeNew(name string, pTypeName string, dir PortDirection) *portType {
+func PortTypeNew(name string, pTypeName string, dir interfaces.PortDirection) *portType {
 	st, ok := signalTypes[pTypeName]
 	if !ok {
 		log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
@@ -39,11 +40,11 @@ func (t *portType) SetSignalType(newSignalType SignalType) {
 	t.signalType = newSignalType
 }
 
-func (t *portType) Direction() PortDirection {
+func (t *portType) Direction() interfaces.PortDirection {
 	return t.direction
 }
 
-func (t *portType) SetDirection(newDir PortDirection) {
+func (t *portType) SetDirection(newDir interfaces.PortDirection) {
 	t.direction = newDir
 }
 
@@ -67,7 +68,7 @@ func (p *portType) AddToTree(tree Tree, cursor Cursor) {
 		prop = mayEdit | mayRemove | mayAddObject
 	}
 	var kind Symbol
-	if p.Direction() == InPort {
+	if p.Direction() == interfaces.InPort {
 		kind = SymbolInputPortType
 	} else {
 		kind = SymbolOutputPortType

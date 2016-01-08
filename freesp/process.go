@@ -2,10 +2,11 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
 	"image"
 	"log"
 	"strings"
+	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type process struct {
@@ -37,7 +38,7 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(InPort, iot, p, xmlc.Source)
+		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
 		p.inChannels.Append(c)
 	}
 	for _, xmlc := range xmlp.OutputChannels {
@@ -53,7 +54,7 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (out): referenced ioType %s not found.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(OutPort, iot, p, xmlc.Dest)
+		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
 		p.outChannels.Append(c)
 	}
 	p.position = image.Point{xmlp.Rect.X, xmlp.Rect.Y}
@@ -164,19 +165,19 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 			return
 		}
 		var l *channelList
-		var dd PortDirection
+		var dd interfaces.PortDirection
 		var ll *channelList
 		var cPos, ccPos int
-		if c.Direction() == InPort {
+		if c.Direction() == interfaces.InPort {
 			l = &p.inChannels
 			ll = &pp.(*process).outChannels
-			dd = OutPort
+			dd = interfaces.OutPort
 			cPos = len(l.Channels())
 			ccPos = AppendCursor
 		} else {
 			l = &p.outChannels
 			ll = &pp.(*process).inChannels
-			dd = InPort
+			dd = interfaces.InPort
 			cPos = AppendCursor
 			ccPos = len(ll.Channels())
 		}
@@ -235,7 +236,7 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 		ccCursor := tree.CursorAt(ppCursor, cc)
 		var l *channelList
 		var ll *channelList
-		if c.Direction() == InPort {
+		if c.Direction() == interfaces.InPort {
 			l = &p.inChannels
 			ll = &pp.(*process).outChannels
 		} else {

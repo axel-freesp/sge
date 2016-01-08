@@ -7,12 +7,12 @@ import (
 )
 
 type Port struct {
-	SelectableObject
+	SelectableBox
 	userObj PortObject
 }
 
 func PortNew(box image.Rectangle, userObj PortObject) *Port {
-	return &Port{SelectableObject{box, false, false}, userObj}
+	return &Port{SelectableBoxInit(box), userObj}
 }
 
 var _ PortIf = (*Port)(nil)

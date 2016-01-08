@@ -18,13 +18,8 @@ const (
 	NumColorMode
 )
 
-var (
-	nodeWidth  = NumericOption(NodeWidth)
-	nodeHeight = NumericOption(NodeHeight)
-)
-
 type Node struct {
-	SelectableObject
+	SelectableBox
 	userObj  NodeObject
 	ports []*Port
 	selectedPort int
@@ -34,8 +29,8 @@ var _ NodeIf = (*Node)(nil)
 
 func NodeNew(pos image.Point, n freesp.Node) (ret *Node) {
 	dy := NumericOption(PortDY)
-	box := image.Rect(pos.X, pos.Y, pos.X + nodeWidth, pos.Y + nodeHeight + numPorts(n)*dy)
-	ret = &Node{SelectableObject{box, false, false}, n, nil, -1}
+	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
+	ret = &Node{SelectableBoxInit(box), n, nil, -1}
 	portBox := image.Rect(0, 0, global.portW, global.portH)
 	portBox = portBox.Add(box.Min)
 	shiftIn := image.Point{global.padX + global.portX0, global.padY + global.portY0}
@@ -69,11 +64,12 @@ func (n *Node) GetInPort(index int) PortObject {
 
 
 func (n *Node) SelectPort(userObj PortObject) {
+	port := userObj.(freesp.Port)
 	var index int
-	if userObj.Direction() == freesp.InPort {
-		index = n.InPortIndex(userObj.Name())
+	if port.Direction() == freesp.InPort {
+		index = n.InPortIndex(port.Name())
 	} else {
-		index = n.OutPortIndex(userObj.Name())
+		index = n.OutPortIndex(port.Name())
 		if index >= 0 {
 			index += n.NumInPorts()
 		}
@@ -251,25 +247,6 @@ func chooseColor(mode ColorMode) (r, g, b float64) {
 	case SelectedMode:
 		r, g, b = ColorOption(Selected)
 	}
-	return
-}
-
-func size(b BBoxer) (w, h float64) {
-	box := b.BBox()
-	r := box.Size()
-	w = float64(r.X)
-	h = float64(r.Y)
-	return
-}
-
-func boxToDraw(b BBoxer) (x, y, w, h float64) {
-	dx, dy := global.padX, global.padY
-	w0, h0 := size(b)
-	a := b.BBox().Min
-	x = float64(a.X) + float64(dx)
-	y = float64(a.Y) + float64(dy)
-	w = w0 - float64(2*dx)
-	h = h0 - float64(2*dy)
 	return
 }
 

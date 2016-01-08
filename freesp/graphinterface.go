@@ -9,6 +9,11 @@ type Positioner interface {
 	SetPosition(image.Point)
 }
 
+type Shaper interface {
+	Shape() image.Point
+	SetShape(image.Point)
+}
+
 type Namer interface {
 	Name() string
 	SetName(string)
@@ -21,16 +26,14 @@ type Porter interface {
 	OutPortIndex(portname string) int
 }
 
+type PortDirection bool
+
+const (
+	InPort  PortDirection = false
+	OutPort PortDirection = true
+)
+
 type Directioner interface {
 	Direction() PortDirection
 	SetDirection(PortDirection)
-}
-
-type Filenamer interface {
-	Filename() string
-	SetFilename(string)
-	Read(data []byte) error
-	ReadFile(filepath string) error
-	Write() (data []byte, err error)
-	WriteFile(filepath string) error
 }

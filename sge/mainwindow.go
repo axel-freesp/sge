@@ -102,7 +102,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					if !ok {
 						return
 					}
-					gv, err = views.GraphViewNew(impl.Graph(), width, height, &global)
+					gv, err = views.GraphViewNew(impl.Graph(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -112,7 +112,9 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					gv.Widget().ShowAll()
 					log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
 				}
+				log.Println("---before v.Sync()")
 				gv.Sync()
+				log.Println("---after v.Sync()")
 			}
 		}
 	}
@@ -194,7 +196,7 @@ func main() {
 				if err1 == nil {
 					log.Println("Loading signal graph", filepath)
 					global.fts.AddSignalGraphFile(p, sg)
-					gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
+					gv, err := views.GraphViewNew(sg.ItsType(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -215,6 +217,12 @@ func main() {
 					log.Println(err)
 					continue
 				}
+				pv, err := views.PlatformViewNew(pl, &global)
+				if err != nil {
+					log.Fatal("Could not create platform view.")
+				}
+				global.graphview = append(global.graphview, pv)
+				global.win.stack.AddTitled(pv.Widget(), p, p)
 				log.Printf("Platform %s successfully loaded\n", p)
 
 			default:

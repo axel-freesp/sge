@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"image"
 	"log"
 	"strings"
 )
@@ -11,12 +12,13 @@ type platform struct {
 	filename   string
 	platformId string
 	archlist   archList
+	shape      image.Point
 }
 
 var _ Platform = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
-	return &platform{filename, "", archListInit()}
+	return &platform{filename, "", archListInit(), image.Point{}}
 }
 
 func (p *platform) PlatformId() string {
@@ -29,6 +31,18 @@ func (p *platform) SetPlatformId(newId string) {
 
 func (p *platform) Arch() []Arch {
 	return p.archlist.Archs()
+}
+
+/*
+ *  Shaper API
+ */
+
+func (p *platform) Shape() image.Point {
+	return p.shape
+}
+
+func (p *platform) SetShape(shape image.Point) {
+	p.shape = shape
 }
 
 /*
@@ -136,6 +150,7 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 			}
 		}
 	}
+	p.shape = image.Point{xmlp.Shape.W, xmlp.Shape.H}
 	return
 }
 

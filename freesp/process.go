@@ -3,21 +3,23 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"image"
 	"log"
 	"strings"
 )
 
 type process struct {
-	name        string
-	inChannels  channelList
-	outChannels channelList
-	arch        Arch
+	name            string
+	inChannels      channelList
+	outChannels     channelList
+	arch            Arch
+	position, shape image.Point
 }
 
 var _ Process = (*process)(nil)
 
 func ProcessNew(name string, arch Arch) *process {
-	return &process{name, channelListInit(), channelListInit(), arch}
+	return &process{name, channelListInit(), channelListInit(), arch, image.Point{}, image.Point{}}
 }
 
 func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType) (err error) {
@@ -54,6 +56,8 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 		c := ChannelNew(OutPort, iot, p, xmlc.Dest)
 		p.outChannels.Append(c)
 	}
+	p.position = image.Point{xmlp.Rect.X, xmlp.Rect.Y}
+	p.shape = image.Point{xmlp.Rect.W, xmlp.Rect.H}
 	return
 }
 
@@ -79,6 +83,30 @@ func (p *process) Name() string {
 
 func (p *process) SetName(newName string) {
 	p.name = newName
+}
+
+/*
+ *  Positioner API
+ */
+
+func (p *process) Position() image.Point {
+	return p.position
+}
+
+func (p *process) SetPosition(pos image.Point) {
+	p.position = pos
+}
+
+/*
+ *  Shaper API
+ */
+
+func (p *process) Shape() image.Point {
+	return p.shape
+}
+
+func (p *process) SetShape(shape image.Point) {
+	p.shape = shape
 }
 
 /*

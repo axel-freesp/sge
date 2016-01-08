@@ -274,6 +274,8 @@ func CreateXmlArch(a Arch) *backend.XmlArch {
 	for _, p := range a.Processes() {
 		ret.Processes = append(ret.Processes, *CreateXmlProcess(p))
 	}
+	ret.Rect.X, ret.Rect.Y = a.(*arch).position.X, a.(*arch).position.Y
+	ret.Rect.W, ret.Rect.H = a.(*arch).shape.X, a.(*arch).shape.Y
 	return ret
 }
 
@@ -289,6 +291,8 @@ func CreateXmlProcess(p Process) *backend.XmlProcess {
 	for _, c := range p.OutChannels() {
 		ret.OutputChannels = append(ret.OutputChannels, *CreateXmlOutChannel(c))
 	}
+	ret.Rect.X, ret.Rect.Y = p.(*process).position.X, p.(*process).position.Y
+	ret.Rect.W, ret.Rect.H = p.(*process).shape.X, p.(*process).shape.Y
 	return ret
 }
 

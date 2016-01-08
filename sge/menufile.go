@@ -46,7 +46,7 @@ func fileNewSg(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		log.Printf("Warning: ftv.AddSignalGraphFile('%s') failed.\n", filename)
 	}
 	setCursorNewId(ftv, newId)
-	gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
+	gv, err := views.GraphViewNew(sg.ItsType(), &global)
 	if err != nil {
 		log.Fatal("fileNewSg: Could not create graph view.")
 	}
@@ -94,7 +94,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			return
 		}
 		setCursorNewId(ftv, newId)
-		gv, err := views.GraphViewNew(sg.ItsType(), width, height, &global)
+		gv, err := views.GraphViewNew(sg.ItsType(), &global)
 		if err != nil {
 			log.Fatal("fileOpen: Could not create graph view.")
 		}
@@ -122,6 +122,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 			return
 		}
 		setCursorNewId(ftv, newId)
+		pv, err := views.PlatformViewNew(p, &global)
+		if err != nil {
+			log.Fatal("fileOpen: Could not create platform view.")
+		}
+		global.graphview = append(global.graphview, pv)
+		global.win.stack.AddTitled(pv.Widget(), filenameToShow(filename), filenameToShow(filename))
+		global.win.Window().ShowAll()
 	default:
 	}
 }

@@ -18,6 +18,16 @@ type XmlHint struct {
 	Y int `xml:"y,attr"`
 }
 
+type XmlShape struct {
+	W int `xml:"w,attr"`
+	H int `xml:"h,attr"`
+}
+
+type XmlRectangle struct {
+	XmlHint
+	XmlShape
+}
+
 type XmlInputNode struct {
 	XMLName xml.Name `xml:"input"`
 	NPort   string   `xml:"port,attr"`

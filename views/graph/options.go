@@ -10,7 +10,8 @@ type Global struct {
 	padX, padY,
 	portX0, portY0, portDY,
 	portW, portH,
-	textX, textY, fontSize int
+	textX, textY, fontSize,
+	processWidth, processHeight int
 }
 
 var global = Global{
@@ -26,6 +27,8 @@ var global = Global{
 	textX: NumericOption(NodeTextX),
 	textY: NumericOption(NodeTextY),
 	fontSize: NumericOption(FontSize),
+	processWidth: NumericOption(ProcessWidth),
+	processHeight: NumericOption(ProcessHeight),
 }
 
 // Index arguments for NumericOption()
@@ -42,6 +45,8 @@ const (
 	PortY0
 	PortDY
 	FontSize
+	ProcessWidth
+	ProcessHeight
 )
 
 func NumericOption(index int) int {
@@ -124,6 +129,8 @@ var defaultOptions = gOptions{
 		{"Port Y0", 24},
 		{"Port DY", 12},
 		{"Font Size", 12},
+		{"Process Width", 100},
+		{"Process Height", 32},
 	},
 	[]optionColor{
 		{"Background", color.RGBA{240, 240, 240, 0xff}},

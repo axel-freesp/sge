@@ -16,13 +16,13 @@ var (
 )
 
 type Connection struct {
-    SelectableObject
+    SelectableBox
     from, to NodeIf
     fromPort, toPort int
 }
 
 func ConnectionNew(from, to NodeIf, fromPort, toPort int) (ret *Connection) {
-    ret = &Connection{SelectableObject{image.Rectangle{}, false, false}, from, to, fromPort, toPort}
+    ret = &Connection{SelectableBoxInit(image.Rectangle{}), from, to, fromPort, toPort}
     ret.box.Min, ret.box.Max = ret.connectionPoints()
     return ret
 }
@@ -53,8 +53,6 @@ func (c *Connection) connectionPoints() (p1, p2 image.Point) {
     return
 }
 
-
-var _ SelectableBox = (*Connection)(nil)
 
 /*
  *	Drawer interface

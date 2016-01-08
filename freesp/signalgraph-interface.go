@@ -127,13 +127,6 @@ type Port interface {
 	RemoveConnection(c Port)
 }
 
-type PortDirection bool
-
-const (
-	InPort  PortDirection = false
-	OutPort PortDirection = true
-)
-
 type Connection interface {
 	TreeElement
 	From() Port
@@ -166,6 +159,7 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 type Platform interface {
 	TreeElement
 	Filenamer
+	Shaper
 	PlatformId() string
 	SetPlatformId(string)
 	Arch() []Arch
@@ -174,6 +168,8 @@ type Platform interface {
 type Arch interface {
 	TreeElement
 	Namer
+	Positioner
+	Shaper
 	Platform() Platform
 	IOTypes() []IOType
 	Processes() []Process
@@ -198,6 +194,8 @@ const (
 type Process interface {
 	TreeElement
 	Namer
+	Positioner
+	//Shaper
 	Arch() Arch
 	InChannels() []Channel
 	OutChannels() []Channel
@@ -220,4 +218,13 @@ func GetRegisteredIOTypes() []string {
 func GetIOTypeByName(name string) (ioType IOType, ok bool) {
 	ioType, ok = ioTypes[name]
 	return
+}
+
+type Filenamer interface {
+	Filename() string
+	SetFilename(string)
+	Read(data []byte) error
+	ReadFile(filepath string) error
+	Write() (data []byte, err error)
+	WriteFile(filepath string) error
 }

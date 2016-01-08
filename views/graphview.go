@@ -38,8 +38,9 @@ type graphView struct {
 }
 
 var _ ScaledScene = (*graphView)(nil)
+var _ GraphView = (*graphView)(nil)
 
-func GraphViewNew(g freesp.SignalGraphType, width, height int, context Context) (viewer *graphView, err error) {
+func GraphViewNew(g freesp.SignalGraphType, context Context) (viewer *graphView, err error) {
 	viewer = &graphView{nil, nil, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -235,7 +236,7 @@ func (v *graphView) handleNodeSelect(pos image.Point) {
 			v.context.SelectNode(n.UserObj())
 			ok, port := n.(*graph.Node).GetSelectedPort()
 			if ok {
-				v.context.SelectPort(port)
+				v.context.SelectPort(port.(freesp.Port))
 			}
 		} else {
 			if n.Deselect() {
@@ -283,7 +284,7 @@ func (v *graphView) handleDrag(pos image.Point) {
 	for _, n := range v.nodes {
 		if n.IsSelected() {
 			box := n.BBox()
-			if !graph.Overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
+			if !overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
 				v.repaintNode(n)
 				box = box.Add(pos.Sub(v.dragOffs))
 				v.dragOffs = pos
@@ -403,4 +404,23 @@ func (v *graphView) repaintNode(n graph.NodeIf) {
 
 func (v *graphView) repaintConnection(c graph.ConnectIf) {
 	v.drawScene(c.BBox())
+}
+
+// Check if the selected object would overlap with any other
+// if we move it to p coordinates:
+func overlaps(list []graph.NodeIf, p image.Point) bool {
+	var box image.Rectangle
+	for _, n := range list {
+		if n.IsSelected() {
+			box = n.BBox()
+			break
+		}
+	}
+	newBox := box.Add(p.Sub(box.Min))
+	for _, n := range list {
+		if !n.IsSelected() && newBox.Overlaps(n.BBox()) {
+			return true
+		}
+	}
+	return false
 }

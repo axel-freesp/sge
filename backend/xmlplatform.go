@@ -11,10 +11,11 @@ type XmlPlatform struct {
 	Version    string    `xml:"version,attr"`
 	PlatformId string    `xml:"platform-id,attr"`
 	Arch       []XmlArch `xml:"arch"`
+	Shape      XmlShape  `xml:"hint"`
 }
 
 func XmlPlatformNew() *XmlPlatform {
-	return &XmlPlatform{xml.Name{freespNamespace, "platform"}, "1.0", "", nil}
+	return &XmlPlatform{xml.Name{freespNamespace, "platform"}, "1.0", "", nil, XmlShape{}}
 }
 
 func (p *XmlPlatform) ReadFile(filepath string) (err error) {

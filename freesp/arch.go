@@ -3,20 +3,22 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"image"
 	"log"
 )
 
 type arch struct {
-	name      string
-	iotypes   ioTypeList
-	processes processList
-	platform  Platform
+	name            string
+	iotypes         ioTypeList
+	processes       processList
+	platform        Platform
+	position, shape image.Point
 }
 
 var _ Arch = (*arch)(nil)
 
 func ArchNew(name string, platform Platform) *arch {
-	return &arch{name, ioTypeListInit(), processListInit(), platform}
+	return &arch{name, ioTypeListInit(), processListInit(), platform, image.Point{}, image.Point{}}
 }
 
 func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
@@ -37,6 +39,8 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 		}
 		a.processes.Append(p)
 	}
+	a.position = image.Point{xmla.Rect.X, xmla.Rect.Y}
+	a.shape = image.Point{xmla.Rect.W, xmla.Rect.H}
 	return
 }
 
@@ -62,6 +66,38 @@ func (a *arch) Name() string {
 
 func (a *arch) SetName(newName string) {
 	a.name = newName
+}
+
+/*
+ *  Positioner API
+ */
+
+func (a *arch) Position() image.Point {
+	return a.position
+}
+
+func (a *arch) SetPosition(pos image.Point) {
+	a.position = pos
+}
+
+/*
+ *  Shaper API
+ */
+
+func (a *arch) Shape() image.Point {
+	return a.shape
+}
+
+func (a *arch) SetShape(shape image.Point) {
+	a.shape = shape
+}
+
+/*
+ *  fmt.Stringer API
+ */
+
+func (a *arch) String() string {
+	return fmt.Sprintf("Arch(%s)", a.name)
 }
 
 /*

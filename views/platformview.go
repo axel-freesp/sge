@@ -1,15 +1,13 @@
 package views
 
 import (
-	//	"fmt"
-	"image"
-	"log"
-	//"math"
 	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/views/graph"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+	"image"
+	"log"
 )
 
 type platformView struct {
@@ -53,6 +51,7 @@ func (v *platformView) init() (err error) {
 }
 
 func (v *platformView) Sync() {
+	log.Printf("platformView.Sync()\n")
 	v.arch = make([]graph.ArchIf, len(v.p.ArchObjects()))
 	for i, a := range v.p.ArchObjects() {
 		pos := a.Position()

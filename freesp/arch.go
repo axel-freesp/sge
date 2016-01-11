@@ -62,15 +62,11 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 		a.processes.Append(pr)
 		for i, c := range pr.InChannelObjects() {
 			xmlc := xmlp.InputChannels[i]
-			p := &archPort{c, image.Point{xmlc.Hint.Port.X, xmlc.Hint.Port.Y}}
-			a.archPorts = append(a.archPorts, p)
-			c.(*channel).archPort = p
+			a.AddArchPort(c, xmlc.Hint.Port.X, xmlc.Hint.Port.Y)
 		}
 		for i, c := range pr.OutChannelObjects() {
 			xmlc := xmlp.OutputChannels[i]
-			p := &archPort{c, image.Point{xmlc.Hint.Port.X, xmlc.Hint.Port.Y}}
-			a.archPorts = append(a.archPorts, p)
-			c.(*channel).archPort = p
+			a.AddArchPort(c, xmlc.Hint.Port.X, xmlc.Hint.Port.Y)
 		}
 	}
 	a.position = image.Point{xmla.Rect.X, xmla.Rect.Y}
@@ -100,6 +96,13 @@ func (a *arch) ProcessObjects() []interfaces.ProcessObject {
 
 func (a *arch) PortObjects() []interfaces.ArchPortObject {
 	return a.archPorts
+}
+
+func (a *arch) AddArchPort(ch interfaces.ChannelObject, x, y int) {
+	// TODO: Do all the checks...
+	p := &archPort{ch, image.Point{x, y}}
+	a.archPorts = append(a.archPorts, p)
+	ch.(*channel).archPort = p
 }
 
 /*

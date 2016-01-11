@@ -68,25 +68,31 @@ func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectArch(arch interfaces.ArchObject) {
-	a := arch.(freesp.Arch)
+func (g *Global) SelectArch(obj interfaces.ArchObject) {
+	a := obj.(freesp.Arch)
 	cursor := g.fts.Cursor(a)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectProcess(arch interfaces.ProcessObject) {
-	p := arch.(freesp.Process)
-	cursor := g.fts.Cursor(p)
+func (g *Global) SelectProcess(obj interfaces.ProcessObject) {
+	p := obj.(freesp.Process)
+	a := p.Arch()
+	aCursor := g.fts.Cursor(a.(freesp.Arch))
+	cursor := g.fts.CursorAt(aCursor, p)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectChannel(arch interfaces.ChannelObject) {
-	c := arch.(freesp.Channel)
-	cursor := g.fts.Cursor(c)
+func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
+	c := obj.(freesp.Channel)
+	pr := c.Process()
+	a := pr.Arch()
+	aCursor := g.fts.Cursor(a.(freesp.Arch))
+	pCursor := g.fts.CursorAt(aCursor, pr.(freesp.Process))
+	cursor := g.fts.CursorAt(pCursor, c)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)

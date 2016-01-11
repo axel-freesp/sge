@@ -225,6 +225,10 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		}
 		newCursor = tree.Insert(cursor)
 		c.AddToTree(tree, newCursor)
+		if p.Arch().Name() != aa.Name() {
+			p.Arch().AddArchPort(c, 0, 0)
+			aa.AddArchPort(cc, 0, 0)
+		}
 		//log.Printf("process.AddNewObject: %v successfully added channel %v\n", p, c)
 
 	default:

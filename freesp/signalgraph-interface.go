@@ -180,6 +180,7 @@ type Arch interface {
 	Platform() Platform
 	IOTypes() []IOType
 	Processes() []Process
+	AddArchPort(interfaces.ChannelObject, int, int)
 }
 
 type IOType interface {

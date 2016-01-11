@@ -26,6 +26,7 @@ func ProcessPortNew(pos image.Point, userObj interfaces.ChannelObject) *ProcessP
 }
 
 func (p ProcessPort) Draw(ctxt interface{}) {
+	p.DrawDefault(ctxt)
     switch ctxt.(type) {
     case *cairo.Context:
 		empty := image.Point{}
@@ -56,7 +57,6 @@ func (p ProcessPort) Draw(ctxt interface{}) {
 			}
 		}
     }
-	p.DrawDefault(ctxt)
 }
 
 func (p *ProcessPort) SetPosition(pos image.Point) {
@@ -84,7 +84,7 @@ func ProcessNew(pos image.Point, userObj interfaces.ProcessObject, arch ArchIf) 
 			ColorInit(ColorOption(ProcessSelected)),
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
-			image.Point{global.padX, global.padY}, userObj), userObj, nil, -1, arch}
+			image.Point{procPortOutBorder, procPortOutBorder}, userObj), userObj, nil, -1, arch}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})

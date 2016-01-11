@@ -2,9 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 )
 
 func SignalGraphNew(filename string, context Context) *signalGraph {
@@ -27,6 +27,10 @@ func (s *signalGraph) Filename() string {
 
 func (s *signalGraph) ItsType() SignalGraphType {
 	return s.itsType
+}
+
+func (s *signalGraph) GraphObject() interfaces.GraphObject {
+	return s.itsType.(*signalGraphType)
 }
 
 func (s *signalGraph) Read(data []byte) error {

@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
 	"log"
 	"strings"
@@ -16,6 +17,7 @@ type platform struct {
 }
 
 var _ Platform = (*platform)(nil)
+var _ interfaces.PlatformObject = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
 	return &platform{filename, "", archListInit(), image.Point{}}
@@ -31,6 +33,14 @@ func (p *platform) SetPlatformId(newId string) {
 
 func (p *platform) Arch() []Arch {
 	return p.archlist.Archs()
+}
+
+func (p *platform) ArchObjects() []interfaces.ArchObject {
+	return p.archlist.Exports()
+}
+
+func (p *platform) PlatformObject() interfaces.PlatformObject {
+	return p
 }
 
 /*
@@ -194,7 +204,7 @@ func (p *platform) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 			err = fmt.Errorf("platform.AddNewObject warning: duplicate arch name %s (abort)\n", a.Name())
 			return
 		}
-		p.archlist.Append(a)
+		p.archlist.Append(a.(*arch))
 		newCursor = tree.Insert(cursor)
 		a.AddToTree(tree, newCursor)
 

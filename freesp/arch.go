@@ -3,6 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
 	"log"
 )
@@ -13,31 +14,64 @@ type arch struct {
 	processes       processList
 	platform        Platform
 	position, shape image.Point
+	archPorts       []interfaces.ArchPortObject
+}
+
+type archPort struct {
+	channel  interfaces.ChannelObject
+	position image.Point
+}
+
+func (p *archPort) Channel() interfaces.ChannelObject {
+	return p.channel
+}
+
+func (p *archPort) Position() image.Point {
+	return p.position
+}
+
+func (p *archPort) SetPosition(pos image.Point) {
+	p.position = pos
 }
 
 var _ Arch = (*arch)(nil)
+var _ interfaces.ArchObject = (*arch)(nil)
+var _ interfaces.ArchPortObject = (*archPort)(nil)
 
 func ArchNew(name string, platform Platform) *arch {
-	return &arch{name, ioTypeListInit(), processListInit(), platform, image.Point{}, image.Point{}}
+	return &arch{name, ioTypeListInit(), processListInit(), platform, image.Point{}, image.Point{}, nil}
 }
 
 func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 	a.name = xmla.Name
 	for _, xmlt := range xmla.IOType {
 		var t IOType
-		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
+		pos := image.Point{xmlt.Hint.X, xmlt.Hint.Y}
+		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform, pos)
 		if err != nil {
 			return
 		}
-		a.iotypes.Append(t)
+		a.iotypes.Append(t.(*iotype))
 	}
 	for _, xmlp := range xmla.Processes {
-		p := ProcessNew(xmlp.Name, a)
-		err = p.createProcessFromXml(xmlp, a.IOTypes())
+		pr := ProcessNew(xmlp.Name, a)
+		err = pr.createProcessFromXml(xmlp, a.IOTypes())
 		if err != nil {
 			err = fmt.Errorf("arch.createArchFromXml error: %s\n", err)
 		}
-		a.processes.Append(p)
+		a.processes.Append(pr)
+		for i, c := range pr.InChannelObjects() {
+			xmlc := xmlp.InputChannels[i]
+			p := &archPort{c, image.Point{xmlc.Hint.Port.X, xmlc.Hint.Port.Y}}
+			a.archPorts = append(a.archPorts, p)
+			c.(*channel).archPort = p
+		}
+		for i, c := range pr.OutChannelObjects() {
+			xmlc := xmlp.OutputChannels[i]
+			p := &archPort{c, image.Point{xmlc.Hint.Port.X, xmlc.Hint.Port.Y}}
+			a.archPorts = append(a.archPorts, p)
+			c.(*channel).archPort = p
+		}
 	}
 	a.position = image.Point{xmla.Rect.X, xmla.Rect.Y}
 	a.shape = image.Point{xmla.Rect.W, xmla.Rect.H}
@@ -52,8 +86,20 @@ func (a *arch) IOTypes() []IOType {
 	return a.iotypes.IoTypes()
 }
 
+func (a *arch) IOTypeObjects() []interfaces.IOTypeObject {
+	return a.iotypes.Exports()
+}
+
 func (a *arch) Processes() []Process {
 	return a.processes.Processes()
+}
+
+func (a *arch) ProcessObjects() []interfaces.ProcessObject {
+	return a.processes.Exports()
+}
+
+func (a *arch) PortObjects() []interfaces.ArchPortObject {
+	return a.archPorts
 }
 
 /*
@@ -133,7 +179,7 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate ioType name %s (abort)\n", t.Name())
 			return
 		}
-		a.iotypes.Append(t)
+		a.iotypes.Append(t.(*iotype))
 		cursor.Position = len(a.IOTypes()) - 1
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
@@ -145,7 +191,7 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate process name %s (abort)\n", p.Name())
 			return
 		}
-		a.processes.Append(p)
+		a.processes.Append(p.(*process))
 		newCursor = tree.Insert(cursor)
 		p.AddToTree(tree, newCursor)
 		//log.Printf("arch.AddNewObject: successfully added process %v\n", p)
@@ -228,15 +274,17 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
  */
 
 type archList struct {
-	archs []Arch
+	archs   []Arch
+	exports []interfaces.ArchObject
 }
 
 func archListInit() archList {
-	return archList{nil}
+	return archList{nil, nil}
 }
 
-func (l *archList) Append(a Arch) {
+func (l *archList) Append(a *arch) {
 	l.archs = append(l.archs, a)
+	l.exports = append(l.exports, a)
 }
 
 func (l *archList) Remove(a Arch) {
@@ -254,12 +302,18 @@ func (l *archList) Remove(a Arch) {
 	}
 	for i++; i < len(l.archs); i++ {
 		l.archs[i-1] = l.archs[i]
+		l.exports[i-1] = l.exports[i]
 	}
 	l.archs = l.archs[:len(l.archs)-1]
+	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *archList) Archs() []Arch {
 	return l.archs
+}
+
+func (l *archList) Exports() []interfaces.ArchObject {
+	return l.exports
 }
 
 func (l *archList) Find(name string) (a Arch, ok bool) {

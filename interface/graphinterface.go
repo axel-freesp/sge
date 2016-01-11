@@ -2,12 +2,19 @@ package interfaces
 
 import (
 	"fmt"
-    "image"
+	"image"
 )
 
 /*
  * 	Graph user objects
  */
+
+type GraphElement interface {
+}
+
+type GraphObject interface {
+	NodeObjects() []NodeObject
+}
 
 type NodeObject interface {
 	Namer
@@ -19,23 +26,54 @@ type PortObject interface {
 	Namer
 	Directioner
 	NodeObject() NodeObject
+	ConnectionObjects() []PortObject
 	ConnectionObject(PortObject) ConnectionObject
+}
+
+type ConnectionObject interface {
+	FromObject() PortObject
+	ToObject() PortObject
+}
+
+type PlatformObject interface {
+	ArchObjects() []ArchObject
 }
 
 type ArchObject interface {
 	Namer
 	Positioner
 	Shaper
+	ProcessObjects() []ProcessObject
+	IOTypeObjects() []IOTypeObject
+	PortObjects() []ArchPortObject
+}
+
+type ArchPortObject interface {
+	Positioner
+	Channel() ChannelObject
+}
+
+type IOTypeObject interface {
+	Namer
+	Positioner
+	IOModer
 }
 
 type ProcessObject interface {
 	Namer
 	Positioner
+	ArchObject() ArchObject
+	InChannelObjects() []ChannelObject
+	OutChannelObjects() []ChannelObject
 }
 
-type ConnectionObject interface {
-	FromObject() PortObject
-	ToObject() PortObject
+type ChannelObject interface {
+	Positioner
+	Directioner
+	IOTypeObject() IOTypeObject
+	ProcessObject() ProcessObject
+	LinkObject() ChannelObject
+	ArchPortObject() ArchPortObject
 }
 
 /*
@@ -56,8 +94,6 @@ type Shaper interface {
 	Shape() image.Point
 	SetShape(image.Point)
 }
-
-
 
 type Porter interface {
 	GetInPorts() []PortObject
@@ -84,9 +120,20 @@ func (d PortDirection) String() (s string) {
 	return
 }
 
-
 type Directioner interface {
 	Direction() PortDirection
 	SetDirection(PortDirection)
 }
 
+type IOMode string
+
+const (
+	IOModeShmem IOMode = "Shared Memory"
+	IOModeAsync IOMode = "Asynchronous"
+	IOModeSync  IOMode = "Isochronous"
+)
+
+type IOModer interface {
+	IOMode() IOMode
+	SetIOMode(IOMode)
+}

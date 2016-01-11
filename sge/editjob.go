@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
 	"log"
 	//"strings"
+	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/models"
 )
 
 type EditJob struct {
@@ -106,6 +107,9 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		state = ptCursor.Path
 	case eSignalType:
 		st := obj.(freesp.SignalType)
+		if (*detail)[iSignalTypeName] != st.TypeName() {
+			log.Printf("jobApplier.Apply(JobEdit): Renaming SignalType is not implemented.\n")
+		}
 		(*old)[iCType] = st.CType()
 		st.SetCType((*detail)[iCType])
 		(*old)[iChannelId] = st.ChannelId()
@@ -173,8 +177,8 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 				}
 			}
 		}
-		(*old)[iIOModeSelect] = string(t.Mode())
-		t.SetMode(freesp.IOMode((*detail)[iIOModeSelect]))
+		(*old)[iIOModeSelect] = string(t.IOMode())
+		t.SetIOMode(interfaces.IOMode((*detail)[iIOModeSelect]))
 		fts.SetValueById(j.objId, t.Name())
 	case eChannel:
 		c := obj.(freesp.Channel)

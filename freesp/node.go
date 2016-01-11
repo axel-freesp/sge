@@ -2,9 +2,9 @@ package freesp
 
 import (
 	"fmt"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
 	"log"
-	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type node struct {
@@ -331,15 +331,17 @@ var _ interfaces.Porter = (*node)(nil)
  */
 
 type nodeList struct {
-	nodes []Node
+	nodes   []Node
+	exports []interfaces.NodeObject
 }
 
 func nodeListInit() nodeList {
-	return nodeList{nil}
+	return nodeList{nil, nil}
 }
 
-func (l *nodeList) Append(n Node) {
+func (l *nodeList) Append(n *node) {
 	l.nodes = append(l.nodes, n)
+	l.exports = append(l.exports, n)
 }
 
 func (l *nodeList) Remove(n Node) {
@@ -357,12 +359,18 @@ func (l *nodeList) Remove(n Node) {
 	}
 	for i++; i < len(l.nodes); i++ {
 		l.nodes[i-1] = l.nodes[i]
+		l.exports[i-1] = l.exports[i]
 	}
 	l.nodes = l.nodes[:len(l.nodes)-1]
+	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *nodeList) Nodes() []Node {
 	return l.nodes
+}
+
+func (l *nodeList) Exports() []interfaces.NodeObject {
+	return l.exports
 }
 
 func (l *nodeList) Find(node Node) (ok bool, index int) {

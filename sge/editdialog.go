@@ -2,11 +2,11 @@ package main
 
 import (
 	//"fmt"
-	"log"
 	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 )
 
 type EditDialog struct {
@@ -107,7 +107,7 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 	case freesp.IOType:
 		dialog.ioTypeNameEntry.SetText(obj.(freesp.IOType).Name())
 		for i, t = range ioModeStrings {
-			if string(obj.(freesp.IOType).Mode()) == t {
+			if string(obj.(freesp.IOType).IOMode()) == t {
 				break
 			}
 		}

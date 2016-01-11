@@ -27,59 +27,60 @@ func ConnectionNew(from, to NodeIf, fromPort, toPort int) (ret *Connection) {
     return ret
 }
 
-func (c *Connection) IsLinked(nodeName string) bool {
+func (c Connection) IsLinked(nodeName string) bool {
     return c.from.Name() == nodeName || c.to.Name() == nodeName
 }
 
-func (c *Connection) From() NodeIf {
+func (c Connection) From() NodeIf {
     return c.from
 }
 
-func (c *Connection) To() NodeIf {
+func (c Connection) To() NodeIf {
     return c.to
 }
 
-func (c *Connection) FromId() int {
+func (c Connection) FromId() int {
     return c.fromPort
 }
 
-func (c *Connection) ToId() int {
+func (c Connection) ToId() int {
     return c.toPort
 }
 
-func (c *Connection) connectionPoints() (p1, p2 image.Point) {
+func (c Connection) connectionPoints() (p1, p2 image.Point) {
     p1 = c.from.BBox().Min.Add(conOut.Add(portDY.Mul(c.fromPort)))
     p2 = c.to.BBox().Min.Add(conIn.Add(portDY.Mul(c.toPort)))
     return
 }
 
 
-/*
- *	Drawer interface
- */
+//
+//	Drawer interface
+//
 
-func (c *Connection) Draw(ctxt interface{}){
+func (c Connection) Draw(ctxt interface{}){
     switch ctxt.(type) {
     case *cairo.Context:
-	context := ctxt.(*cairo.Context)
-	var r, g, b float64
-	if c.selected {
-	    r, g, b = ColorOption(SelectLine)
-	} else if c.highlighted {
-	    r, g, b = ColorOption(HighlightLine)
-	} else {
-	    r, g, b = ColorOption(NormalLine)
-	}
-	context.SetLineWidth(2)
-	context.SetSourceRGB(r, g, b)
-	p1, p2 := c.connectionPoints()
-	DrawArrow(context, p1, p2)
+        context := ctxt.(*cairo.Context)
+        var r, g, b float64
+        if c.IsSelected() {
+            r, g, b = ColorOption(SelectLine)
+        } else if c.IsHighlighted() {
+            r, g, b = ColorOption(HighlightLine)
+        } else {
+            r, g, b = ColorOption(NormalLine)
+        }
+        context.SetLineWidth(2)
+        context.SetSourceRGB(r, g, b)
+        p1, p2 := c.connectionPoints()
+        DrawArrow(context, p1, p2)
     }
 }
 
-/*
- *	Overwrite default implementation
- */
+
+//
+//	Overwrite default implementation
+//
 
 func (c *Connection) CheckHit(pos image.Point) (hit, modified bool) {
     f, r := c.Transformation()
@@ -87,8 +88,7 @@ func (c *Connection) CheckHit(pos image.Point) (hit, modified bool) {
     px := math.Abs(float64(p.X))
     py := math.Abs(float64(p.Y))
     hit = (px <= r && py <= 4.0)
-    modified = c.highlighted != hit
-    c.highlighted = hit
+	modified = c.DoHighlight(hit, pos)
     return
 }
 
@@ -103,7 +103,7 @@ func (c *Connection) BBox() image.Rectangle {
     return r
 }
 
-func (c *Connection) Transformation() (func(image.Point) image.Point, float64) {
+func (c Connection) Transformation() (func(image.Point) image.Point, float64) {
     a, b := c.connectionPoints()
     m := a.Add(b).Div(2)
     am := m.Sub(a)
@@ -111,17 +111,18 @@ func (c *Connection) Transformation() (func(image.Point) image.Point, float64) {
     cos := float64(m.X - a.X) / r
     sin := float64(a.Y - m.Y) / r
     return func(x image.Point) (y image.Point) {
-	p1 := x.Sub(m)
-	a := int(cos*float64(p1.X) - sin*float64(p1.Y))
-	b := int(sin*float64(p1.X) + cos*float64(p1.Y))
-	y = image.Point{a, b}
-	return
+        p1 := x.Sub(m)
+        a := int(cos*float64(p1.X) - sin*float64(p1.Y))
+        b := int(sin*float64(p1.X) + cos*float64(p1.Y))
+        y = image.Point{a, b}
+        return
     }, r
 }
 
-/*
- *	Private functions
- */
+
+//
+//	Private functions
+//
 
 func trans(cos, sin float64, m, x image.Point) (y image.Point) {
     p1 := x.Sub(m)
@@ -129,6 +130,10 @@ func trans(cos, sin float64, m, x image.Point) (y image.Point) {
     b := int(sin*float64(p1.X) + cos*float64(p1.Y))
     y = image.Point{a, b}
     return
+}
+
+func DrawLine(gc *cairo.Context, p1, p2 image.Point) {
+	drawLine(gc, p1, p2)
 }
 
 func drawLine(gc *cairo.Context, p1, p2 image.Point) {

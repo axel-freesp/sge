@@ -2,9 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	"strings"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"strings"
 )
 
 func CreateXML(object interface{}) (buf []byte, err error) {
@@ -281,7 +281,8 @@ func CreateXmlArch(a Arch) *backend.XmlArch {
 }
 
 func CreateXmlIOType(t IOType) *backend.XmlIOType {
-	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.Mode()])
+	hint := backend.XmlHint{t.(*iotype).Position().X, t.(*iotype).Position().Y}
+	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.IOMode()], hint)
 }
 
 func CreateXmlProcess(p Process) *backend.XmlProcess {
@@ -298,11 +299,23 @@ func CreateXmlProcess(p Process) *backend.XmlProcess {
 }
 
 func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
+	var portHint backend.XmlHint
+	if ch.(*channel).archPort != nil {
+		portHint = backend.XmlHint{ch.(*channel).archPort.Position().X, ch.(*channel).archPort.Position().Y}
+	}
+	hint := backend.XmlChannelHint{backend.XmlHint{ch.(*channel).Position().X, ch.(*channel).Position().Y},
+		portHint}
 	return backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(),
-		ch.(*channel).linkText)
+		ch.(*channel).linkText, hint)
 }
 
 func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
+	var portHint backend.XmlHint
+	if ch.(*channel).archPort != nil {
+		portHint = backend.XmlHint{ch.(*channel).archPort.Position().X, ch.(*channel).archPort.Position().Y}
+	}
+	hint := backend.XmlChannelHint{backend.XmlHint{ch.(*channel).Position().X, ch.(*channel).Position().Y},
+		portHint}
 	return backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(),
-		ch.(*channel).linkText)
+		ch.(*channel).linkText, hint)
 }

@@ -4,41 +4,47 @@ import (
     "image"
 )
 
-/*
- *      Default BBox implementation
- */
+//
+//	Default BBox implementation
+//
 
 type BBoxObject struct {
-	box image.Rectangle
+    box image.Rectangle
 }
 
 func BBoxInit(box image.Rectangle) BBoxObject{
     return BBoxObject{box}
 }
 
-func (b *BBoxObject) BBox() image.Rectangle {
-	return b.box
+func (b BBoxObject) BBox() image.Rectangle {
+    return b.box
 }
 
-/*
- *      Positioner implementation
- */
 
-func (b *BBoxObject) Position() image.Point {
+//
+//	Positioner implementation
+//
+
+func (b BBoxObject) Position() image.Point {
     return b.box.Min
 }
 
-func (b *BBoxObject) SetPosition(pos image.Point) {
+func (b *BBoxObject) DefaultSetPosition(pos image.Point) {
     size := b.Shape()
     b.box.Min = pos
     b.SetShape(size)
 }
 
-/*
- *      Shaper implementation
- */
+func (b *BBoxObject) SetPosition(pos image.Point) {
+    b.DefaultSetPosition(pos)
+}
 
-func (b *BBoxObject) Shape() image.Point {
+
+//
+//	Shaper implementation
+//
+
+func (b BBoxObject) Shape() image.Point {
     return b.box.Max.Sub(b.box.Min)
 }
 
@@ -47,9 +53,9 @@ func (b *BBoxObject) SetShape(newSize image.Point) {
 }
 
 
-/*
- *      Helper functions
- */
+//
+//      Helper functions
+//
 
 func size(b BBoxer) (w, h float64) {
 	box := b.BBox()

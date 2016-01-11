@@ -2,11 +2,11 @@ package freesp
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
 	"log"
 	"strings"
-	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type process struct {
@@ -38,7 +38,7 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
+		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source, image.Point{xmlc.Hint.Channel.X, xmlc.Hint.Channel.Y})
 		p.inChannels.Append(c)
 	}
 	for _, xmlc := range xmlp.OutputChannels {
@@ -54,7 +54,7 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (out): referenced ioType %s not found.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
+		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest, image.Point{xmlc.Hint.Channel.X, xmlc.Hint.Channel.Y})
 		p.outChannels.Append(c)
 	}
 	p.position = image.Point{xmlp.Rect.X, xmlp.Rect.Y}
@@ -66,12 +66,24 @@ func (p *process) Arch() Arch {
 	return p.arch
 }
 
+func (p *process) ArchObject() interfaces.ArchObject {
+	return p.arch.(*arch)
+}
+
 func (p *process) InChannels() []Channel {
 	return p.inChannels.Channels()
 }
 
 func (p *process) OutChannels() []Channel {
 	return p.outChannels.Channels()
+}
+
+func (p *process) InChannelObjects() []interfaces.ChannelObject {
+	return p.inChannels.Exports()
+}
+
+func (p *process) OutChannelObjects() []interfaces.ChannelObject {
+	return p.outChannels.Exports()
 }
 
 /*
@@ -197,7 +209,7 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 				pp, dd, ccLinkText, c.iotype.Name())
 			return
 		}
-		cc := ChannelNew(dd, c.iotype, pp, ccLinkText)
+		cc := ChannelNew(dd, c.iotype, pp, ccLinkText, image.Point{})
 		cc.link = c
 		c.link = cc
 		l.Append(c)
@@ -262,14 +274,16 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 
 type processList struct {
 	processs []Process
+	exports  []interfaces.ProcessObject
 }
 
 func processListInit() processList {
-	return processList{nil}
+	return processList{nil, nil}
 }
 
-func (l *processList) Append(p Process) {
+func (l *processList) Append(p *process) {
 	l.processs = append(l.processs, p)
+	l.exports = append(l.exports, p)
 }
 
 func (l *processList) Remove(p Process) {
@@ -287,12 +301,18 @@ func (l *processList) Remove(p Process) {
 	}
 	for i++; i < len(l.processs); i++ {
 		l.processs[i-1] = l.processs[i]
+		l.exports[i-1] = l.exports[i]
 	}
 	l.processs = l.processs[:len(l.processs)-1]
+	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *processList) Processes() []Process {
 	return l.processs
+}
+
+func (l *processList) Exports() []interfaces.ProcessObject {
+	return l.exports
 }
 
 func (l *processList) Find(name string) (p Process, ok bool) {

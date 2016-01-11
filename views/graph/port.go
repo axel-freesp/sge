@@ -17,32 +17,32 @@ func PortNew(box image.Rectangle, userObj interfaces.PortObject) *Port {
 
 var _ PortIf = (*Port)(nil)
 
-func (p *Port) UserObj() interfaces.PortObject {
+func (p Port) UserObj() interfaces.PortObject {
 	return p.userObj
 }
 
-/*
- *	Drawer interface
- */
+//
+//	Drawer interface
+//
 
-func (p *Port) Draw(ctxt interface{}){
+func (p Port) Draw(ctxt interface{}){
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
 		var r, g, b float64
 		switch p.userObj.Direction() {
 		case interfaces.InPort:
-			if p.selected {
+			if p.IsSelected() {
 				r, g, b = ColorOption(SelectInPort)
-			} else if p.highlighted {
+			} else if p.IsHighlighted() {
 				r, g, b = ColorOption(HighlightInPort)
 			} else {
 				r, g, b = ColorOption(InputPort)
 			}
 		case interfaces.OutPort:
-			if p.selected {
+			if p.IsSelected() {
 				r, g, b = ColorOption(SelectOutPort)
-			} else if p.highlighted {
+			} else if p.IsHighlighted() {
 				r, g, b = ColorOption(HighlightOutPort)
 			} else {
 				r, g, b = ColorOption(OutputPort)
@@ -59,19 +59,4 @@ func (p *Port) Draw(ctxt interface{}){
 		context.Stroke()
 	}
 }
-
-/*
- *	freesp.Positioner interface
- */
-
-func (p *Port) Position() image.Point {
-	return p.BBox().Min
-}
-
-func (p *Port) SetPosition(pos image.Point) {
-	size := p.BBox().Size()
-	p.box.Min = pos
-	p.box.Max = p.box.Min.Add(size)
-}
-
 

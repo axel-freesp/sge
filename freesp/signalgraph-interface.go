@@ -29,6 +29,7 @@ type SignalGraph interface {
 	TreeElement
 	Filenamer
 	ItsType() SignalGraphType
+	GraphObject() interfaces.GraphObject
 }
 
 type Library interface {
@@ -63,6 +64,7 @@ type Implementation interface {
 	ElementName() string
 	SetElemName(string)
 	Graph() SignalGraphType
+	GraphObject() interfaces.GraphObject
 	// missing: input mapping, output mapping
 }
 
@@ -167,6 +169,7 @@ type Platform interface {
 	PlatformId() string
 	SetPlatformId(string)
 	Arch() []Arch
+	PlatformObject() interfaces.PlatformObject
 }
 
 type Arch interface {
@@ -182,18 +185,9 @@ type Arch interface {
 type IOType interface {
 	TreeElement
 	interfaces.Namer
-	Mode() IOMode
-	SetMode(IOMode)
+	interfaces.IOModer
 	Platform() Platform
 }
-
-type IOMode string
-
-const (
-	IOModeShmem IOMode = "Shared Memory"
-	IOModeAsync IOMode = "Asynchronous"
-	IOModeSync  IOMode = "Isochronous"
-)
 
 type Process interface {
 	TreeElement

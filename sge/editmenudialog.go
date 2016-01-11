@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 )
 
 // Menu control wants to see this:
@@ -85,9 +85,9 @@ var modeStrings = []string{"Isochronous", "Asynchronous"}
 var directionStrings = []string{"InPort", "OutPort"}
 var implTypeStrings = []string{"Elementary Type", "Signal Graph"}
 var ioModeStrings = []string{
-	string(freesp.IOModeShmem),
-	string(freesp.IOModeAsync),
-	string(freesp.IOModeSync),
+	string(interfaces.IOModeShmem),
+	string(interfaces.IOModeAsync),
+	string(interfaces.IOModeSync),
 }
 
 var scope2string = map[freesp.Scope]string{

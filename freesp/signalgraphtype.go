@@ -2,17 +2,18 @@ package freesp
 
 import (
 	"fmt"
-	"log"
-	"image"
-	"strings"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
+	"log"
+	"strings"
 )
 
 type signalGraphType struct {
-	context                                         Context
-	libraries                                       []Library
-	nodes, inputNodes, outputNodes, processingNodes []Node
+	context                                  Context
+	libraries                                []Library
+	nodes                                    nodeList
+	inputNodes, outputNodes, processingNodes []Node
 }
 
 /*
@@ -20,17 +21,22 @@ type signalGraphType struct {
  */
 
 var _ SignalGraphType = (*signalGraphType)(nil)
+var _ interfaces.GraphObject = (*signalGraphType)(nil)
 
 func SignalGraphTypeNew(context Context) *signalGraphType {
-	return &signalGraphType{context, nil, nil, nil, nil, nil}
+	return &signalGraphType{context, nil, nodeListInit(), nil, nil, nil}
 }
 
 func (t *signalGraphType) Nodes() []Node {
-	return t.nodes
+	return t.nodes.Nodes()
+}
+
+func (t *signalGraphType) NodeObjects() []interfaces.NodeObject {
+	return t.nodes.Exports()
 }
 
 func (t *signalGraphType) NodeByName(name string) Node {
-	for _, n := range t.nodes {
+	for _, n := range t.Nodes() {
 		if n.Name() == name {
 			return n
 		}
@@ -78,7 +84,7 @@ func (t *signalGraphType) RemoveNode(n Node) {
 			c.RemoveConnection(p)
 		}
 	}
-	RemNode(&t.nodes, n.(*node))
+	t.nodes.Remove(n)
 	RemNode(&t.inputNodes, n.(*node))
 	RemNode(&t.outputNodes, n.(*node))
 	RemNode(&t.processingNodes, n.(*node))
@@ -133,7 +139,7 @@ func (t *signalGraphType) addNode(n Node) error {
 			return fmt.Errorf("signalGraphType.AddNode error: node has no ports")
 		}
 	}
-	t.nodes = append(t.nodes, n.(*node))
+	t.nodes.Append(n.(*node))
 	return nil
 }
 
@@ -173,7 +179,7 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 			return
 		}
 		t.inputNodes = append(t.inputNodes, nnode)
-		t.nodes = append(t.nodes, nnode)
+		t.nodes.Append(nnode)
 	}
 	for _, n := range g.OutputNodes {
 		var nnode *node
@@ -182,12 +188,12 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 			return
 		}
 		t.outputNodes = append(t.outputNodes, nnode)
-		t.nodes = append(t.nodes, nnode)
+		t.nodes.Append(nnode)
 	}
 	for _, n := range g.ProcessingNodes {
 		nnode := t.createNodeFromXml(n.XmlNode)
 		t.processingNodes = append(t.processingNodes, nnode)
-		t.nodes = append(t.nodes, nnode)
+		t.nodes.Append(nnode)
 	}
 	for i, c := range g.Connections {
 		n1 := t.NodeByName(c.From)

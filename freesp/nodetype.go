@@ -2,8 +2,8 @@ package freesp
 
 import (
 	"github.com/axel-freesp/sge/backend"
-	"log"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 )
 
 type nodeType struct {

@@ -56,9 +56,9 @@ func NumericOption(index int) int {
 // Index arguments for ColorOption()
 const (
 	Background = iota
-	Normal
-	Highlight
-	Selected
+	NodeNormal
+	NodeHighlight
+	NodeSelected
 	InputPort
 	OutputPort
 	BoxFrame
@@ -70,6 +70,18 @@ const (
 	SelectLine
 	HighlightLine
 	NormalLine
+	ArchNormal
+	ArchHighlight
+	ArchSelected
+	ProcessNormal
+	ProcessHighlight
+	ProcessSelected
+	SelectArchPort
+	HighlightArchPort
+	NormalArchPort
+	SelectChannelLine
+	HighlightChannelLine
+	NormalChannelLine
 )
 
 func ColorOption(index int) (r, g, b float64) {
@@ -129,14 +141,14 @@ var defaultOptions = gOptions{
 		{"Port Y0", 24},
 		{"Port DY", 12},
 		{"Font Size", 12},
-		{"Process Width", 100},
-		{"Process Height", 32},
+		{"Process Width", 120},
+		{"Process Height", 52},
 	},
 	[]optionColor{
 		{"Background", color.RGBA{240, 240, 240, 0xff}},
-		{"Normal", color.RGBA{255, 204, 146, 0xff}},
-		{"Highlight", color.RGBA{255, 234, 170, 0xff}},
-		{"Selected", color.RGBA{221, 255, 190, 0xff}},
+		{"NormalNode", color.RGBA{255, 204, 146, 0xff}},
+		{"HighlightNode", color.RGBA{255, 234, 170, 0xff}},
+		{"SelectedNode", color.RGBA{221, 255, 190, 0xff}},
 		{"InputPort", color.RGBA{255, 60, 60, 0xff}},
 		{"OutputPort", color.RGBA{60, 60, 255, 0xff}},
 		{"BoxFrame", color.RGBA{0, 0, 0, 0xff}},
@@ -148,6 +160,18 @@ var defaultOptions = gOptions{
 		{"SelectLine", color.RGBA{0, 0, 255, 0xff}},
 		{"HighlightLine", color.RGBA{0, 190, 0, 0xff}},
 		{"NormalLine", color.RGBA{120, 120, 120, 0xff}},
+		{"NormalArch", color.RGBA{70, 140, 0, 0xff}},
+		{"HighlightArch", color.RGBA{90, 180, 0, 0xff}},
+		{"SelectedArch", color.RGBA{201, 187, 0, 0xff}},
+		{"NormalProcess", color.RGBA{255, 204, 146, 0xff}},
+		{"HighlightProcess", color.RGBA{255, 234, 170, 0xff}},
+		{"SelectedProcess", color.RGBA{221, 255, 190, 0xff}},
+		{"SelectArchPort", color.RGBA{255, 255, 120, 0xff}},
+		{"HighlightArchPort", color.RGBA{255, 170, 170, 0xff}},
+		{"NormalArchPort", color.RGBA{225, 225, 225, 0xff}},
+		{"SelectChannelLine", color.RGBA{190, 0, 0, 0xff}},
+		{"HighlightChannelLine", color.RGBA{255, 255, 180, 0xff}},
+		{"NormalChannelLine", color.RGBA{0, 0, 0, 0xff}},
 	},
 	[]optionString{	// actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},

@@ -2,8 +2,8 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 )
 
 type connection struct {

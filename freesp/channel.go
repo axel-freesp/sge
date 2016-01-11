@@ -2,8 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
+	"log"
 )
 
 type channel struct {
@@ -12,12 +13,31 @@ type channel struct {
 	link      Channel
 	process   Process
 	linkText  string
+	position  image.Point
+	archPort  interfaces.ArchPortObject
 }
 
 var _ Channel = (*channel)(nil)
+var _ interfaces.ChannelObject = (*channel)(nil)
 
-func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string) *channel {
-	return &channel{dir, iotype, nil, process, linkText}
+func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string, pos image.Point) *channel {
+	return &channel{dir, iotype, nil, process, linkText, pos, nil}
+}
+
+func (c *channel) IOTypeObject() interfaces.IOTypeObject {
+	return c.iotype.(*iotype)
+}
+
+func (c *channel) ProcessObject() interfaces.ProcessObject {
+	return c.process.(*process)
+}
+
+func (c *channel) LinkObject() interfaces.ChannelObject {
+	return c.link.(*channel)
+}
+
+func (c *channel) ArchPortObject() interfaces.ArchPortObject {
+	return c.archPort
 }
 
 func (c *channel) Process() Process {
@@ -38,6 +58,19 @@ func (c *channel) SetIOType(newIOType IOType) {
 
 func (c *channel) Link() Channel {
 	return c.link
+}
+
+/*
+ *      Positioner API
+ */
+
+func (c *channel) Position() (p image.Point) {
+	p = c.position
+	return
+}
+
+func (c *channel) SetPosition(p image.Point) {
+	c.position = p
 }
 
 /*
@@ -121,14 +154,16 @@ func (c *channel) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 
 type channelList struct {
 	channels []Channel
+	exports  []interfaces.ChannelObject
 }
 
 func channelListInit() channelList {
-	return channelList{nil}
+	return channelList{}
 }
 
-func (l *channelList) Append(ch Channel) {
+func (l *channelList) Append(ch *channel) {
 	l.channels = append(l.channels, ch)
+	l.exports = append(l.exports, ch)
 }
 
 func (l *channelList) Remove(ch Channel) {
@@ -146,12 +181,18 @@ func (l *channelList) Remove(ch Channel) {
 	}
 	for i++; i < len(l.channels); i++ {
 		l.channels[i-1] = l.channels[i]
+		l.exports[i-1] = l.exports[i]
 	}
 	l.channels = l.channels[:len(l.channels)-1]
+	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *channelList) Channels() []Channel {
 	return l.channels
+}
+
+func (l *channelList) Exports() []interfaces.ChannelObject {
+	return l.exports
 }
 
 func (l *channelList) Find(name string) (c Channel, ok bool) {

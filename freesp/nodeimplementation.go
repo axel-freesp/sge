@@ -2,6 +2,7 @@ package freesp
 
 import (
 	"fmt"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"log"
 )
 
@@ -35,6 +36,10 @@ func (n *implementation) SetElemName(newName string) {
 
 func (n *implementation) Graph() SignalGraphType {
 	return n.graph
+}
+
+func (n *implementation) GraphObject() interfaces.GraphObject {
+	return n.graph.(*signalGraphType)
 }
 
 /*

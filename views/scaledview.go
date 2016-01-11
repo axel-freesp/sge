@@ -1,9 +1,9 @@
 package views
 
 import (
-	"math"
-	"image"
 	"github.com/gotk3/gotk3/gtk"
+	"image"
+	"math"
 )
 
 const (
@@ -46,6 +46,14 @@ func (v *ScaledView) Container() *gtk.Container {
 
 func (v *ScaledView) Position(pos image.Point) image.Point {
 	return image.Point{int(float64(pos.X) / v.Scale()), int(float64(pos.Y) / v.Scale())}
+}
+
+func (v *ScaledView) ScaleCoord(x int, roundUp bool) int {
+	if roundUp {
+		return int(math.Ceil(float64(x) * v.scale))
+	} else {
+		return int(float64(x) * v.scale)
+	}
 }
 
 func (v *ScaledView) init() (err error) {

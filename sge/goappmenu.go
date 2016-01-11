@@ -7,35 +7,35 @@ import (
 )
 
 type GoAppMenu struct {
-	menubar    *gtk.MenuBar
-	menuFile   *gtk.Menu
-	filemenu   *gtk.MenuItem
-	fileNewSg  *gtk.MenuItem
-	fileNewLib *gtk.MenuItem
-	fileOpen   *gtk.MenuItem
-	fileSave   *gtk.MenuItem
-	fileSaveAs *gtk.MenuItem
-	fileQuit   *gtk.MenuItem
-	menuEdit   *gtk.Menu
-	editmenu   *gtk.MenuItem
-	editUndo   *gtk.MenuItem
-	editRedo   *gtk.MenuItem
-	editNew    *gtk.MenuItem
-	editEdit   *gtk.MenuItem
-	editDelete *gtk.MenuItem
-	editCopy   *gtk.MenuItem
-	editPaste  *gtk.MenuItem
-	menuAbout  *gtk.Menu
-	aboutmenu  *gtk.MenuItem
-	aboutAbout *gtk.MenuItem
-	aboutHelp  *gtk.MenuItem
+	menubar     *gtk.MenuBar
+	menuFile    *gtk.Menu
+	filemenu    *gtk.MenuItem
+	fileNewSg   *gtk.MenuItem
+	fileNewLib  *gtk.MenuItem
+	fileNewPlat *gtk.MenuItem
+	fileOpen    *gtk.MenuItem
+	fileSave    *gtk.MenuItem
+	fileSaveAs  *gtk.MenuItem
+	fileQuit    *gtk.MenuItem
+	menuEdit    *gtk.Menu
+	editmenu    *gtk.MenuItem
+	editUndo    *gtk.MenuItem
+	editRedo    *gtk.MenuItem
+	editNew     *gtk.MenuItem
+	editEdit    *gtk.MenuItem
+	editDelete  *gtk.MenuItem
+	editCopy    *gtk.MenuItem
+	editPaste   *gtk.MenuItem
+	menuAbout   *gtk.Menu
+	aboutmenu   *gtk.MenuItem
+	aboutAbout  *gtk.MenuItem
+	aboutHelp   *gtk.MenuItem
 
 	aboutdialog *gtk.AboutDialog
 }
 
 func GoAppMenuNew() *GoAppMenu {
-	return &GoAppMenu{nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+	return &GoAppMenu{}
 }
 
 func (m *GoAppMenu) Init() {
@@ -56,30 +56,35 @@ func (m *GoAppMenu) Init() {
 	}
 	m.fileNewSg, err = gtk.MenuItemNewWithLabel("New Signal Graph")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileNewSg:", err)
 	}
 	m.fileNewLib, err = gtk.MenuItemNewWithLabel("New Library")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileNewLib:", err)
+	}
+	m.fileNewPlat, err = gtk.MenuItemNewWithLabel("New Platform")
+	if err != nil {
+		log.Fatal("Unable to create fileNewPlat:", err)
 	}
 	m.fileOpen, err = gtk.MenuItemNewWithLabel("Open")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileOpen:", err)
 	}
 	m.fileSave, err = gtk.MenuItemNewWithLabel("Save")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileSave:", err)
 	}
 	m.fileSaveAs, err = gtk.MenuItemNewWithLabel("Save As")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileSaveAs:", err)
 	}
 	m.fileQuit, err = gtk.MenuItemNewWithLabel("Quit")
 	if err != nil {
-		log.Fatal("Unable to create filemenu:", err)
+		log.Fatal("Unable to create fileQuit:", err)
 	}
 	m.menuFile.Append(m.fileNewSg)
 	m.menuFile.Append(m.fileNewLib)
+	m.menuFile.Append(m.fileNewPlat)
 	x, _ := gtk.SeparatorMenuItemNew()
 	m.menuFile.Append(x)
 	m.menuFile.Append(m.fileOpen)

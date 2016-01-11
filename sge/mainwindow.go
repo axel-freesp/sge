@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
+	"log"
+	"os"
 )
 
 const (
@@ -68,6 +68,30 @@ func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
+func (g *Global) SelectArch(arch interfaces.ArchObject) {
+	a := arch.(freesp.Arch)
+	cursor := g.fts.Cursor(a)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
+func (g *Global) SelectProcess(arch interfaces.ProcessObject) {
+	p := arch.(freesp.Process)
+	cursor := g.fts.Cursor(p)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
+func (g *Global) SelectChannel(arch interfaces.ChannelObject) {
+	c := arch.(freesp.Channel)
+	cursor := g.fts.Cursor(c)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
 var global Global
 
 func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
@@ -86,14 +110,14 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		MenuEditCurrent(menu, treeStore, global.jl)
 		global.xmlview.Set(obj)
 		switch obj.(type) {
-		case freesp.Node, freesp.Port, freesp.Connection:
+		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel:
 			for _, v := range global.graphview {
 				v.Select(obj)
 			}
 		case freesp.Implementation:
 			impl := obj.(freesp.Implementation)
 			if impl.ImplementationType() == freesp.NodeTypeGraph {
-				log.Println("treeSelectionChangedCB: Have graph implementation to show")
+				//log.Println("treeSelectionChangedCB: Have graph implementation to show")
 				gv, ok := global.graphviewMap[impl]
 				if !ok {
 					cursor := treeStore.Cursor(obj)
@@ -104,7 +128,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					if !ok {
 						return
 					}
-					gv, err = views.GraphViewNew(impl.Graph(), &global)
+					gv, err = views.GraphViewNew(impl.GraphObject(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -112,7 +136,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					global.win.stack.AddTitled(gv.Widget(), nt.TypeName(), nt.TypeName())
 					global.graphviewMap[impl] = gv
 					gv.Widget().ShowAll()
-					log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
+					//log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
 				}
 				gv.Sync()
 			}
@@ -196,7 +220,7 @@ func main() {
 				if err1 == nil {
 					log.Println("Loading signal graph", filepath)
 					global.fts.AddSignalGraphFile(p, sg)
-					gv, err := views.GraphViewNew(sg.ItsType(), &global)
+					gv, err := views.GraphViewNew(sg.GraphObject(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}

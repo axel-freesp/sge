@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
+	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/models"
 	"image"
 	"log"
 	"strings"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
-	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type NewElementJob struct {
@@ -218,7 +218,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], freesp.IOMode(j.input[iIOModeSelect]), p)
+		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], interfaces.IOMode(j.input[iIOModeSelect]), p, image.Point{})
 
 	case eProcess:
 		switch parentObject.(type) {
@@ -255,7 +255,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		if !ok {
 			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen ioType\n", j.input[iIOTypeSelect])
 		}
-		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect])
+		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect], image.Point{})
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)

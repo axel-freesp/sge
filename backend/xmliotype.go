@@ -9,10 +9,11 @@ type XmlIOType struct {
 	XMLName xml.Name  `xml:"io-type"`
 	Name    string    `xml:"name,attr"`
 	Mode    XmlIOMode `xml:"mode,attr"`
+	Hint    XmlHint   `xml:"hint"`
 }
 
-func XmlIOTypeNew(name string, mode XmlIOMode) *XmlIOType {
-	return &XmlIOType{xml.Name{freespNamespace, "io-type"}, name, mode}
+func XmlIOTypeNew(name string, mode XmlIOMode, hint XmlHint) *XmlIOType {
+	return &XmlIOType{xml.Name{freespNamespace, "io-type"}, name, mode, hint}
 }
 
 type XmlIOMode string

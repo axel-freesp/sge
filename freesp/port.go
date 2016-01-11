@@ -2,9 +2,9 @@ package freesp
 
 import (
 	"fmt"
+	interfaces "github.com/axel-freesp/sge/interface"
 	"log"
 	"unsafe"
-	interfaces "github.com/axel-freesp/sge/interface"
 )
 
 type port struct {
@@ -61,6 +61,10 @@ func (p *port) SetDirection(interfaces.PortDirection) {
 
 func (p *port) Connections() []Port {
 	return p.connected.Ports()
+}
+
+func (p *port) ConnectionObjects() []interfaces.PortObject {
+	return p.connected.Exports()
 }
 
 func (p *port) Node() Node {
@@ -307,7 +311,7 @@ func findPort(list []Port, prt *port) bool {
  */
 
 type portList struct {
-	ports []Port
+	ports    []Port
 	exported []interfaces.PortObject
 }
 

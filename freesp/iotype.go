@@ -3,31 +3,35 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
 	"log"
 )
 
-var ioModeMap = map[backend.XmlIOMode]IOMode{
-	backend.IOModeShmem: IOModeShmem,
-	backend.IOModeAsync: IOModeAsync,
-	backend.IOModeSync:  IOModeSync,
+var ioModeMap = map[backend.XmlIOMode]interfaces.IOMode{
+	backend.IOModeShmem: interfaces.IOModeShmem,
+	backend.IOModeAsync: interfaces.IOModeAsync,
+	backend.IOModeSync:  interfaces.IOModeSync,
 }
 
-var ioXmlModeMap = map[IOMode]backend.XmlIOMode{
-	IOModeShmem: backend.IOModeShmem,
-	IOModeAsync: backend.IOModeAsync,
-	IOModeSync:  backend.IOModeSync,
+var ioXmlModeMap = map[interfaces.IOMode]backend.XmlIOMode{
+	interfaces.IOModeShmem: backend.IOModeShmem,
+	interfaces.IOModeAsync: backend.IOModeAsync,
+	interfaces.IOModeSync:  backend.IOModeSync,
 }
 
 type iotype struct {
 	name     string
-	mode     IOMode
+	mode     interfaces.IOMode
 	platform Platform
+	position image.Point
 }
 
 var _ IOType = (*iotype)(nil)
+var _ interfaces.IOTypeObject = (*iotype)(nil)
 
-func IOTypeNew(name string, mode IOMode, platform Platform) (t *iotype, err error) {
-	newT := &iotype{name, mode, platform}
+func IOTypeNew(name string, mode interfaces.IOMode, platform Platform, pos image.Point) (t *iotype, err error) {
+	newT := &iotype{name, mode, platform, pos}
 	ioType := ioTypes[name]
 	if ioType != nil {
 		if (*newT) != (*ioType) {
@@ -46,16 +50,29 @@ func IOTypeNew(name string, mode IOMode, platform Platform) (t *iotype, err erro
 	return
 }
 
-func (t *iotype) Mode() IOMode {
+func (t *iotype) IOMode() interfaces.IOMode {
 	return t.mode
 }
 
-func (t *iotype) SetMode(newMode IOMode) {
+func (t *iotype) SetIOMode(newMode interfaces.IOMode) {
 	t.mode = newMode
 }
 
 func (t *iotype) Platform() Platform {
 	return t.platform
+}
+
+/*
+ *      Positioner API
+ */
+
+func (t *iotype) Position() (p image.Point) {
+	p = t.position
+	return
+}
+
+func (t *iotype) SetPosition(p image.Point) {
+	t.position = p
 }
 
 /*
@@ -106,14 +123,16 @@ func (t *iotype) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
 
 type ioTypeList struct {
 	ioTypes []IOType
+	exports []interfaces.IOTypeObject
 }
 
 func ioTypeListInit() ioTypeList {
-	return ioTypeList{nil}
+	return ioTypeList{nil, nil}
 }
 
-func (l *ioTypeList) Append(st IOType) {
+func (l *ioTypeList) Append(st *iotype) {
 	l.ioTypes = append(l.ioTypes, st)
+	l.exports = append(l.exports, st)
 }
 
 func (l *ioTypeList) Remove(st IOType) {
@@ -131,12 +150,18 @@ func (l *ioTypeList) Remove(st IOType) {
 	}
 	for i++; i < len(l.ioTypes); i++ {
 		l.ioTypes[i-1] = l.ioTypes[i]
+		l.exports[i-1] = l.exports[i]
 	}
 	l.ioTypes = l.ioTypes[:len(l.ioTypes)-1]
+	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *ioTypeList) IoTypes() []IOType {
 	return l.ioTypes
+}
+
+func (l *ioTypeList) Exports() []interfaces.IOTypeObject {
+	return l.exports
 }
 
 func (l *ioTypeList) Find(name string) (t IOType, ok bool) {

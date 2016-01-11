@@ -2,28 +2,29 @@ package views
 
 import (
 	//	"fmt"
-	"image"
-	"log"
-	"math"
+	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/views/graph"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/views/graph"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
+	"log"
 )
 
 type Context interface {
-	SelectNode(node interfaces.NodeObject)     // single click selection
-	EditNode(node interfaces.NodeObject)       // double click selection
+	SelectNode(node interfaces.NodeObject)          // single click selection
+	EditNode(node interfaces.NodeObject)            // double click selection
 	SelectPort(port interfaces.PortObject)          // single click selection
 	SelectConnect(conn interfaces.ConnectionObject) // single click selection
+	SelectArch(arch interfaces.ArchObject)
+	SelectProcess(arch interfaces.ProcessObject)
+	SelectChannel(arch interfaces.ChannelObject)
 }
 
 type GraphView interface {
 	Widget() *gtk.Widget
 	Sync()
-	Select(obj freesp.TreeElement)
+	Select(obj interfaces.GraphElement)
 }
 
 type graphView struct {
@@ -31,7 +32,7 @@ type graphView struct {
 	area        DrawArea
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
-	sgType      freesp.SignalGraphType
+	sgType      interfaces.GraphObject
 	context     Context
 
 	dragOffs       image.Point
@@ -41,7 +42,7 @@ type graphView struct {
 var _ ScaledScene = (*graphView)(nil)
 var _ GraphView = (*graphView)(nil)
 
-func GraphViewNew(g freesp.SignalGraphType, context Context) (viewer *graphView, err error) {
+func GraphViewNew(g interfaces.GraphObject, context Context) (viewer *graphView, err error) {
 	viewer = &graphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -70,26 +71,26 @@ func (v *graphView) init() (err error) {
 
 func (v *graphView) Sync() {
 	g := v.sgType
-	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
+	v.nodes = make([]graph.NodeIf, len(g.NodeObjects()))
 
 	var numberOfConnections = 0
-	for _, n := range g.Nodes() {
-		for _, p := range n.OutPorts() {
-			numberOfConnections += len(p.Connections())
+	for _, n := range g.NodeObjects() {
+		for _, p := range n.GetOutPorts() {
+			numberOfConnections += len(p.ConnectionObjects())
 		}
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
-	for i, n := range g.Nodes() {
+	for i, n := range g.NodeObjects() {
 		v.nodes[i] = graph.NodeNew(n.Position(), n)
 	}
 	var index = 0
-	for _, n := range g.Nodes() {
+	for _, n := range g.NodeObjects() {
 		from := v.findNode(n.Name())
-		for _, p := range n.OutPorts() {
+		for _, p := range n.GetOutPorts() {
 			fromId := from.OutPortIndex(p.Name())
-			for _, c := range p.Connections() {
-				to := v.findNode(c.Node().Name())
+			for _, c := range p.ConnectionObjects() {
+				to := v.findNode(c.NodeObject().Name())
 				toId := to.InPortIndex(c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
@@ -104,7 +105,7 @@ func (v *graphView) Sync() {
  *		Handle selection in treeview
  */
 
-func (v *graphView) Select(obj freesp.TreeElement) {
+func (v *graphView) Select(obj interfaces.GraphElement) {
 	switch obj.(type) {
 	case interfaces.NodeObject:
 		v.deselectConnects()
@@ -350,14 +351,6 @@ func (v *graphView) findNode(name string) *graph.Node {
 	return nil
 }
 
-func (v *graphView) scaleCoord(x int, roundUp bool) int {
-	if roundUp {
-		return int(math.Ceil(float64(x) * v.parent.Scale()))
-	} else {
-		return int(float64(x) * v.parent.Scale())
-	}
-}
-
 func (v *graphView) drawAll() {
 	v.drawScene(v.bBox())
 }
@@ -376,7 +369,8 @@ func (v *graphView) bBox() (box image.Rectangle) {
 
 func (v *graphView) drawScene(r image.Rectangle) {
 	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
-	v.area.QueueDrawArea(v.scaleCoord(x, false), v.scaleCoord(y, false), v.scaleCoord(w, true)+1, v.scaleCoord(h, true)+1)
+	v.area.QueueDrawArea(v.parent.ScaleCoord(x, false), v.parent.ScaleCoord(y, false),
+		v.parent.ScaleCoord(w, true)+1, v.parent.ScaleCoord(h, true)+1)
 	return
 }
 

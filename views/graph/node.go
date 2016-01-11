@@ -1,7 +1,6 @@
 package graph
 
 import (
-	//"fmt"
 	//"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
@@ -31,6 +30,14 @@ func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
 	ret = &Node{SelectableBoxInit(box), n, nil, -1}
+	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
+		return ret.onHighlight(hit, pos)
+	})
+	ret.RegisterOnSelect(func(){
+		ret.onSelect()
+	}, func(){
+		ret.onDeselect()
+	})
 	portBox := image.Rect(0, 0, global.portW, global.portH)
 	portBox = portBox.Add(box.Min)
 	shiftIn := image.Point{global.padX + global.portX0, global.padY + global.portY0}
@@ -50,15 +57,15 @@ func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	return
 }
 
-func (n *Node) UserObj() interfaces.NodeObject {
+func (n Node) UserObj() interfaces.NodeObject {
 	return n.userObj
 }
 
-func (n *Node) GetInPorts() []interfaces.PortObject {
+func (n Node) GetInPorts() []interfaces.PortObject {
 	return n.userObj.GetInPorts()
 }
 
-func (n *Node) GetOutPorts() []interfaces.PortObject {
+func (n Node) GetOutPorts() []interfaces.PortObject {
 	return n.userObj.GetOutPorts()
 }
 
@@ -82,7 +89,7 @@ func (n *Node) SelectPort(port interfaces.PortObject) {
 	n.selectedPort = index
 }
 
-func (n *Node) GetSelectedPort() (ok bool, port interfaces.PortObject) {
+func (n Node) GetSelectedPort() (ok bool, port interfaces.PortObject) {
 	if n.selectedPort == -1 {
 		return
 	}
@@ -91,76 +98,77 @@ func (n *Node) GetSelectedPort() (ok bool, port interfaces.PortObject) {
 	return
 }
 
-func (n *Node) NumInPorts() int {
+func (n Node) NumInPorts() int {
 	return len(n.userObj.GetInPorts())
 }
 
-func (n *Node) NumOutPorts() int {
+func (n Node) NumOutPorts() int {
 	return len(n.userObj.GetOutPorts())
 }
 
-func (n *Node) InPortIndex(portName string) int {
+func (n Node) InPortIndex(portName string) int {
 	return n.userObj.InPortIndex(portName)
 }
 
-func (n *Node) OutPortIndex(portName string) int {
+func (n Node) OutPortIndex(portName string) int {
 	return n.userObj.OutPortIndex(portName)
 }
 
 
-/*
- *      freesp.Namer implementation
- */
+//
+//      freesp.Namer implementation
+//
 
-func (n *Node) Name() string {
+func (n Node) Name() string {
 	return n.userObj.Name()
 }
 
-func (n *Node) SetName(newName string) {
+func (n Node) SetName(newName string) {
 	n.userObj.SetName(newName)
 }
 
 var _ interfaces.Namer  = (*Node)(nil)
 
-/*
- *      freesp.Positioner interface
- */
+
+//
+//      freesp.Positioner interface
+//
 
 var _ interfaces.Positioner  = (*Node)(nil)
 var _ interfaces.Positioner  = (*Port)(nil)
 
-// (overwrite DragableObject implementation)
+// (overwrite BBoxObject default implementation)
 func (n *Node) SetPosition(pos image.Point) {
 	shift := pos.Sub(n.Position())
-	(*n).userObj.SetPosition(pos)
-	n.box = n.box.Add(shift)
+	n.userObj.SetPosition(pos)
+	n.DefaultSetPosition(pos)
 	for _, p := range n.ports {
 		p.SetPosition(p.Position().Add(shift))
 	}
 }
 
 
-/*
- *      Drawer interface
- */
+//
+//      Drawer interface
+//
 
 var _ Drawer  = (*Node)(nil)
 var _ Drawer  = (*Port)(nil)
 
-func (n *Node) Draw(ctxt interface{}){
+func (n Node) Draw(ctxt interface{}){
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
-		x, y, w, h := boxToDraw(n)
+		x, y, w, h := boxToDraw(&n)
 		var mode ColorMode
-		if n.selected {
+		if n.IsSelected() {
 			mode = SelectedMode
-		} else if n.highlighted {
+		} else if n.IsHighlighted() {
 			mode = HighlightMode
 		} else {
 			mode = NormalMode
 		}
-		drawBody(context, x, y, w, h, n.Name(), mode)
+		nodeDrawBody(context, x, y, w, h, n.Name(), mode)
 		context.SetLineWidth(1)
 		for _, p := range n.ports {
 			p.Draw(context)
@@ -169,17 +177,14 @@ func (n *Node) Draw(ctxt interface{}){
 }
 
 
-
-/*
- *	Selecter interface (overwrite DragableObject implementation)
- */
+//
+//	Selecter interface
+//
 
 var _ Selecter  = (*Node)(nil)
 var _ Selecter  = (*Port)(nil)
 
-func (n *Node) Select() (selected bool) {
-	selected = n.selected
-	n.selected = true
+func (n *Node) onSelect() (selected bool) {
 	for i, p := range n.ports {
 		if i == n.selectedPort {
 			p.Select()
@@ -190,22 +195,24 @@ func (n *Node) Select() (selected bool) {
 	return
 }
 
-func (n *Node) Deselect() (selected bool) {
-	selected = n.selected
-	n.selected = false
+func (n *Node) onDeselect() (selected bool) {
 	for _, p := range n.ports {
 		p.Deselect()
 	}
 	return
 }
 
-func (n *Node) CheckHit(pos image.Point) (hit, modified bool) {
-	test := image.Rectangle{pos, pos}
-	hit = n.BBox().Overlaps(test)
-	modified = n.highlighted != hit
-	n.highlighted = hit
+
+//
+//	Highlighter interface
+//
+
+var _ Highlighter  = (*Node)(nil)
+var _ Highlighter  = (*Port)(nil)
+
+func (n *Node) onHighlight(hit bool, pos image.Point) (modified bool) {
+	n.selectedPort = -1
 	if hit {
-		n.selectedPort = -1
 		for i, p := range n.ports {
 			phit, mod := p.CheckHit(pos)
 			if phit {
@@ -213,17 +220,21 @@ func (n *Node) CheckHit(pos image.Point) (hit, modified bool) {
 			}
 			modified = modified || mod
 		}
+	} else {
+		for _, p := range n.ports {
+			p.CheckHit(pos)
+		}
 	}
 	return
 }
 
 
-/*
- *	Private functions
- */
+//
+//	Private functions
+//
 
-func drawBody(context *cairo.Context, x, y, w, h float64, name string, mode ColorMode) {
-	context.SetSourceRGB(chooseColor(mode))
+func nodeDrawBody(context *cairo.Context, x, y, w, h float64, name string, mode ColorMode) {
+	context.SetSourceRGB(nodeChooseColor(mode))
 	context.Rectangle(x, y, w, h)
 	context.FillPreserve()
 	context.SetSourceRGB(ColorOption(BoxFrame))
@@ -236,14 +247,14 @@ func drawBody(context *cairo.Context, x, y, w, h float64, name string, mode Colo
 	context.ShowText(name)
 }
 
-func chooseColor(mode ColorMode) (r, g, b float64) {
+func nodeChooseColor(mode ColorMode) (r, g, b float64) {
 	switch mode {
 	case NormalMode:
-		r, g, b = ColorOption(Normal)
+		r, g, b = ColorOption(NodeNormal)
 	case HighlightMode:
-		r, g, b = ColorOption(Highlight)
+		r, g, b = ColorOption(NodeHighlight)
 	case SelectedMode:
-		r, g, b = ColorOption(Selected)
+		r, g, b = ColorOption(NodeSelected)
 	}
 	return
 }

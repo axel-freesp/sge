@@ -37,7 +37,19 @@ type ArchIf interface {
 	interfaces.Namer
 	BoxedSelecter
 	Drawer
+	Processes() []ProcessIf
 	UserObj() interfaces.ArchObject
+	IsLinked(name string) bool
+	ChannelPort(interfaces.ChannelObject) ArchPortIf
+	SelectProcess(interfaces.ProcessObject)
+	GetSelectedProcess() (ok bool, pr interfaces.ProcessObject)
+	SelectChannel(ch interfaces.ChannelObject)
+	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
+}
+
+type ArchPortIf interface {
+	BoxedSelecter
+	Drawer
 }
 
 type ProcessIf interface {
@@ -45,6 +57,9 @@ type ProcessIf interface {
 	BoxedSelecter
 	Drawer
 	UserObj() interfaces.ProcessObject
+	ArchObject() ArchIf
+	SelectChannel(ch interfaces.ChannelObject)
+	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
 }
 
 /*
@@ -57,14 +72,21 @@ type BBoxer interface {
 	BBox() image.Rectangle
 }
 
+type OnSelectionFunc func()
+
 type Selecter interface {
 	Select() bool
 	Deselect() bool
 	IsSelected() bool
+	RegisterOnSelect(inSelect, onDeselect OnSelectionFunc)
 }
+
+type OnHighlightFunc func(hit bool, pos image.Point) (modified bool)
 
 type Highlighter interface {
 	IsHighlighted() bool
+	RegisterOnHighlight(onHighlight OnHighlightFunc)
+	DoHighlight(state bool, pos image.Point) (modified bool)
 }
 
 type BoxedSelecter interface {

@@ -10,22 +10,18 @@ import (
  */
 
 type NodeIf interface {
-	interfaces.Namer
 	interfaces.Porter
-	BoxedSelecter
-	Drawer
+	NamedBox
 	UserObj() interfaces.NodeObject
 }
 
 type PortIf interface {
 	BoxedSelecter
-	Drawer
 	UserObj() interfaces.PortObject
 }
 
 type ConnectIf interface {
 	BoxedSelecter
-	Drawer
 	IsLinked(nodeName string) bool
 	From() NodeIf
 	To() NodeIf
@@ -34,9 +30,7 @@ type ConnectIf interface {
 }
 
 type ArchIf interface {
-	interfaces.Namer
-	BoxedSelecter
-	Drawer
+	NamedBox
 	Processes() []ProcessIf
 	UserObj() interfaces.ArchObject
 	IsLinked(name string) bool
@@ -49,13 +43,10 @@ type ArchIf interface {
 
 type ArchPortIf interface {
 	BoxedSelecter
-	Drawer
 }
 
 type ProcessIf interface {
-	interfaces.Namer
-	BoxedSelecter
-	Drawer
+	NamedBox
 	UserObj() interfaces.ProcessObject
 	ArchObject() ArchIf
 	SelectChannel(ch interfaces.ChannelObject)
@@ -89,16 +80,21 @@ type Highlighter interface {
 	DoHighlight(state bool, pos image.Point) (modified bool)
 }
 
+type Drawer interface {
+	Draw(context interface{})
+}
+
 type BoxedSelecter interface {
 	BBoxer
 	Selecter
     Highlighter
+	Drawer
 	CheckHit(image.Point) (hit, modified bool)
 }
 
-
-type Drawer interface {
-	Draw(context interface{})
+type NamedBox interface {
+	interfaces.Namer
+	BoxedSelecter
 }
 
 

@@ -18,7 +18,7 @@ const (
 )
 
 type Node struct {
-	SelectableBox
+	NamedBoxObject
 	userObj  interfaces.NodeObject
 	ports []*Port
 	selectedPort int
@@ -29,7 +29,13 @@ var _ NodeIf = (*Node)(nil)
 func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
-	ret = &Node{SelectableBoxInit(box), n, nil, -1}
+	ret = &Node{NamedBoxObjectInit(box,
+			ColorInit(ColorOption(NodeNormal)),
+			ColorInit(ColorOption(NodeHighlight)),
+			ColorInit(ColorOption(NodeSelected)),
+			ColorInit(ColorOption(BoxFrame)),
+			ColorInit(ColorOption(Text)),
+			image.Point{global.padX, global.padY}, n), n, nil, -1}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
 		return ret.onHighlight(hit, pos)
 	})
@@ -116,21 +122,6 @@ func (n Node) OutPortIndex(portName string) int {
 
 
 //
-//      freesp.Namer implementation
-//
-
-func (n Node) Name() string {
-	return n.userObj.Name()
-}
-
-func (n Node) SetName(newName string) {
-	n.userObj.SetName(newName)
-}
-
-var _ interfaces.Namer  = (*Node)(nil)
-
-
-//
 //      freesp.Positioner interface
 //
 
@@ -156,19 +147,10 @@ var _ Drawer  = (*Node)(nil)
 var _ Drawer  = (*Port)(nil)
 
 func (n Node) Draw(ctxt interface{}){
+	n.DrawDefaultText(ctxt)
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
-		x, y, w, h := boxToDraw(&n)
-		var mode ColorMode
-		if n.IsSelected() {
-			mode = SelectedMode
-		} else if n.IsHighlighted() {
-			mode = HighlightMode
-		} else {
-			mode = NormalMode
-		}
-		nodeDrawBody(context, x, y, w, h, n.Name(), mode)
 		context.SetLineWidth(1)
 		for _, p := range n.ports {
 			p.Draw(context)
@@ -232,32 +214,6 @@ func (n *Node) onHighlight(hit bool, pos image.Point) (modified bool) {
 //
 //	Private functions
 //
-
-func nodeDrawBody(context *cairo.Context, x, y, w, h float64, name string, mode ColorMode) {
-	context.SetSourceRGB(nodeChooseColor(mode))
-	context.Rectangle(x, y, w, h)
-	context.FillPreserve()
-	context.SetSourceRGB(ColorOption(BoxFrame))
-	context.SetLineWidth(2)
-	context.Stroke()
-	context.SetSourceRGB(ColorOption(Text))
-	context.SetFontSize(float64(global.fontSize))
-	tx, ty := float64(global.textX), float64(global.textY)
-	context.MoveTo(x + tx, y + ty)
-	context.ShowText(name)
-}
-
-func nodeChooseColor(mode ColorMode) (r, g, b float64) {
-	switch mode {
-	case NormalMode:
-		r, g, b = ColorOption(NodeNormal)
-	case HighlightMode:
-		r, g, b = ColorOption(NodeHighlight)
-	case SelectedMode:
-		r, g, b = ColorOption(NodeSelected)
-	}
-	return
-}
 
 func numPorts(n interfaces.Porter) int {
 	npi := len(n.GetInPorts())

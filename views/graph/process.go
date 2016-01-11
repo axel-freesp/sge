@@ -13,6 +13,18 @@ type ProcessPort struct {
 	userObj interfaces.ChannelObject
 }
 
+func ProcessPortNew(pos image.Point, userObj interfaces.ChannelObject) *ProcessPort {
+	size := image.Point{procPortWidth, procPortHeight}
+	box := image.Rectangle{pos, pos.Add(size)}
+	return &ProcessPort{SelectableBoxInit(box,
+			ColorInit(ColorOption(NormalArchPort)),
+			ColorInit(ColorOption(HighlightArchPort)),
+			ColorInit(ColorOption(SelectArchPort)),
+			ColorInit(ColorOption(BoxFrame)),
+			image.Point{}),
+			userObj}
+}
+
 func (p ProcessPort) Draw(ctxt interface{}) {
     switch ctxt.(type) {
     case *cairo.Context:
@@ -22,36 +34,29 @@ func (p ProcessPort) Draw(ctxt interface{}) {
 		if extPort != nil {
 			extPPos := extPort.Position()
 			if extPPos != empty {
-				var p1, p2 image.Point
+				var pos1, pos2 image.Point
 				if p.userObj.Direction() == interfaces.InPort {
-					p1 = extPPos.Add(image.Point{archPortWidth, archPortHeight}.Div(2))
-					p2 = p.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+					pos1 = extPPos.Add(image.Point{archPortWidth, archPortHeight}.Div(2))
+					pos2 = p.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
 				} else {
-					p1 = p.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
-					p2 = extPPos.Add(image.Point{archPortWidth, archPortHeight}.Div(2))
+					pos1 = p.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+					pos2 = extPPos.Add(image.Point{archPortWidth, archPortHeight}.Div(2))
 				}
-				context.SetSourceRGB(ColorOption(BoxFrame))
-				DrawArrow(context, p1, p2)
+				var r, g, b float64
+				if p.IsSelected() {
+					r, g, b = ColorOption(SelectChannelLine)
+				} else if p.IsHighlighted() {
+					r, g, b = ColorOption(HighlightChannelLine)
+				} else {
+					r, g, b = ColorOption(NormalChannelLine)
+				}
+				context.SetLineWidth(2)
+				context.SetSourceRGB(r, g, b)
+				DrawArrow(context, pos1, pos2)
 			}
 		}
-		var r, g, b float64
-		if p.selected {
-			r, g, b = ColorOption(SelectArchPort)
-		} else if p.highlighted {
-			r, g, b = ColorOption(HighlightArchPort)
-		} else {
-			r, g, b = ColorOption(NormalArchPort)
-		}
-		x := float64(p.BBox().Min.X)
-		y := float64(p.BBox().Min.Y)
-		w := float64(p.BBox().Size().X)
-		h := float64(p.BBox().Size().Y)
-		context.SetSourceRGB(r, g, b)
-		context.Rectangle(x, y, w, h)
-		context.FillPreserve()
-		context.SetSourceRGB(ColorOption(BoxFrame))
-		context.Stroke()
     }
+	p.DrawDefault(ctxt)
 }
 
 func (p *ProcessPort) SetPosition(pos image.Point) {
@@ -61,7 +66,7 @@ func (p *ProcessPort) SetPosition(pos image.Point) {
 
 
 type Process struct {
-	SelectableBox
+	NamedBoxObject
 	userObj interfaces.ProcessObject
 	ports []*ProcessPort
 	selectedPort int
@@ -73,8 +78,14 @@ var _ ProcessIf = (*Process)(nil)
 func ProcessNew(pos image.Point, userObj interfaces.ProcessObject, arch ArchIf) (ret *Process) {
 	shape := image.Point{global.processWidth, global.processHeight}
 	box := image.Rectangle{pos, pos.Add(shape)}
-	ret = &Process{SelectableBoxInit(box), userObj, nil, -1, arch}
-	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
+	ret = &Process{NamedBoxObjectInit(box,
+			ColorInit(ColorOption(ProcessNormal)),
+			ColorInit(ColorOption(ProcessHighlight)),
+			ColorInit(ColorOption(ProcessSelected)),
+			ColorInit(ColorOption(BoxFrame)),
+			ColorInit(ColorOption(Text)),
+			image.Point{global.padX, global.padY}, userObj), userObj, nil, -1, arch}
+	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
 	ret.RegisterOnSelect(func(){
@@ -87,24 +98,24 @@ func ProcessNew(pos image.Point, userObj interfaces.ProcessObject, arch ArchIf) 
 	outCnt := len(userObj.OutChannelObjects())
 	empty := image.Point{}
 	for _, c := range userObj.InChannelObjects() {
-		var box image.Rectangle
+		var pos image.Point
 		if c.Position() == empty {
-			box = ret.calcPortBox(idx, inCnt + outCnt)
+			pos = ret.calcPortPos(idx, inCnt + outCnt)
 		} else {
-			box = image.Rectangle{c.Position(), c.Position().Add(image.Point{procPortWidth, procPortHeight})}
+			pos = c.Position()
 		}
-		arch.(*Arch).channelMap[c] = &ProcessPort{SelectableBoxInit(box), c}
+		arch.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
 		ret.ports = append(ret.ports, arch.(*Arch).channelMap[c])
 		idx++
 	}
 	for _, c := range userObj.OutChannelObjects() {
-		var box image.Rectangle
+		var pos image.Point
 		if c.Position() == empty {
-			box = ret.calcPortBox(idx, inCnt + outCnt)
+			pos = ret.calcPortPos(idx, inCnt + outCnt)
 		} else {
-			box = image.Rectangle{c.Position(), c.Position().Add(image.Point{procPortWidth, procPortHeight})}
+			pos = c.Position()
 		}
-		arch.(*Arch).channelMap[c] = &ProcessPort{SelectableBoxInit(box), c}
+		arch.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
 		ret.ports = append(ret.ports, arch.(*Arch).channelMap[c])
 		idx++
 	}
@@ -152,26 +163,9 @@ func (pr Process) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
 
 
 func (pr Process) Draw(ctxt interface{}){
-    switch ctxt.(type) {
-    case *cairo.Context:
-		context := ctxt.(*cairo.Context)
-		x, y, w, h := boxToDraw(&pr)
-		x = x + procPortOutBorder - float64(global.padX)
-		y = y + procPortOutBorder - float64(global.padY)
-		w = w - 2 * (procPortOutBorder - float64(global.padX))
-		h = h - 2 * (procPortOutBorder - float64(global.padY))
-		var mode ColorMode
-		if pr.IsSelected() {
-			mode = SelectedMode
-		} else if pr.IsHighlighted() {
-			mode = HighlightMode
-		} else {
-			mode = NormalMode
-		}
-		processDrawBody(context, x, y, w, h, pr.Name(), mode)
-		for _, port := range pr.ports {
-			port.Draw(ctxt)
-		}
+	pr.DrawDefaultText(ctxt)
+	for _, port := range pr.ports {
+		port.Draw(ctxt)
 	}
 }
 
@@ -206,19 +200,6 @@ func (pr *Process) SetPosition(pos image.Point) {
 			p.SetPosition(p.Position().Add(shift))
 		}
 	}
-}
-
-
-//
-//	Namer interface
-//
-
-func (p Process) Name() string {
-	return p.userObj.Name()
-}
-
-func (p Process) SetName(newName string) {
-	p.userObj.SetName(newName)
 }
 
 
@@ -308,6 +289,7 @@ func processChooseColor(mode ColorMode) (r, g, b float64) {
 	return
 }
 
+// obsolete
 func (p Process) calcPortBox(idx, cnt int) image.Rectangle {
 	lX, rX, _, bY := p.portCorners()
 	size := image.Point{procPortWidth, procPortHeight}
@@ -315,6 +297,14 @@ func (p Process) calcPortBox(idx, cnt int) image.Rectangle {
 	x := int(k * float64(rX - lX))
 	pos := image.Point{lX + x, bY}
 	return image.Rectangle{pos, pos.Add(size)}
+}
+
+func (p Process) calcPortPos(idx, cnt int) (pos image.Point) {
+	lX, rX, _, bY := p.portCorners()
+	k := float64(idx + 1) / float64(cnt + 1)
+	x := int(k * float64(rX - lX))
+	pos = image.Point{lX + x, bY}
+	return
 }
 
 func (p Process) portIsSideBorder(pos image.Point) bool {

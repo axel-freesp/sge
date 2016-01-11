@@ -16,14 +16,13 @@ var (
 )
 
 type Connection struct {
-    SelectableBox
+    LineObject
     from, to NodeIf
     fromPort, toPort int
 }
 
 func ConnectionNew(from, to NodeIf, fromPort, toPort int) (ret *Connection) {
-    ret = &Connection{SelectableBoxInit(image.Rectangle{}), from, to, fromPort, toPort}
-    ret.box.Min, ret.box.Max = ret.connectionPoints()
+    ret = &Connection{LineObjectInit(connectionPoints(from, to, fromPort, toPort)), from, to, fromPort, toPort}
     return ret
 }
 
@@ -47,12 +46,6 @@ func (c Connection) ToId() int {
     return c.toPort
 }
 
-func (c Connection) connectionPoints() (p1, p2 image.Point) {
-    p1 = c.from.BBox().Min.Add(conOut.Add(portDY.Mul(c.fromPort)))
-    p2 = c.to.BBox().Min.Add(conIn.Add(portDY.Mul(c.toPort)))
-    return
-}
-
 
 //
 //	Drawer interface
@@ -72,7 +65,7 @@ func (c Connection) Draw(ctxt interface{}){
         }
         context.SetLineWidth(2)
         context.SetSourceRGB(r, g, b)
-        p1, p2 := c.connectionPoints()
+        p1, p2 := connectionPoints(c.from, c.to, c.fromPort, c.toPort)
         DrawArrow(context, p1, p2)
     }
 }
@@ -81,42 +74,16 @@ func (c Connection) Draw(ctxt interface{}){
 //
 //	Overwrite default implementation
 //
-
-func (c *Connection) CheckHit(pos image.Point) (hit, modified bool) {
-    f, r := c.Transformation()
-    p := f(pos)
-    px := math.Abs(float64(p.X))
-    py := math.Abs(float64(p.Y))
-    hit = (px <= r && py <= 4.0)
-	modified = c.DoHighlight(hit, pos)
-    return
-}
+var k = int(math.Ceil(arrowsize/math.Sqrt(1.5)))
 
 func (c *Connection) BBox() image.Rectangle {
-    c.box.Min, c.box.Max = c.connectionPoints()
-    r := c.box.Canon()
-    k := int(math.Ceil(arrowsize/math.Sqrt(1.5)))
-    r.Min.X -= k
-    r.Max.X += k
-    r.Min.Y -= k
-    r.Max.Y += k
-    return r
-}
-
-func (c Connection) Transformation() (func(image.Point) image.Point, float64) {
-    a, b := c.connectionPoints()
-    m := a.Add(b).Div(2)
-    am := m.Sub(a)
-    r := math.Sqrt(float64(am.X*am.X) + float64(am.Y*am.Y))
-    cos := float64(m.X - a.X) / r
-    sin := float64(a.Y - m.Y) / r
-    return func(x image.Point) (y image.Point) {
-        p1 := x.Sub(m)
-        a := int(cos*float64(p1.X) - sin*float64(p1.Y))
-        b := int(sin*float64(p1.X) + cos*float64(p1.Y))
-        y = image.Point{a, b}
-        return
-    }, r
+    c.box.Min, c.box.Max = connectionPoints(c.from, c.to, c.fromPort, c.toPort)
+    c.box = c.box.Canon()
+    c.box.Min.X -= k
+    c.box.Max.X += k
+    c.box.Min.Y -= k
+    c.box.Max.Y += k
+    return c.box
 }
 
 
@@ -124,45 +91,9 @@ func (c Connection) Transformation() (func(image.Point) image.Point, float64) {
 //	Private functions
 //
 
-func trans(cos, sin float64, m, x image.Point) (y image.Point) {
-    p1 := x.Sub(m)
-    a := int(cos*float64(p1.X) - sin*float64(p1.Y))
-    b := int(sin*float64(p1.X) + cos*float64(p1.Y))
-    y = image.Point{a, b}
+func connectionPoints(from, to NodeIf, fromPort, toPort int) (p1, p2 image.Point) {
+    p1 = from.BBox().Min.Add(conOut.Add(portDY.Mul(fromPort)))
+    p2 = to.BBox().Min.Add(conIn.Add(portDY.Mul(toPort)))
     return
-}
-
-func DrawLine(gc *cairo.Context, p1, p2 image.Point) {
-	drawLine(gc, p1, p2)
-}
-
-func drawLine(gc *cairo.Context, p1, p2 image.Point) {
-    gc.MoveTo(float64(p1.X), float64(p1.Y))
-    gc.LineTo(float64(p2.X), float64(p2.Y))
-    gc.Stroke()
-}
-
-func drawAccLine(gc *cairo.Context, x1, y1 float64, p2 image.Point) {
-    gc.MoveTo(x1, y1)
-    gc.LineTo(float64(p2.X), float64(p2.Y))
-    gc.Stroke()
-}
-
-func DrawArrow(gc *cairo.Context, p1, p2 image.Point){
-    x1 := float64(p2.X)
-    y1 := float64(p2.Y)
-    dx := x1 - float64(p1.X)
-    dy := y1 - float64(p1.Y)
-    r := math.Sqrt(dx*dx + dy*dy)
-    if r > 0 {
-        h0x, h0y := x1 - arrowsize*dx / r, y1 - arrowsize*dy / r
-        h1x, h1y := x1 - arrowsize*dy / r, y1 + arrowsize*dx / r
-        h2x, h2y := x1 + arrowsize*dy / r, y1 - arrowsize*dx / r
-        a1x, a1y := (2.0*h0x + h1x) / 3.0, (2.0*h0y + h1y) / 3.0
-        a2x, a2y := (2.0*h0x + h2x) / 3.0, (2.0*h0y + h2y) / 3.0
-        drawLine(gc, p1, p2)
-        drawAccLine(gc, a1x, a1y, p2)
-        drawAccLine(gc, a2x, a2y, p2)
-    }
 }
 

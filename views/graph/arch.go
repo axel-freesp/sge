@@ -13,40 +13,29 @@ type ArchPort struct {
 	userObj interfaces.ArchPortObject
 }
 
-var _ ArchPortIf = (*ArchPort)(nil)
-
-func (p *ArchPort) Draw(ctxt interface{}) {
-    switch ctxt.(type) {
-    case *cairo.Context:
-		context := ctxt.(*cairo.Context)
-		var r, g, b float64
-		if p.selected {
-			r, g, b = ColorOption(SelectArchPort)
-		} else if p.highlighted {
-			r, g, b = ColorOption(HighlightArchPort)
-		} else {
-			r, g, b = ColorOption(NormalArchPort)
-		}
-		x := float64(p.BBox().Min.X)
-		y := float64(p.BBox().Min.Y)
-		w := float64(p.BBox().Size().X)
-		h := float64(p.BBox().Size().Y)
-		context.SetSourceRGB(r, g, b)
-		context.Rectangle(x, y, w, h)
-		context.FillPreserve()
-		context.SetSourceRGB(ColorOption(BoxFrame))
-		context.Stroke()
-    }
+func ArchPortNew(pos image.Point, userObj interfaces.ArchPortObject) *ArchPort {
+	size := image.Point{archPortWidth, archPortHeight}
+	box := image.Rectangle{pos, pos.Add(size)}
+	return &ArchPort{SelectableBoxInit(box,
+			ColorInit(ColorOption(NormalArchPort)),
+			ColorInit(ColorOption(HighlightArchPort)),
+			ColorInit(ColorOption(SelectArchPort)),
+			ColorInit(ColorOption(BoxFrame)),
+			image.Point{}),
+			userObj}
 }
+
+var _ ArchPortIf = (*ArchPort)(nil)
 
 func (p *ArchPort) SetPosition(pos image.Point) {
 	p.userObj.SetPosition(pos)
 	p.DefaultSetPosition(pos)
 }
 
+//////////////////////
 
 type Arch struct {
-	SelectableBox
+	NamedBoxObject
 	userObj interfaces.ArchObject
 	processes []ProcessIf
 	selectedProcess int
@@ -58,7 +47,13 @@ type Arch struct {
 var _ ArchIf = (*Arch)(nil)
 
 func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
-	a := &Arch{SelectableBoxInit(box), userObj, nil, -1, nil, -1,
+	a := &Arch{NamedBoxObjectInit(box,
+			ColorInit(ColorOption(ArchNormal)),
+			ColorInit(ColorOption(ArchHighlight)),
+			ColorInit(ColorOption(ArchSelected)),
+			ColorInit(ColorOption(BoxFrame)),
+			ColorInit(ColorOption(Text)),
+			image.Point{archPortOutBorder, archPortOutBorder}, userObj), userObj, nil, -1, nil, -1,
 		make(map[interfaces.ChannelObject]*ProcessPort)}
 	a.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
 		return a.onHighlight(hit, pos)
@@ -75,35 +70,34 @@ func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
 	extCnt := a.numExtChannel()
 	idx := 0
 	empty := image.Point{}
-	size := image.Point{archPortWidth, archPortHeight}
 	for _, up := range userObj.ProcessObjects() {
 		for _, c := range up.InChannelObjects() {
 			if a.channelIsExtern(c) {
-				var box image.Rectangle
+				var pos image.Point
 				ap := c.ArchPortObject()
 				if ap == nil {
-					box = a.calcPortBox(idx, extCnt)
+					pos = a.calcPortPos(idx, extCnt)
 				} else if ap.Position() == empty {
-					box = a.calcPortBox(idx, extCnt)
+					pos = a.calcPortPos(idx, extCnt)
 				} else {
-					box = image.Rectangle{ap.Position(), ap.Position().Add(size)}
+					pos = ap.Position()
 				}
-				a.ports = append(a.ports, &ArchPort{SelectableBoxInit(box), ap})
+				a.ports = append(a.ports, ArchPortNew(pos, ap))
 				idx++
 			}
 		}
 		for _, c := range up.OutChannelObjects() {
 			if a.channelIsExtern(c) {
-				var box image.Rectangle
+				var pos image.Point
 				ap := c.ArchPortObject()
 				if ap == nil {
-					box = a.calcPortBox(idx, extCnt)
+					pos = a.calcPortPos(idx, extCnt)
 				} else if ap.Position() == empty {
-					box = a.calcPortBox(idx, extCnt)
+					pos = a.calcPortPos(idx, extCnt)
 				} else {
-					box = image.Rectangle{ap.Position(), ap.Position().Add(size)}
+					pos = ap.Position()
 				}
-				a.ports = append(a.ports, &ArchPort{SelectableBoxInit(box), ap})
+				a.ports = append(a.ports, ArchPortNew(pos, ap))
 				idx++
 			}
 		}
@@ -163,34 +157,17 @@ func (a *Arch) ChannelPort(ch interfaces.ChannelObject) ArchPortIf {
 //
 
 func (a Arch) Draw(ctxt interface{}){
-    switch ctxt.(type) {
-    case *cairo.Context:
-		context := ctxt.(*cairo.Context)
-		x, y, w, h := boxToDraw(&a)
-		x = x + archPortOutBorder - float64(global.padX)
-		y = y + archPortOutBorder - float64(global.padY)
-		w = w - 2 * (archPortOutBorder - float64(global.padX))
-		h = h - 2 * (archPortOutBorder - float64(global.padY))
-		var mode ColorMode
-		if a.IsSelected() {
-			mode = SelectedMode
-		} else if a.IsHighlighted() {
-			mode = HighlightMode
-		} else {
-			mode = NormalMode
+	a.DrawDefaultText(ctxt)
+	for _, p := range a.ports {
+		p.Draw(ctxt)
+	}
+	for _, pr := range a.processes {
+		pr.Draw(ctxt)
+		for _, c := range pr.UserObj().InChannelObjects() {
+			a.drawLocalChannel(ctxt, c)
 		}
-		archDrawBody(context, x, y, w, h, a.Name(), mode)
-		for _, p := range a.ports {
-			p.Draw(ctxt)
-		}
-		for _, pr := range a.processes {
-			pr.Draw(ctxt)
-			for _, c := range pr.UserObj().InChannelObjects() {
-				a.drawLocalChannel(context, c)
-			}
-			for _, c := range pr.UserObj().OutChannelObjects() {
-				a.drawLocalChannel(context, c)
-			}
+		for _, c := range pr.UserObj().OutChannelObjects() {
+			a.drawLocalChannel(ctxt, c)
 		}
 	}
 }
@@ -213,17 +190,16 @@ func (a *Arch) SetPosition(pos image.Point) {
 		a.box = box
 		empty := image.Point{}
 		for i, p := range a.ports {
-			var box image.Rectangle
+			var pos image.Point
 			ap := p.userObj
 			if ap == nil {
-				box = a.calcPortBox(i, len(a.ports))
+				pos = a.calcPortPos(i, len(a.ports))
 			} else if ap.Position() == empty {
-				log.Printf("Arch.SetPosition(%s): empty position\n", a.Name())
-				box = a.calcPortBox(i, len(a.ports))
+				pos = a.calcPortPos(i, len(a.ports))
 			} else {
-				box = image.Rectangle{ap.Position(), ap.Position().Add(image.Point{archPortWidth, archPortHeight})}
+				pos = ap.Position()
 			}
-			p.SetPosition(a.portClipPos(box.Min))
+			p.SetPosition(a.portClipPos(pos))
 		}
 	} else if a.selectedPort != -1 {
 		child := a.ports[a.selectedPort]
@@ -263,19 +239,6 @@ func (a *Arch) SetPosition(pos image.Point) {
 func (a *Arch) SetShape(shape image.Point) {
 	a.box.Max = a.box.Min.Add(shape)
 	a.userObj.SetShape(shape)
-}
-
-
-//
-//	Namer interface
-//
-
-func (a Arch) Name() string {
-	return a.userObj.Name()
-}
-
-func (a Arch) SetName(newName string) {
-	a.userObj.SetName(newName)
 }
 
 
@@ -399,69 +362,46 @@ const (
 	archPortOutBorder = 8
 )
 
-func archDrawBody(context *cairo.Context, x, y, w, h float64, name string, mode ColorMode) {
-	context.SetSourceRGB(archChooseColor(mode))
-	context.Rectangle(x, y, w, h)
-	context.FillPreserve()
-	context.SetSourceRGB(ColorOption(BoxFrame))
-	context.SetLineWidth(2)
-	context.Stroke()
-	context.SetSourceRGB(ColorOption(Text))
-	context.SetFontSize(float64(global.fontSize))
-	tx, ty := float64(global.textX), float64(global.textY)
-	context.MoveTo(x + tx, y + ty)
-	context.ShowText(name)
-}
-
-func archChooseColor(mode ColorMode) (r, g, b float64) {
-	switch mode {
-	case NormalMode:
-		r, g, b = ColorOption(ArchNormal)
-	case HighlightMode:
-		r, g, b = ColorOption(ArchHighlight)
-	case SelectedMode:
-		r, g, b = ColorOption(ArchSelected)
-	}
-	return
-}
-
-func (a Arch) drawLocalChannel(context *cairo.Context, ch interfaces.ChannelObject) {
-	link := ch.LinkObject()
-	if ch.ProcessObject().ArchObject().Name() != a.Name() {
-		log.Fatal("Arch.drawLocalChannel: channel not in arch %s\n", a.Name())
-	}
-	if link.ProcessObject().ArchObject().Name() == a.Name() {
-        var r, g, b float64
-        p1 := a.channelMap[ch]
-        p2 := a.channelMap[link]
-        if p1.IsSelected() || p2.IsSelected() {
-            r, g, b = ColorOption(SelectChannelLine)
-        } else if p1.IsHighlighted() || p2.IsHighlighted() {
-            r, g, b = ColorOption(HighlightChannelLine)
-        } else {
-            r, g, b = ColorOption(NormalChannelLine)
-        }
-        context.SetLineWidth(2)
-        context.SetSourceRGB(r, g, b)
-		var pos1, pos2 image.Point
-		if ch.Direction() == interfaces.InPort {
-			pos1 = link.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
-			pos2 = ch.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
-		} else {
-			pos1 = ch.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
-			pos2 = link.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+func (a Arch) drawLocalChannel(ctxt interface{}, ch interfaces.ChannelObject) {
+    switch ctxt.(type) {
+    case *cairo.Context:
+		context := ctxt.(*cairo.Context)
+		link := ch.LinkObject()
+		if ch.ProcessObject().ArchObject().Name() != a.Name() {
+			log.Fatal("Arch.drawLocalChannel: channel not in arch %s\n", a.Name())
 		}
-		DrawArrow(context, pos1, pos2)
+		if link.ProcessObject().ArchObject().Name() == a.Name() {
+			var r, g, b float64
+			p1 := a.channelMap[ch]
+			p2 := a.channelMap[link]
+			if p1.IsSelected() || p2.IsSelected() {
+				r, g, b = ColorOption(SelectChannelLine)
+			} else if p1.IsHighlighted() || p2.IsHighlighted() {
+				r, g, b = ColorOption(HighlightChannelLine)
+			} else {
+				r, g, b = ColorOption(NormalChannelLine)
+			}
+			context.SetLineWidth(2)
+			context.SetSourceRGB(r, g, b)
+			var pos1, pos2 image.Point
+			if ch.Direction() == interfaces.InPort {
+				pos1 = link.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+				pos2 = ch.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+			} else {
+				pos1 = ch.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+				pos2 = link.Position().Add(image.Point{procPortWidth, procPortHeight}.Div(2))
+			}
+			DrawArrow(context, pos1, pos2)
+		}
 	}
 }
 
-func (a Arch) calcPortBox(idx, cnt int) image.Rectangle {
+func (a Arch) calcPortPos(idx, cnt int) (pos image.Point) {
 	lX, rX, _, bY := a.portCorners()
-	size := image.Point{archPortWidth, archPortHeight}
 	k := float64(idx + 1) / float64(cnt + 1)
 	x := int(k * float64(rX - lX))
-	pos := image.Point{lX + x, bY}
-	return image.Rectangle{pos, pos.Add(size)}
+	pos = image.Point{lX + x, bY}
+	return
 }
 
 func (a Arch) portIsSideBorder(pos image.Point) bool {

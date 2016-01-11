@@ -65,8 +65,8 @@ func size(b BBoxer) (w, h float64) {
 	return
 }
 
-func boxToDraw(b BBoxer) (x, y, w, h float64) {
-	dx, dy := global.padX, global.padY
+func boxToDraw(b BBoxer, pad image.Point) (x, y, w, h float64) {
+	dx, dy := pad.X, pad.Y
 	w0, h0 := size(b)
 	a := b.BBox().Min
 	x = float64(a.X) + float64(dx)

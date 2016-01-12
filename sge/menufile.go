@@ -242,7 +242,9 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 		var tmp []views.GraphView
 		for _, v := range global.graphview {
 			if v.IdentifyGraph(obj.(freesp.SignalGraph).GraphObject()) {
+				global.win.stack.SetVisibleChild(global.xmlview.Widget())
 				global.win.stack.Remove(v.Widget())
+				views.GraphViewDestroy(v)
 			} else {
 				tmp = append(tmp, v)
 			}
@@ -254,7 +256,9 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 		var tmp []views.GraphView
 		for _, v := range global.graphview {
 			if v.IdentifyPlatform(obj.(freesp.Platform).PlatformObject()) {
+				global.win.stack.SetVisibleChild(global.xmlview.Widget())
 				global.win.stack.Remove(v.Widget())
+				views.PlatformViewDestroy(v)
 			} else {
 				tmp = append(tmp, v)
 			}

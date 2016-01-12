@@ -54,6 +54,10 @@ func GraphViewNew(g interfaces.GraphObject, context Context) (viewer *graphView,
 	return
 }
 
+func GraphViewDestroy(viewer GraphView) {
+	DrawAreaDestroy(viewer.(*graphView).area)
+}
+
 func (v *graphView) Widget() *gtk.Widget {
 	return v.parent.Widget()
 }

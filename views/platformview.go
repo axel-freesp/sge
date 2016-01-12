@@ -33,6 +33,10 @@ func PlatformViewNew(p interfaces.PlatformObject, context Context) (viewer *plat
 	return
 }
 
+func PlatformViewDestroy(viewer GraphView) {
+	DrawAreaDestroy(viewer.(*platformView).area)
+}
+
 func (v *platformView) Widget() *gtk.Widget {
 	return v.parent.Widget()
 }

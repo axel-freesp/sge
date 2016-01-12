@@ -129,6 +129,7 @@ func (v *graphView) Select(obj interfaces.GraphElement) {
 		n, ok := v.selectNode(obj.(interfaces.PortObject).NodeObject())
 		if ok {
 			n.(*graph.Node).SelectPort(obj.(interfaces.PortObject))
+			v.repaintNode(n)
 		}
 	case interfaces.ConnectionObject:
 		v.deselectNodes()

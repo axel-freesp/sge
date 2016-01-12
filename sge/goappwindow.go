@@ -9,7 +9,8 @@ import (
 type GoAppWindow struct {
 	//gtk.ApplicationWindow
 	window         *gtk.Window
-	layout_box     *gtk.Paned
+	layout_box     *gtk.Box
+	paned_box      *gtk.Paned
 	navigation_box *gtk.Box
 	content_box    *gtk.Box
 	header         *gtk.HeaderBar
@@ -32,7 +33,12 @@ func (w *GoAppWindow) Init(width, height int) (err error) {
 	})
 	w.window.SetTitle("Go Application")
 	w.window.SetDefaultSize(width, height)
-	w.layout_box, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	w.layout_box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		log.Println("Unable to create box:", err)
+		return
+	}
+	w.paned_box, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		log.Println("Unable to create layout box:", err)
 		return
@@ -62,19 +68,20 @@ func (w *GoAppWindow) Init(width, height int) (err error) {
 		log.Println("Unable to create Stack:", err)
 		return
 	}
-	w.layout_box.Add1(w.navigation_box)
+	w.paned_box.Add1(w.navigation_box)
 	w.content_box.PackStart(w.header, false, true, 0)
 	w.header.Add(w.tabs)
 	w.tabs.SetStack(w.stack)
 	w.content_box.Add(w.stack)
-	w.layout_box.Add2(w.content_box)
+	w.paned_box.Add2(w.content_box)
+	w.layout_box.PackEnd(w.paned_box, false, true, 0)
 	w.window.Add(w.layout_box)
 
 	return
 }
 
 func GoAppWindowNew(width, height int) (win *GoAppWindow, err error) {
-	win = &GoAppWindow{nil, nil, nil, nil, nil, nil, nil}
+	win = &GoAppWindow{}
 	err = win.Init(width, height)
 	return
 }

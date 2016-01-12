@@ -305,3 +305,7 @@ func (g *Global) RenameLibrary(oldName, newName string) {
 	delete(g.libraryMap, oldName)
 	g.libraryMap[newName] = lib
 }
+
+func (g *Global) RemoveLibrary(name string) {
+	delete(g.libraryMap, name)
+}

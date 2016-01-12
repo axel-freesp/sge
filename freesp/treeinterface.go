@@ -19,6 +19,10 @@ type TreeElement interface {
 	RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
 }
 
+type Remover interface {
+	Remove(Tree)
+}
+
 type Cursor struct {
 	Path     string
 	Position int

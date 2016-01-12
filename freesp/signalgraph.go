@@ -11,6 +11,31 @@ func SignalGraphNew(filename string, context Context) *signalGraph {
 	return &signalGraph{filename, SignalGraphTypeNew(context)}
 }
 
+func SignalGraphUsesNodeType(s SignalGraph, nt NodeType) bool {
+	for _, n := range s.ItsType().Nodes() {
+		if n.ItsType() == nt {
+			return true
+		}
+	}
+	return false
+}
+
+func SignalGraphUsesSignalType(s SignalGraph, st SignalType) bool {
+	for _, n := range s.ItsType().Nodes() {
+		for _, p := range n.InPorts() {
+			if p.SignalType() == st {
+				return true
+			}
+		}
+		for _, p := range n.OutPorts() {
+			if p.SignalType() == st {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type signalGraph struct {
 	filename string
 	itsType  SignalGraphType
@@ -68,6 +93,14 @@ func (s *signalGraph) WriteFile(filepath string) error {
 
 func (s *signalGraph) SetFilename(filename string) {
 	s.filename = filename
+}
+
+func (s *signalGraph) Remove(tree Tree) {
+	gt := s.ItsType()
+	tree.Remove(tree.Cursor(s))
+	for len(gt.Nodes()) > 0 {
+		gt.RemoveNode(gt.Nodes()[0].(*node))
+	}
 }
 
 /*

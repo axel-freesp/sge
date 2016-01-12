@@ -23,6 +23,7 @@ func MenuFileInit(menu *GoAppMenu) {
 	menu.fileOpen.Connect("activate", func() { fileOpen(global.fts, global.ftv) })
 	menu.fileSave.Connect("activate", func() { fileSave(global.fts) })
 	menu.fileSaveAs.Connect("activate", func() { fileSaveAs(global.fts) })
+	menu.fileClose.Connect("activate", func() { fileClose(menu, global.fts, global.ftv, global.jl) })
 
 }
 
@@ -225,6 +226,46 @@ func fileSave(fts *models.FilesTreeStore) {
 		log.Println(err)
 	}
 	return
+}
+
+func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTreeView, jl IJobList) {
+	path := fts.GetCurrentId()
+	if strings.Contains(path, ":") {
+		path = strings.Split(path, ":")[0]
+	}
+	obj, err := fts.GetObjectById(path)
+	if err != nil {
+		return
+	}
+	switch obj.(type) {
+	case freesp.SignalGraph:
+		var tmp []views.GraphView
+		for _, v := range global.graphview {
+			if v.IdentifyGraph(obj.(freesp.SignalGraph).GraphObject()) {
+				global.win.stack.Remove(v.Widget())
+			} else {
+				tmp = append(tmp, v)
+			}
+		}
+		global.graphview = tmp
+	case freesp.Library:
+		global.RemoveLibrary(obj.(freesp.Library).Filename())
+	case freesp.Platform:
+		var tmp []views.GraphView
+		for _, v := range global.graphview {
+			if v.IdentifyPlatform(obj.(freesp.Platform).PlatformObject()) {
+				global.win.stack.Remove(v.Widget())
+			} else {
+				tmp = append(tmp, v)
+			}
+		}
+		global.graphview = tmp
+	default:
+		log.Fatalf("fileClose error: invalid object type %T\n", obj)
+	}
+	fts.RemoveToplevel(path)
+	jl.Reset()
+	MenuEditPost(menu, fts, jl)
 }
 
 /*

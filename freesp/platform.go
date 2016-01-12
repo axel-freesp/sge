@@ -176,6 +176,10 @@ func (p *platform) WriteFile(filepath string) (err error) {
 	return
 }
 
+func (p *platform) Remove(tree Tree) {
+	tree.Remove(tree.Cursor(p))
+}
+
 /*
  *  TreeElement API
  */

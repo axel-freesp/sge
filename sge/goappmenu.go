@@ -16,6 +16,7 @@ type GoAppMenu struct {
 	fileOpen    *gtk.MenuItem
 	fileSave    *gtk.MenuItem
 	fileSaveAs  *gtk.MenuItem
+	fileClose   *gtk.MenuItem
 	fileQuit    *gtk.MenuItem
 	menuEdit    *gtk.Menu
 	editmenu    *gtk.MenuItem
@@ -78,6 +79,10 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create fileSaveAs:", err)
 	}
+	m.fileClose, err = gtk.MenuItemNewWithLabel("Close")
+	if err != nil {
+		log.Fatal("Unable to create fileClose:", err)
+	}
 	m.fileQuit, err = gtk.MenuItemNewWithLabel("Quit")
 	if err != nil {
 		log.Fatal("Unable to create fileQuit:", err)
@@ -90,6 +95,8 @@ func (m *GoAppMenu) Init() {
 	m.menuFile.Append(m.fileOpen)
 	m.menuFile.Append(m.fileSave)
 	m.menuFile.Append(m.fileSaveAs)
+	x, _ = gtk.SeparatorMenuItemNew()
+	m.menuFile.Append(m.fileClose)
 	x, _ = gtk.SeparatorMenuItemNew()
 	m.menuFile.Append(x)
 	m.menuFile.Append(m.fileQuit)

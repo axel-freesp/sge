@@ -25,24 +25,28 @@ func MenuEditInit(menu *GoAppMenu) {
 func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	MenuEditCurrent(menu, fts, jl)
 	cursor := fts.Current()
-	if len(cursor.Path) == 0 {
-		return
+	var obj freesp.TreeElement
+	if len(cursor.Path) != 0 {
+		obj = fts.Object(cursor)
 	}
-	obj := fts.Object(cursor)
 	global.xmlview.Set(obj)
 }
 
 func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
-	cursor := fts.Current()
-	if len(cursor.Path) == 0 {
-		return
-	}
-	prop := fts.Property(cursor)
-	menu.editNew.SetSensitive(prop.MayAddObject())
-	menu.editDelete.SetSensitive(prop.MayRemove())
-	menu.editEdit.SetSensitive(prop.MayEdit())
 	menu.editUndo.SetSensitive(jl.CanUndo())
 	menu.editRedo.SetSensitive(jl.CanRedo())
+	var prop freesp.Property
+	cursor := fts.Current()
+	if len(cursor.Path) != 0 {
+		prop = fts.Property(cursor)
+		menu.editNew.SetSensitive(prop.MayAddObject())
+		menu.editDelete.SetSensitive(prop.MayRemove())
+		menu.editEdit.SetSensitive(prop.MayEdit())
+	} else {
+		menu.editNew.SetSensitive(false)
+		menu.editDelete.SetSensitive(false)
+		menu.editEdit.SetSensitive(false)
+	}
 }
 
 func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *views.FilesTreeView) {

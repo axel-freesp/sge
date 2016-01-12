@@ -28,6 +28,7 @@ type SignalGraphType interface {
 type SignalGraph interface {
 	TreeElement
 	Filenamer
+	Remover
 	ItsType() SignalGraphType
 	GraphObject() interfaces.GraphObject
 }
@@ -35,6 +36,7 @@ type SignalGraph interface {
 type Library interface {
 	TreeElement
 	Filenamer
+	Remover
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
 	AddNodeType(NodeType) error
@@ -165,6 +167,7 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 type Platform interface {
 	TreeElement
 	Filenamer
+	Remover
 	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)

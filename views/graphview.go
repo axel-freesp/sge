@@ -25,6 +25,8 @@ type GraphView interface {
 	Widget() *gtk.Widget
 	Sync()
 	Select(obj interfaces.GraphElement)
+	IdentifyGraph(interfaces.GraphObject) bool
+	IdentifyPlatform(interfaces.PlatformObject) bool
 }
 
 type graphView struct {
@@ -99,6 +101,14 @@ func (v *graphView) Sync() {
 	}
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
+}
+
+func (v graphView) IdentifyGraph(g interfaces.GraphObject) bool {
+	return g == v.sgType
+}
+
+func (v graphView) IdentifyPlatform(g interfaces.PlatformObject) bool {
+	return false
 }
 
 /*

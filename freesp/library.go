@@ -21,24 +21,24 @@ func LibraryNew(filename string, context Context) *library {
 	return ret
 }
 
-func (l *library) Filename() string {
+func (l library) Filename() string {
 	return l.filename
 }
 
-func (s *library) SetFilename(filename string) {
-	delete(libraries, s.filename)
-	s.filename = filename
-	for _, t := range s.NodeTypes() {
+func (l *library) SetFilename(filename string) {
+	delete(libraries, l.filename)
+	l.filename = filename
+	for _, t := range l.NodeTypes() {
 		t.(*nodeType).definedAt = filename
 	}
-	libraries[filename] = s
+	libraries[filename] = l
 }
 
-func (l *library) SignalTypes() []SignalType {
+func (l library) SignalTypes() []SignalType {
 	return l.signalTypes.SignalTypes()
 }
 
-func (l *library) NodeTypes() []NodeType {
+func (l library) NodeTypes() []NodeType {
 	return l.nodeTypes.NodeTypes()
 }
 
@@ -92,15 +92,20 @@ func (l *library) ReadFile(filepath string) error {
 	return l.createLibFromXml(xmllib)
 }
 
-func (l *library) Write() (data []byte, err error) {
-	xmllib := CreateXmlLibrary(l)
+func (l library) Write() (data []byte, err error) {
+	xmllib := CreateXmlLibrary(&l)
 	data, err = xmllib.Write()
 	return
 }
 
-func (s *library) WriteFile(filepath string) error {
-	xmllib := CreateXmlLibrary(s)
+func (l library) WriteFile(filepath string) error {
+	xmllib := CreateXmlLibrary(&l)
 	return xmllib.WriteFile(filepath)
+}
+
+func (l *library) Remove(tree Tree) {
+	tree.Remove(tree.Cursor(l))
+	delete(libraries, l.filename)
 }
 
 func (l *library) AddNodeType(t NodeType) error {

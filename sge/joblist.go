@@ -15,6 +15,7 @@ type IJobApplier interface {
 type IJobList interface {
 	Undo() (state interface{}, ok bool)
 	Redo() (state interface{}, ok bool)
+	Reset()
 	CanUndo() bool
 	CanRedo() bool
 	Apply(job interface{}) (state interface{}, ok bool)
@@ -32,7 +33,7 @@ func jobListNew(system IJobApplier) *jobList {
 	return j
 }
 
-func (j *jobList) reset() {
+func (j *jobList) Reset() {
 	j.undoStack.Reset()
 	j.redoStack.Reset()
 }
@@ -46,7 +47,7 @@ func (j *jobList) Undo() (state interface{}, ok bool) {
 		state, err = j.system.Revert(job)
 		if err != nil {
 			log.Println("jobList.Undo error: ", err)
-			j.reset()
+			j.Reset()
 		}
 		ok = true
 	}
@@ -62,7 +63,7 @@ func (j *jobList) Redo() (state interface{}, ok bool) {
 		state, err = j.system.Apply(job)
 		if err != nil {
 			log.Println("jobList.Redo error: ", err)
-			j.reset()
+			j.Reset()
 		}
 		ok = true
 	}

@@ -66,6 +66,14 @@ func (v *platformView) Sync() {
 	v.drawAll()
 }
 
+func (v platformView) IdentifyGraph(g interfaces.GraphObject) bool {
+	return false
+}
+
+func (v platformView) IdentifyPlatform(p interfaces.PlatformObject) bool {
+	return p == v.p
+}
+
 /*
  *		Handle selection in treeview
  */
@@ -75,27 +83,23 @@ func (v *platformView) Select(obj interfaces.GraphElement) {
 	case interfaces.ArchObject:
 		arch := obj.(interfaces.ArchObject)
 		a, ok := v.focusArchFromUserObject(arch)
-		if !ok {
-			log.Fatalf("platformView.Select(ArchObject): object not found.\n")
+		if ok {
+			v.selectArch(a)
 		}
-		v.selectArch(a)
-		v.repaintArch(a)
 	case interfaces.ProcessObject:
 		pr := obj.(interfaces.ProcessObject)
 		a, ok := v.focusArchFromUserObject(pr.ArchObject())
-		if !ok {
-			log.Fatalf("platformView.Select(ArchObject): object not found.\n")
+		if ok {
+			a.SelectProcess(pr)
+			v.repaintArch(a)
 		}
-		a.SelectProcess(pr)
-		v.repaintArch(a)
 	case interfaces.ChannelObject:
 		ch := obj.(interfaces.ChannelObject)
 		a, ok := v.focusArchFromUserObject(ch.ProcessObject().ArchObject())
-		if !ok {
-			log.Fatalf("platformView.Select(ArchObject): object not found.\n")
+		if ok {
+			a.SelectChannel(ch)
+			v.repaintArch(a)
 		}
-		a.SelectChannel(ch)
-		v.repaintArch(a)
 	default:
 	}
 }
@@ -114,7 +118,7 @@ func (v *platformView) selectArch(toSelect graph.ArchIf) {
 func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret graph.ArchIf, ok bool) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
-		if obj == a.UserObj() {
+		if obj.Name() == a.UserObj().Name() {
 			ret = a
 			ok = true
 		} else {

@@ -35,12 +35,9 @@ func IOTypeNew(name string, mode interfaces.IOMode, platform Platform, pos image
 	ioType := ioTypes[name]
 	if ioType != nil {
 		if (*newT) != (*ioType) {
-			err = fmt.Errorf(`IOTypeNew error: adding existing
-				io type %s, which is incompatible`, name)
+			err = fmt.Errorf("IOTypeNew error: adding existing io type %s, which is incompatible.", name)
 			return
 		}
-		log.Printf(`IOTypeNew: warning: adding existing
-			io type definition %s (taking the existing)`, name)
 		t = ioType
 	} else {
 		t = newT

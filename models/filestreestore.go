@@ -64,13 +64,12 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 }
 
 func (s *FilesTreeStore) GetCurrentId() (id string) {
+	id = ""
 	if s.currentSelection == nil {
-		id = ""
 		return
 	}
 	p, err := s.treestore.GetPath(s.currentSelection)
 	if err != nil {
-		id = ""
 		return
 	}
 	id = p.String()
@@ -78,6 +77,10 @@ func (s *FilesTreeStore) GetCurrentId() (id string) {
 }
 
 func (s *FilesTreeStore) GetObjectById(id string) (ret freesp.TreeElement, err error) {
+	if len(id) == 0 {
+		err = fmt.Errorf("FilesTreeStore.GetObjectById warning: empty id.\n")
+		return
+	}
 	_, err = s.treestore.GetIterFromString(id)
 	if err != nil {
 		err = gtkErr("FilesTreeStore.GetObjectById", "GetIterFromString()", err)
@@ -187,6 +190,20 @@ func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObje
 	return
 }
 
+func (tree *FilesTreeStore) RemoveToplevel(id string) (deleted []freesp.IdWithObject, err error) {
+	if strings.Contains(id, ":") {
+		err = fmt.Errorf("FilesTreeStore.RemoveToplevel: not removing toplevel object (abort)")
+		return
+	}
+	var obj freesp.TreeElement
+	obj, err = tree.GetObjectById(id)
+	if err != nil {
+		return
+	}
+	obj.(freesp.Remover).Remove(tree)
+	return
+}
+
 /*
  *      Tree Interface
  */
@@ -252,12 +269,33 @@ func (s *FilesTreeStore) Insert(c freesp.Cursor) freesp.Cursor {
 
 func (s *FilesTreeStore) Remove(c freesp.Cursor) (prefix string, index int) {
 	s.deleteSubtree(c.Path)
-	prefix = c.Path[:strings.LastIndex(c.Path, ":")]
-	suffix := c.Path[strings.LastIndex(c.Path, ":")+1:]
+	var suffix string
+	if strings.Contains(c.Path, ":") {
+		prefix = c.Path[:strings.LastIndex(c.Path, ":")]
+		suffix = c.Path[strings.LastIndex(c.Path, ":")+1:]
+	} else {
+		suffix = c.Path
+	}
 	fmt.Sscanf(suffix, "%d", &index)
 	i := index
 	for ok := true; ok; i++ {
 		ok = s.shiftLookup(prefix, fmt.Sprintf("%d", i+1), fmt.Sprintf("%d", i))
+	}
+	_, ok := s.lookup[c.Path]
+	if !ok {
+		index--
+		suffix = fmt.Sprintf("%d", index)
+		if len(prefix) > 0 {
+			c.Path = fmt.Sprintf("%s:%d", prefix, index)
+		} else {
+			c.Path = fmt.Sprintf("%d", index)
+		}
+		_, ok = s.lookup[c.Path]
+		if !ok {
+			s.currentSelection = nil
+		} else {
+			_, s.currentSelection, _ = s.getObjAndIterById(c.Path)
+		}
 	}
 	return
 }
@@ -379,7 +417,12 @@ func (s *FilesTreeStore) deleteSubtree(id string) {
 }
 
 func (s *FilesTreeStore) shiftLookup(parent, from, to string) (ok bool) {
-	fromId, toId := fmt.Sprintf("%s:%s", parent, from), fmt.Sprintf("%s:%s", parent, to)
+	var fromId, toId string
+	if len(parent) > 0 {
+		fromId, toId = fmt.Sprintf("%s:%s", parent, from), fmt.Sprintf("%s:%s", parent, to)
+	} else {
+		fromId, toId = fmt.Sprintf("%s", from), fmt.Sprintf("%s", to)
+	}
 	obj, ok := s.lookup[fromId]
 	if ok {
 		s.lookup[toId] = obj

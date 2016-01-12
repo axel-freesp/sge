@@ -31,14 +31,20 @@ func (x *XmlTextView) xmlTextViewInit() (err error) {
 	return nil
 }
 
-func (x *XmlTextView) Set(object interface{}) error {
-	buf, err := freesp.CreateXML(object)
-	if err != nil {
-		return err
-	}
-	textbuf, err := x.view.GetBuffer()
+func (x *XmlTextView) Set(object interface{}) (err error) {
+	var textbuf *gtk.TextBuffer
+	textbuf, err = x.view.GetBuffer()
 	if err != nil {
 		return fmt.Errorf("XmlTextView.Set: view.GetBuffer failed: %v", err)
+	}
+	if object == nil {
+		textbuf.SetText("")
+		return
+	}
+	var buf []byte
+	buf, err = freesp.CreateXML(object)
+	if err != nil {
+		return err
 	}
 	textbuf.SetText(string(buf))
 	return nil

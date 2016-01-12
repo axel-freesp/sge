@@ -27,29 +27,16 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 	p.name = xmlp.Name
 	for _, xmlc := range xmlp.InputChannels {
 		var iot IOType
-		ok := false
-		for _, iot = range ioTypes {
-			if iot.Name() == xmlc.IOType {
-				ok = true
-				break
-			}
-		}
+		iot, ok := p.arch.(*arch).iotypes.Find(xmlc.IOType)
 		if !ok {
-			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found.\n", xmlc.IOType)
+			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found in arch.\n", xmlc.IOType)
 			return
 		}
 		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source, image.Point{xmlc.Hint.Channel.X, xmlc.Hint.Channel.Y})
 		p.inChannels.Append(c)
 	}
 	for _, xmlc := range xmlp.OutputChannels {
-		var iot IOType
-		ok := false
-		for _, iot = range ioTypes {
-			if iot.Name() == xmlc.IOType {
-				ok = true
-				break
-			}
-		}
+		iot, ok := p.arch.(*arch).iotypes.Find(xmlc.IOType)
 		if !ok {
 			err = fmt.Errorf("process.createProcessFromXml error (out): referenced ioType %s not found.\n", xmlc.IOType)
 			return

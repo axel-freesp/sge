@@ -1,13 +1,10 @@
 package views
 
 import (
-	//	"fmt"
+	"fmt"
+	//"image"
 	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/axel-freesp/sge/views/graph"
-	"github.com/gotk3/gotk3/cairo"
-	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"image"
 	"log"
 )
 
@@ -29,399 +26,131 @@ type GraphView interface {
 	IdentifyPlatform(interfaces.PlatformObject) bool
 }
 
-type graphView struct {
-	parent      *ScaledView
-	area        DrawArea
-	nodes       []graph.NodeIf
-	connections []graph.ConnectIf
-	sgType      interfaces.GraphObject
-	context     Context
-
-	dragOffs       image.Point
-	button1Pressed bool
+type GraphViewCollection interface {
+	Add(gv GraphView, title string)
+	RemoveGraphView(g interfaces.GraphObject)
+	RemovePlatformView(p interfaces.PlatformObject)
+	Rename(old, new string)
+	Widget() *gtk.Widget
+	XmlTextView() *XmlTextView
+	Sync()
+	Select(obj interfaces.GraphElement)
 }
 
-var _ ScaledScene = (*graphView)(nil)
-var _ GraphView = (*graphView)(nil)
+type graphViewCollection struct {
+	graphview []GraphView
+	xmlview   *XmlTextView
+	box       *gtk.Box
+	header    *gtk.HeaderBar
+	tabs      *gtk.StackSwitcher
+	stack     *gtk.Stack
+}
 
-func GraphViewNew(g interfaces.GraphObject, context Context) (viewer *graphView, err error) {
-	viewer = &graphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
-	err = viewer.init()
+var _ GraphViewCollection = (*graphViewCollection)(nil)
+
+func GraphViewCollectionNew(width, height int) (gvc *graphViewCollection, err error) {
+	gvc = &graphViewCollection{}
+	gvc.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
+		err = fmt.Errorf("GraphViewCollectionNew: Unable to create box:", err)
 		return
 	}
-	viewer.Sync()
-	return
-}
-
-func GraphViewDestroy(viewer GraphView) {
-	DrawAreaDestroy(viewer.(*graphView).area)
-}
-
-func (v *graphView) Widget() *gtk.Widget {
-	return v.parent.Widget()
-}
-
-func (v *graphView) init() (err error) {
-	v.parent, err = ScaledViewNew(v)
+	gvc.header, err = gtk.HeaderBarNew()
 	if err != nil {
+		err = fmt.Errorf("GraphViewCollectionNew: Unable to create bar:", err)
 		return
 	}
-	v.area, err = DrawAreaInit(v)
+	gvc.tabs, err = gtk.StackSwitcherNew()
 	if err != nil {
+		err = fmt.Errorf("GraphViewCollectionNew: Unable to create stackswitcher:", err)
 		return
 	}
-	v.parent.Container().Add(v.area)
+	gvc.stack, err = gtk.StackNew()
+	if err != nil {
+		err = fmt.Errorf("GraphViewCollectionNew: Unable to create Stack:", err)
+		return
+	}
+	gvc.box.PackStart(gvc.header, false, true, 0)
+	gvc.header.Add(gvc.tabs)
+	gvc.tabs.SetStack(gvc.stack)
+	gvc.box.Add(gvc.stack)
+
+	gvc.xmlview, err = XmlTextViewNew(width, height)
+	if err != nil {
+		err = fmt.Errorf("GraphViewCollectionNew: Could not create XML view.")
+		return
+	}
+	gvc.stack.AddTitled(gvc.xmlview.Widget(), "XML View", "XML View")
 	return
 }
 
-func (v *graphView) Sync() {
-	g := v.sgType
-	v.nodes = make([]graph.NodeIf, len(g.NodeObjects()))
+func (gvc graphViewCollection) XmlTextView() *XmlTextView {
+	return gvc.xmlview
+}
 
-	var numberOfConnections = 0
-	for _, n := range g.NodeObjects() {
-		for _, p := range n.GetOutPorts() {
-			numberOfConnections += len(p.ConnectionObjects())
-		}
+func (gvc *graphViewCollection) Add(gv GraphView, title string) {
+	gvc.graphview = append(gvc.graphview, gv)
+	gvc.stack.AddTitled(gv.Widget(), title, title)
+	gv.Widget().Show()
+}
+
+func (gvc *graphViewCollection) Rename(old, new string) {
+	widget, err := gvc.stack.GetChildByName(old)
+	if err != nil {
+		log.Printf("graphViewCollection.Rename warning: stack child %s not found\n", old)
+		return
 	}
-	v.connections = make([]graph.ConnectIf, numberOfConnections)
-
-	for i, n := range g.NodeObjects() {
-		v.nodes[i] = graph.NodeNew(n.Position(), n)
-	}
-	var index = 0
-	for _, n := range g.NodeObjects() {
-		from := v.findNode(n.Name())
-		for _, p := range n.GetOutPorts() {
-			fromId := from.OutPortIndex(p.Name())
-			for _, c := range p.ConnectionObjects() {
-				to := v.findNode(c.NodeObject().Name())
-				toId := to.InPortIndex(c.Name())
-				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
-				index++
-			}
-		}
-	}
-	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
-	v.drawAll()
-}
-
-func (v graphView) IdentifyGraph(g interfaces.GraphObject) bool {
-	return g == v.sgType
-}
-
-func (v graphView) IdentifyPlatform(g interfaces.PlatformObject) bool {
-	return false
-}
-
-/*
- *		Handle selection in treeview
- */
-
-func (v *graphView) Select(obj interfaces.GraphElement) {
-	switch obj.(type) {
-	case interfaces.NodeObject:
-		v.deselectConnects()
-		v.selectNode(obj.(interfaces.NodeObject))
-	case interfaces.PortObject:
-		v.deselectConnects()
-		n, ok := v.selectNode(obj.(interfaces.PortObject).NodeObject())
-		if ok {
-			n.(*graph.Node).SelectPort(obj.(interfaces.PortObject))
-			v.repaintNode(n)
-		}
-	case interfaces.ConnectionObject:
-		v.deselectNodes()
-		v.selectConnect(obj.(interfaces.ConnectionObject))
-	}
-}
-
-func (v *graphView) selectNode(obj interfaces.NodeObject) (ret graph.NodeIf, ok bool) {
-	var n graph.NodeIf
-	for _, n = range v.nodes {
-		if obj == n.UserObj() {
-			if !n.Select() {
-				v.repaintNode(n)
-			}
-			ret = n
-			ok = true
-		} else {
-			if n.Deselect() {
-				v.repaintNode(n)
-			}
-		}
-	}
-	return
-}
-
-func (v *graphView) deselectNodes() {
-	var n graph.NodeIf
-	for _, n = range v.nodes {
-		if n.Deselect() {
-			v.repaintNode(n)
-		}
-	}
-}
-
-func (v *graphView) selectConnect(conn interfaces.ConnectionObject) {
-	n1 := v.findNode(conn.FromObject().NodeObject().Name())
-	n2 := v.findNode(conn.ToObject().NodeObject().Name())
-	for _, c := range v.connections {
-		if n1 == c.From() && n2 == c.To() &&
-			n1.GetOutPorts()[c.FromId()] == conn.FromObject() &&
-			n2.GetInPorts()[c.ToId()] == conn.ToObject() {
-			if !c.Select() {
-				v.repaintConnection(c)
-			}
-		} else {
-			if c.Deselect() {
-				v.repaintConnection(c)
-			}
-		}
-	}
-}
-
-func (v *graphView) deselectConnects() {
-	for _, c := range v.connections {
-		if c.Deselect() {
-			v.repaintConnection(c)
-		}
-	}
-}
-
-/*
- *		ScaledScene interface
- */
-
-func (v *graphView) Update() (width, height int) {
-	width = v.calcSceneWidth()
-	height = v.calcSceneHeight()
-	v.area.SetSizeRequest(width, height)
-	v.area.QueueDrawArea(0, 0, width, height)
-	return
-}
-
-func (v *graphView) calcSceneWidth() int {
-	return int(float64(v.bBox().Max.X+50) * v.parent.Scale())
-}
-
-func (v *graphView) calcSceneHeight() int {
-	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
-}
-
-/*
- *		areaButtonCallback
- */
-
-func (v *graphView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
-	pos := v.parent.Position(position)
-	switch evType {
-	case gdk.EVENT_BUTTON_PRESS:
-		v.button1Pressed = true
-		v.dragOffs = pos
-		v.handleNodeSelect(pos)
-		v.handleConnectSelect(pos)
-	case gdk.EVENT_2BUTTON_PRESS:
-		log.Println("areaButtonCallback 2BUTTON_PRESS")
-		for _, n := range v.nodes {
-			if n.IsSelected() {
-				v.context.EditNode(n.UserObj())
-				break
-			}
-		}
-
-	case gdk.EVENT_BUTTON_RELEASE:
-		v.button1Pressed = false
-	default:
-	}
-}
-
-func (v *graphView) handleNodeSelect(pos image.Point) {
-	for _, n := range v.nodes {
-		hit, _ := n.CheckHit(pos)
-		if hit {
-			if !n.Select() {
-				v.repaintNode(n)
-			}
-			v.context.SelectNode(n.UserObj())
-			ok, port := n.(*graph.Node).GetSelectedPort()
-			if ok {
-				v.context.SelectPort(port)
-			}
-		} else {
-			if n.Deselect() {
-				v.repaintNode(n)
-			}
-		}
-	}
-}
-
-func (v *graphView) handleConnectSelect(pos image.Point) {
-	for _, c := range v.connections {
-		hit, _ := c.CheckHit(pos)
-		if hit {
-			c.Select()
-			n1 := c.From()
-			p1 := n1.GetOutPorts()[c.FromId()]
-			n2 := c.To()
-			p2 := n2.GetInPorts()[c.ToId()]
-			v.context.SelectConnect(p1.ConnectionObject(p2))
-			v.repaintConnection(c)
-		} else {
-			if c.Deselect() {
-				v.repaintConnection(c)
-			}
-		}
-	}
-}
-
-/*
- *		areaMotionCallback
- */
-
-func (v *graphView) MotionCallback(area DrawArea, position image.Point) {
-	pos := v.parent.Position(position)
-	if v.button1Pressed {
-		v.handleDrag(pos)
+	if widget == gvc.stack.GetVisibleChild() {
+		gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
+		gvc.stack.Remove(widget)
+		gvc.stack.AddTitled(widget, new, new)
+		gvc.stack.SetVisibleChildName(new)
 	} else {
-		v.handleMouseover(pos)
+		gvc.stack.Remove(widget)
+		gvc.stack.AddTitled(widget, new, new)
 	}
 }
 
-func (v *graphView) handleDrag(pos image.Point) {
-	for _, n := range v.nodes {
-		if n.IsSelected() {
-			box := n.BBox()
-			if !overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
-				v.repaintNode(n)
-				box = box.Add(pos.Sub(v.dragOffs))
-				v.dragOffs = pos
-				n.SetPosition(box.Min)
-				v.repaintNode(n)
-			}
-		}
-	}
-}
-
-func (v *graphView) handleMouseover(pos image.Point) {
-	for _, n := range v.nodes {
-		_, mod := n.CheckHit(pos)
-		if mod {
-			v.repaintNode(n)
-		}
-	}
-	for _, c := range v.connections {
-		_, modified := c.CheckHit(pos)
-		if modified {
-			v.repaintConnection(c)
-		}
-	}
-}
-
-/*
- *		areaDrawCallback
- */
-
-func (v *graphView) DrawCallback(area DrawArea, context *cairo.Context) {
-	context.Scale(v.parent.Scale(), v.parent.Scale())
-	x1, y1, x2, y2 := context.ClipExtents()
-	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
-	v.drawNodes(context, r)
-	v.drawConnections(context, r)
-}
-
-func (v *graphView) drawConnections(context *cairo.Context, r image.Rectangle) {
-	for _, c := range v.connections {
-		box := c.BBox()
-		if r.Overlaps(box) {
-			c.Draw(context)
-		}
-	}
-}
-
-func (v *graphView) drawNodes(context *cairo.Context, r image.Rectangle) {
-	for _, o := range v.nodes {
-		if !o.IsSelected() && o.BBox().Overlaps(r) {
-			o.Draw(context)
-		}
-	}
-	for _, o := range v.nodes {
-		if o.IsSelected() && o.BBox().Overlaps(r) {
-			o.Draw(context)
-		}
-	}
-}
-
-/*
- *		Private functions
- */
-
-func (v *graphView) findNode(name string) *graph.Node {
-	for _, d := range v.nodes {
-		if d.Name() == name {
-			return d.(*graph.Node)
-		}
-	}
-	return nil
-}
-
-func (v *graphView) drawAll() {
-	v.drawScene(v.bBox())
-}
-
-func (v *graphView) bBox() (box image.Rectangle) {
-	emptyRect := image.Rectangle{}
-	for _, o := range v.nodes {
-		if box == emptyRect {
-			box = o.BBox()
+func (gvc *graphViewCollection) RemoveGraphView(g interfaces.GraphObject) {
+	var tmp []GraphView
+	for _, v := range gvc.graphview {
+		if v.IdentifyGraph(g) {
+			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
+			gvc.stack.Remove(v.Widget())
+			//views.SignalGraphViewDestroy(v)
 		} else {
-			box = box.Union(o.BBox())
+			tmp = append(tmp, v)
 		}
 	}
-	return
+	gvc.graphview = tmp
 }
 
-func (v *graphView) drawScene(r image.Rectangle) {
-	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
-	v.area.QueueDrawArea(v.parent.ScaleCoord(x, false), v.parent.ScaleCoord(y, false),
-		v.parent.ScaleCoord(w, true)+1, v.parent.ScaleCoord(h, true)+1)
-	return
-}
-
-func (v *graphView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
-	ret := n.BBox()
-	for _, c := range v.connections {
-		if c.IsLinked(n.Name()) {
-			ret = ret.Union(c.BBox())
+func (gvc *graphViewCollection) RemovePlatformView(p interfaces.PlatformObject) {
+	var tmp []GraphView
+	for _, v := range gvc.graphview {
+		if v.IdentifyPlatform(p) {
+			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
+			gvc.stack.Remove(v.Widget())
+			//views.SignalGraphViewDestroy(v)
+		} else {
+			tmp = append(tmp, v)
 		}
 	}
-	return ret
+	gvc.graphview = tmp
 }
 
-func (v *graphView) repaintNode(n graph.NodeIf) {
-	v.drawScene(v.nodeDrawBox(n))
+func (gvc *graphViewCollection) Widget() *gtk.Widget {
+	return &gvc.box.Widget
 }
 
-func (v *graphView) repaintConnection(c graph.ConnectIf) {
-	v.drawScene(c.BBox())
-}
-
-// Check if the selected object would overlap with any other
-// if we move it to p coordinates:
-func overlaps(list []graph.NodeIf, p image.Point) bool {
-	var box image.Rectangle
-	for _, n := range list {
-		if n.IsSelected() {
-			box = n.BBox()
-			break
-		}
+func (gvc *graphViewCollection) Sync() {
+	for _, v := range gvc.graphview {
+		v.Sync()
 	}
-	newBox := box.Add(p.Sub(box.Min))
-	for _, n := range list {
-		if !n.IsSelected() && newBox.Overlaps(n.BBox()) {
-			return true
-		}
+}
+
+func (gvc *graphViewCollection) Select(obj interfaces.GraphElement) {
+	for _, v := range gvc.graphview {
+		v.Select(obj)
 	}
-	return false
 }

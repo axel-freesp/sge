@@ -87,6 +87,10 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		case freesp.NodeType:
 			context = parentObject.(freesp.NodeType).DefinedAt()
 			j.parentId = getParentId(j.parentId)
+		case freesp.SignalType:
+			j.parentId = getParentId(j.parentId)
+			parentObject, err = fts.GetObjectById(j.parentId)
+			context = parentObject.(freesp.Library).Filename()
 		case freesp.Library:
 			context = parentObject.(freesp.Library).Filename()
 		default:
@@ -169,6 +173,8 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 	case eSignalType:
 		switch parentObject.(type) {
 		case freesp.SignalType:
+			j.parentId = getParentId(j.parentId)
+		case freesp.NodeType:
 			j.parentId = getParentId(j.parentId)
 		case freesp.Library:
 		default:

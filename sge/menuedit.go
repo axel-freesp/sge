@@ -29,7 +29,7 @@ func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	if len(cursor.Path) != 0 {
 		obj = fts.Object(cursor)
 	}
-	global.xmlview.Set(obj)
+	global.win.graphViews.XmlTextView().Set(obj)
 }
 
 func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
@@ -53,9 +53,7 @@ func editUndo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *vie
 	defer MenuEditPost(menu, fts, jl)
 	state, ok := jl.Undo()
 	if ok {
-		for _, v := range global.graphview {
-			v.Sync()
-		}
+		global.win.graphViews.Sync()
 		path, err := gtk.TreePathNewFromString(state.(string))
 		if err != nil {
 			log.Println("editNew error: TreePathNewFromString failed:", err)
@@ -70,9 +68,7 @@ func editRedo(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *vie
 	defer MenuEditPost(menu, fts, jl)
 	state, ok := jl.Redo()
 	if ok {
-		for _, v := range global.graphview {
-			v.Sync()
-		}
+		global.win.graphViews.Sync()
 		path, err := gtk.TreePathNewFromString(state.(string))
 		if err != nil {
 			log.Println("editNew error: TreePathNewFromString failed:", err)
@@ -94,9 +90,7 @@ func editNew(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *view
 	if ok {
 		state, ok := jl.Apply(job)
 		if ok {
-			for _, v := range global.graphview {
-				v.Sync()
-			}
+			global.win.graphViews.Sync()
 			path, err := gtk.TreePathNewFromString(state.(string))
 			if err != nil {
 				log.Println("editNew error: TreePathNewFromString failed:", err)
@@ -163,9 +157,7 @@ func editPaste(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *vi
 	}
 	state, ok := jl.Apply(job)
 	if ok {
-		for _, v := range global.graphview {
-			v.Sync()
-		}
+		global.win.graphViews.Sync()
 		path, err := gtk.TreePathNewFromString(state.(string))
 		if err != nil {
 			log.Println("editPaste error: TreePathNewFromString failed:", err)
@@ -181,9 +173,7 @@ func editDelete(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList, ftv *v
 	job := DeleteObjectJobNew(fts.GetCurrentId())
 	state, ok := jl.Apply(EditorJobNew(JobDeleteObject, job))
 	if ok {
-		for _, v := range global.graphview {
-			v.Sync()
-		}
+		global.win.graphViews.Sync()
 		path, err := gtk.TreePathNewFromString(state.(string))
 		if err != nil {
 			log.Println("editNew error: TreePathNewFromString failed:", err)

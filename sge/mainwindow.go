@@ -22,8 +22,6 @@ const (
 type Global struct {
 	win          *GoAppWindow
 	jl           *jobList
-	graphview    []views.GraphView
-	xmlview      *views.XmlTextView
 	fts          *models.FilesTreeStore
 	ftv          *views.FilesTreeView
 	graphviewMap map[freesp.Implementation]views.GraphView
@@ -114,16 +112,13 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 			}
 		}
 		MenuEditCurrent(menu, treeStore, global.jl)
-		global.xmlview.Set(obj)
+		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
 		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel:
-			for _, v := range global.graphview {
-				v.Select(obj)
-			}
+			global.win.graphViews.Select(obj)
 		case freesp.Implementation:
 			impl := obj.(freesp.Implementation)
 			if impl.ImplementationType() == freesp.NodeTypeGraph {
-				//log.Println("treeSelectionChangedCB: Have graph implementation to show")
 				gv, ok := global.graphviewMap[impl]
 				if !ok {
 					cursor := treeStore.Cursor(obj)
@@ -134,15 +129,13 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					if !ok {
 						return
 					}
-					gv, err = views.GraphViewNew(impl.GraphObject(), &global)
+					gv, err = views.SignalGraphViewNew(impl.GraphObject(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
-					global.graphview = append(global.graphview, gv)
-					global.win.stack.AddTitled(gv.Widget(), nt.TypeName(), nt.TypeName())
+					global.win.graphViews.Add(gv, nt.TypeName())
 					global.graphviewMap[impl] = gv
 					gv.Widget().ShowAll()
-					//log.Println("treeSelectionChangedCB: Created graphview for implementation to show")
 				}
 				gv.Sync()
 			}
@@ -201,12 +194,6 @@ func main() {
 	}
 	global.win.navigation_box.Add(global.ftv.Widget())
 
-	global.xmlview, err = views.XmlTextViewNew(width, height)
-	if err != nil {
-		log.Fatal("Could not create XML view.")
-	}
-	global.win.stack.AddTitled(global.xmlview.Widget(), "XML View", "XML View")
-
 	selection, err := global.ftv.TreeView().GetSelection()
 	if err != nil {
 		log.Fatal("Could not get tree selection object.")
@@ -226,12 +213,11 @@ func main() {
 				if err1 == nil {
 					log.Println("Loading signal graph", filepath)
 					global.fts.AddSignalGraphFile(p, sg)
-					gv, err := views.GraphViewNew(sg.GraphObject(), &global)
+					gv, err := views.SignalGraphViewNew(sg.GraphObject(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
-					global.graphview = append(global.graphview, gv)
-					global.win.stack.AddTitled(gv.Widget(), p, p)
+					global.win.graphViews.Add(gv, p)
 				}
 			case "alml":
 				_, err = global.GetLibrary(p)
@@ -251,8 +237,7 @@ func main() {
 				if err != nil {
 					log.Fatal("Could not create platform view.")
 				}
-				global.graphview = append(global.graphview, pv)
-				global.win.stack.AddTitled(pv.Widget(), p, p)
+				global.win.graphViews.Add(pv, p)
 				log.Printf("Platform %s successfully loaded\n", p)
 
 			default:
@@ -295,6 +280,10 @@ func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
 		_, err = g.fts.AddLibraryFile(libname, lib)
 	}
 	return
+}
+
+func (g *Global) AddNewLibrary(lib freesp.Library) {
+	g.libraryMap[lib.Filename()] = lib
 }
 
 func (g *Global) RenameLibrary(oldName, newName string) {

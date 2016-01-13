@@ -96,6 +96,7 @@ func (m *GoAppMenu) Init() {
 	m.menuFile.Append(m.fileSave)
 	m.menuFile.Append(m.fileSaveAs)
 	x, _ = gtk.SeparatorMenuItemNew()
+	m.menuFile.Append(x)
 	m.menuFile.Append(m.fileClose)
 	x, _ = gtk.SeparatorMenuItemNew()
 	m.menuFile.Append(x)

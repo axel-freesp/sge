@@ -1,21 +1,17 @@
 package main
 
 import (
+	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
-	//"github.com/gotk3/gotk3/glib"
 )
 
 type GoAppWindow struct {
-	//gtk.ApplicationWindow
 	window         *gtk.Window
-	layout_box     *gtk.Box
-	paned_box      *gtk.Paned
+	layout_box     *gtk.Box   // child of window, holds paned and menu
+	paned_box      *gtk.Paned // holds navigation and views
 	navigation_box *gtk.Box
-	content_box    *gtk.Box
-	header         *gtk.HeaderBar
-	tabs           *gtk.StackSwitcher
-	stack          *gtk.Stack
+	graphViews     views.GraphViewCollection
 }
 
 func (w *GoAppWindow) Window() *gtk.Window {
@@ -48,32 +44,15 @@ func (w *GoAppWindow) Init(width, height int) (err error) {
 		log.Println("Unable to create box:", err)
 		return
 	}
-	w.content_box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	w.graphViews, err = views.GraphViewCollectionNew(width, height)
 	if err != nil {
-		log.Println("Unable to create box:", err)
+		log.Println("Unable to create graphViews:", err)
 		return
 	}
-	w.header, err = gtk.HeaderBarNew()
-	if err != nil {
-		log.Println("Unable to create bar:", err)
-		return
-	}
-	w.tabs, err = gtk.StackSwitcherNew()
-	if err != nil {
-		log.Println("Unable to create stackswitcher:", err)
-		return
-	}
-	w.stack, err = gtk.StackNew()
-	if err != nil {
-		log.Println("Unable to create Stack:", err)
-		return
-	}
+
 	w.paned_box.Add1(w.navigation_box)
-	w.content_box.PackStart(w.header, false, true, 0)
-	w.header.Add(w.tabs)
-	w.tabs.SetStack(w.stack)
-	w.content_box.Add(w.stack)
-	w.paned_box.Add2(w.content_box)
+	w.paned_box.Add2(w.graphViews.Widget())
+	w.paned_box.SetPosition(200)
 	w.layout_box.PackEnd(w.paned_box, false, true, 0)
 	w.window.Add(w.layout_box)
 

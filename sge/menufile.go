@@ -239,6 +239,13 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 	}
 	switch obj.(type) {
 	case freesp.SignalGraph:
+		var nodes []freesp.Node
+		for _, n := range obj.(freesp.SignalGraph).ItsType().Nodes() {
+			nodes = append(nodes, n)
+		}
+		fts.RemoveToplevel(path)
+		CleanupNodeTypesFromNodes(nodes)
+		CleanupSignalTypesFromNodes(nodes)
 		var tmp []views.GraphView
 		for _, v := range global.graphview {
 			if v.IdentifyGraph(obj.(freesp.SignalGraph).GraphObject()) {
@@ -251,8 +258,10 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 		}
 		global.graphview = tmp
 	case freesp.Library:
+		fts.RemoveToplevel(path)
 		global.RemoveLibrary(obj.(freesp.Library).Filename())
 	case freesp.Platform:
+		fts.RemoveToplevel(path)
 		var tmp []views.GraphView
 		for _, v := range global.graphview {
 			if v.IdentifyPlatform(obj.(freesp.Platform).PlatformObject()) {
@@ -267,7 +276,6 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 	default:
 		log.Fatalf("fileClose error: invalid object type %T\n", obj)
 	}
-	fts.RemoveToplevel(path)
 	jl.Reset()
 	MenuEditPost(menu, fts, jl)
 }

@@ -86,6 +86,11 @@ func (s *FilesTreeStore) GetObjectById(id string) (ret freesp.TreeElement, err e
 		err = gtkErr("FilesTreeStore.GetObjectById", "GetIterFromString()", err)
 		return
 	}
+	_, ok := s.lookup[id]
+	if !ok {
+		err = fmt.Errorf("FilesTreeStore.GetObjectById: no such id %s\n", id)
+		return
+	}
 	ret = s.lookup[id].elem
 	return
 }
@@ -323,8 +328,6 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter 
 			break
 		} else if o.elem != obj {
 			path, ok = s.getIdFromObjectRecursive(path, obj)
-		} else {
-			fmt.Println("match: ", ok, path)
 		}
 	}
 	if !ok {
@@ -456,8 +459,6 @@ func (s *FilesTreeStore) getIterFromObject(obj freesp.TreeElement) (iter *gtk.Tr
 			break
 		} else if o.elem != obj {
 			id, ok = s.getIdFromObjectRecursive(id, obj)
-		} else {
-			fmt.Println("match: ", ok, id)
 		}
 	}
 	if !ok {

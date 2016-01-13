@@ -21,3 +21,21 @@ func Init() {
 	registeredSignalTypes = tool.StringListInit()
 	registeredIOTypes = tool.StringListInit()
 }
+
+func RemoveRegisteredNodeType(nt NodeType) {
+	name := nt.TypeName()
+	delete(nodeTypes, name)
+	_, ok := registeredNodeTypes.Find(name)
+	if ok {
+		registeredNodeTypes.Remove(name)
+	}
+}
+
+func RemoveRegisteredSignalType(st SignalType) {
+	name := st.TypeName()
+	delete(signalTypes, name)
+	_, ok := registeredSignalTypes.Find(name)
+	if ok {
+		registeredSignalTypes.Remove(name)
+	}
+}

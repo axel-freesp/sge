@@ -12,28 +12,11 @@ func SignalGraphNew(filename string, context Context) *signalGraph {
 }
 
 func SignalGraphUsesNodeType(s SignalGraph, nt NodeType) bool {
-	for _, n := range s.ItsType().Nodes() {
-		if n.ItsType() == nt {
-			return true
-		}
-	}
-	return false
+	return SignalGraphTypeUsesNodeType(s.ItsType(), nt)
 }
 
 func SignalGraphUsesSignalType(s SignalGraph, st SignalType) bool {
-	for _, n := range s.ItsType().Nodes() {
-		for _, p := range n.InPorts() {
-			if p.SignalType() == st {
-				return true
-			}
-		}
-		for _, p := range n.OutPorts() {
-			if p.SignalType() == st {
-				return true
-			}
-		}
-	}
-	return false
+	return SignalGraphTypeUsesSignalType(s.ItsType(), st)
 }
 
 type signalGraph struct {

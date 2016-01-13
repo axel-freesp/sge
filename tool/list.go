@@ -17,13 +17,8 @@ func (l *StringList) Append(s string) {
 }
 
 func (l *StringList) Remove(s string) {
-	var i int
-	for i = range l.strings {
-		if s == l.strings[i] {
-			break
-		}
-	}
-	if i >= len(l.strings) {
+	i, ok := l.Find(s)
+	if !ok {
 		for _, v := range l.strings {
 			log.Printf("StringList.Remove: have %s\n", v)
 		}
@@ -35,6 +30,16 @@ func (l *StringList) Remove(s string) {
 	l.strings = l.strings[:len(l.strings)-1]
 }
 
-func (l *StringList) Strings() []string {
+func (l StringList) Strings() []string {
 	return l.strings
+}
+
+func (l StringList) Find(s string) (index int, ok bool) {
+	for index = range l.strings {
+		if s == l.strings[index] {
+			ok = true
+			break
+		}
+	}
+	return
 }

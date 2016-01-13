@@ -27,6 +27,45 @@ func SignalGraphTypeNew(context Context) *signalGraphType {
 	return &signalGraphType{context, nil, nodeListInit(), nil, nil, nil}
 }
 
+func SignalGraphTypeUsesNodeType(t SignalGraphType, nt NodeType) bool {
+	for _, n := range t.Nodes() {
+		if n.ItsType().TypeName() == nt.TypeName() {
+			return true
+		}
+		for _, impl := range n.ItsType().Implementation() {
+			if impl.ImplementationType() == NodeTypeGraph {
+				if SignalGraphTypeUsesNodeType(impl.Graph(), nt) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func SignalGraphTypeUsesSignalType(t SignalGraphType, st SignalType) bool {
+	for _, n := range t.Nodes() {
+		for _, p := range n.InPorts() {
+			if p.SignalType() == st {
+				return true
+			}
+		}
+		for _, p := range n.OutPorts() {
+			if p.SignalType() == st {
+				return true
+			}
+		}
+		for _, impl := range n.ItsType().Implementation() {
+			if impl.ImplementationType() == NodeTypeGraph {
+				if SignalGraphTypeUsesSignalType(impl.Graph(), st) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (t *signalGraphType) Nodes() []Node {
 	return t.nodes.Nodes()
 }

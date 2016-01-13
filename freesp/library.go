@@ -21,6 +21,40 @@ func LibraryNew(filename string, context Context) *library {
 	return ret
 }
 
+func LibraryUsesNodeType(l Library, nt NodeType) bool {
+	for _, t := range l.NodeTypes() {
+		if t.TypeName() == nt.TypeName() {
+			return true
+		}
+		for _, impl := range t.Implementation() {
+			if impl.ImplementationType() == NodeTypeGraph {
+				if SignalGraphTypeUsesNodeType(impl.Graph(), nt) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func LibraryUsesSignalType(l Library, st SignalType) bool {
+	for _, t := range l.SignalTypes() {
+		if t.TypeName() == st.TypeName() {
+			return true
+		}
+	}
+	for _, t := range l.NodeTypes() {
+		for _, impl := range t.Implementation() {
+			if impl.ImplementationType() == NodeTypeGraph {
+				if SignalGraphTypeUsesSignalType(impl.Graph(), st) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (l library) Filename() string {
 	return l.filename
 }

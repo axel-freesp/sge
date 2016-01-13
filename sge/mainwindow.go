@@ -307,5 +307,103 @@ func (g *Global) RenameLibrary(oldName, newName string) {
 }
 
 func (g *Global) RemoveLibrary(name string) {
+	l := g.libraryMap[name]
+	nodeTypes := l.NodeTypes()
+	signalTypes := l.SignalTypes()
+	for _, nt := range nodeTypes {
+		if !NodeTypeIsInUse(nt) {
+			CleanupNodeType(nt)
+		}
+	}
+	for _, st := range signalTypes {
+		if !SignalTypeIsInUse(st) {
+			CleanupSignalType(st)
+		}
+	}
 	delete(g.libraryMap, name)
+}
+
+func CleanupNodeType(nt freesp.NodeType) {
+	for _, impl := range nt.Implementation() {
+		if impl.ImplementationType() == freesp.NodeTypeGraph {
+			CleanupNodeTypesFromNodes(impl.Graph().Nodes())
+		}
+	}
+	freesp.RemoveRegisteredNodeType(nt)
+}
+
+func CleanupNodeTypesFromNodes(nodes []freesp.Node) {
+	for _, n := range nodes {
+		nt := n.ItsType()
+		if !NodeTypeIsInUse(nt) {
+			CleanupNodeType(nt)
+		}
+	}
+}
+
+func CleanupSignalType(st freesp.SignalType) {
+	freesp.RemoveRegisteredSignalType(st)
+}
+
+func CleanupSignalTypesFromNodes(nodes []freesp.Node) {
+	for _, n := range nodes {
+		for _, p := range n.InPorts() {
+			st := p.SignalType()
+			if !SignalTypeIsInUse(st) {
+				CleanupSignalType(st)
+			}
+		}
+		for _, p := range n.OutPorts() {
+			st := p.SignalType()
+			if !SignalTypeIsInUse(st) {
+				CleanupSignalType(st)
+			}
+		}
+		nt := n.ItsType()
+		for _, impl := range nt.Implementation() {
+			if impl.ImplementationType() == freesp.NodeTypeGraph {
+				CleanupSignalTypesFromNodes(impl.Graph().Nodes())
+			}
+		}
+	}
+}
+
+func NodeTypeIsInUse(nt freesp.NodeType) bool {
+	var te freesp.TreeElement
+	var err error
+	for i := 0; err == nil; i++ {
+		id := fmt.Sprintf("%d", i)
+		te, err = global.fts.GetObjectById(id)
+		switch te.(type) {
+		case freesp.SignalGraph:
+			if freesp.SignalGraphUsesNodeType(te.(freesp.SignalGraph), nt) {
+				return true
+			}
+		case freesp.Library:
+			if freesp.LibraryUsesNodeType(te.(freesp.Library), nt) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func SignalTypeIsInUse(st freesp.SignalType) bool {
+	var te freesp.TreeElement
+	var err error
+	for i := 0; err == nil; i++ {
+		id := fmt.Sprintf("%d", i)
+		te, err = global.fts.GetObjectById(id)
+		switch te.(type) {
+		case freesp.SignalGraph:
+			if freesp.SignalGraphUsesSignalType(te.(freesp.SignalGraph), st) {
+				return true
+			}
+		case freesp.Library:
+			if freesp.LibraryUsesSignalType(te.(freesp.Library), st) {
+				return true
+			}
+		}
+	}
+	return false
 }

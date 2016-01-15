@@ -59,6 +59,9 @@ const (
 	SymbolIOType
 	SymbolInChannel
 	SymbolOutChannel
+	SymbolMappings
+	SymbolMapped
+	SymbolUnmapped
 )
 
 type Property interface {

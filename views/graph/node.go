@@ -29,13 +29,13 @@ var _ NodeIf = (*Node)(nil)
 func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
-	ret = &Node{NamedBoxObjectInit(box,
-			ColorInit(ColorOption(NodeNormal)),
+	config := DrawConfig{ColorInit(ColorOption(NodeNormal)),
 			ColorInit(ColorOption(NodeHighlight)),
 			ColorInit(ColorOption(NodeSelected)),
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
-			image.Point{global.padX, global.padY}, n), n, nil, -1}
+			image.Point{global.padX, global.padY}}
+	ret = &Node{NamedBoxObjectInit(box, config, n), n, nil, -1}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
 		return ret.onHighlight(hit, pos)
 	})
@@ -118,6 +118,14 @@ func (n Node) InPortIndex(portName string) int {
 
 func (n Node) OutPortIndex(portName string) int {
 	return n.userObj.OutPortIndex(portName)
+}
+
+
+//
+//		ContainerChild interface
+//
+func (n Node) Layout() (box image.Rectangle) {
+	return n.BBox()
 }
 
 

@@ -13,6 +13,7 @@ type GoAppMenu struct {
 	fileNewSg   *gtk.MenuItem
 	fileNewLib  *gtk.MenuItem
 	fileNewPlat *gtk.MenuItem
+	fileNewMap  *gtk.MenuItem
 	fileOpen    *gtk.MenuItem
 	fileSave    *gtk.MenuItem
 	fileSaveAs  *gtk.MenuItem
@@ -67,6 +68,10 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create fileNewPlat:", err)
 	}
+	m.fileNewMap, err = gtk.MenuItemNewWithLabel("New Mapping")
+	if err != nil {
+		log.Fatal("Unable to create fileNewPlat:", err)
+	}
 	m.fileOpen, err = gtk.MenuItemNewWithLabel("Open")
 	if err != nil {
 		log.Fatal("Unable to create fileOpen:", err)
@@ -90,6 +95,7 @@ func (m *GoAppMenu) Init() {
 	m.menuFile.Append(m.fileNewSg)
 	m.menuFile.Append(m.fileNewLib)
 	m.menuFile.Append(m.fileNewPlat)
+	m.menuFile.Append(m.fileNewMap)
 	x, _ := gtk.SeparatorMenuItemNew()
 	m.menuFile.Append(x)
 	m.menuFile.Append(m.fileOpen)

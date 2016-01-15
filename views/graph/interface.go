@@ -49,6 +49,7 @@ type ProcessIf interface {
 	NamedBox
 	UserObj() interfaces.ProcessObject
 	ArchObject() ArchIf
+	SetArchObject(ArchIf)
 	SelectChannel(ch interfaces.ChannelObject)
 	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
 }

@@ -35,6 +35,12 @@ type ConnectionObject interface {
 	ToObject() PortObject
 }
 
+type MappingObject interface {
+	GraphObject() GraphObject
+	PlatformObject() PlatformObject
+	MappedObject(NodeObject) (ProcessObject, bool)
+}
+
 type PlatformObject interface {
 	ArchObjects() []ArchObject
 }

@@ -10,21 +10,24 @@ import (
 	"log"
 )
 
-type platformView struct {
-	parent         *ScaledView
-	area           DrawArea
-	p              interfaces.PlatformObject
-	context        Context
-	arch           []graph.ArchIf
+type mappingView struct {
+	parent      *ScaledView
+	area        DrawArea
+	mapping     interfaces.MappingObject
+	nodes       []graph.NodeIf
+	connections []graph.ConnectIf
+	arch        []graph.ArchIf
+	context     Context
+
 	dragOffs       image.Point
 	button1Pressed bool
 }
 
-var _ ScaledScene = (*platformView)(nil)
-var _ GraphView = (*platformView)(nil)
+var _ ScaledScene = (*mappingView)(nil)
+var _ GraphView = (*mappingView)(nil)
 
-func PlatformViewNew(p interfaces.PlatformObject, context Context) (viewer *platformView, err error) {
-	viewer = &platformView{nil, DrawArea{}, p, context, nil, image.Point{}, false}
+func MappingViewNew(m interfaces.MappingObject, context Context) (viewer *mappingView, err error) {
+	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -33,15 +36,15 @@ func PlatformViewNew(p interfaces.PlatformObject, context Context) (viewer *plat
 	return
 }
 
-func PlatformViewDestroy(viewer GraphView) {
-	DrawAreaDestroy(viewer.(*platformView).area)
+func MappingViewDestroy(viewer GraphView) {
+	DrawAreaDestroy(viewer.(*mappingView).area)
 }
 
-func (v *platformView) Widget() *gtk.Widget {
+func (v *mappingView) Widget() *gtk.Widget {
 	return v.parent.Widget()
 }
 
-func (v *platformView) init() (err error) {
+func (v *mappingView) init() (err error) {
 	v.parent, err = ScaledViewNew(v)
 	if err != nil {
 		return
@@ -54,29 +57,59 @@ func (v *platformView) init() (err error) {
 	return
 }
 
-func (v *platformView) Sync() {
-	log.Printf("platformView.Sync()\n")
-	v.arch = make([]graph.ArchIf, len(v.p.ArchObjects()))
-	for i, a := range v.p.ArchObjects() {
-		v.arch[i] = graph.ArchNew(a)
+func (v *mappingView) Sync() {
+	log.Printf("mappingView.Sync()\n")
+	g := v.mapping.GraphObject()
+	v.nodes = make([]graph.NodeIf, len(g.NodeObjects()))
+	var numberOfConnections = 0
+	for _, n := range g.NodeObjects() {
+		for _, p := range n.GetOutPorts() {
+			numberOfConnections += len(p.ConnectionObjects())
+		}
+	}
+	v.connections = make([]graph.ConnectIf, numberOfConnections)
+	for i, n := range g.NodeObjects() {
+		v.nodes[i] = graph.NodeNew(n.Position(), n)
+	}
+	var index = 0
+	for _, n := range g.NodeObjects() {
+		from := v.findNode(n.Name())
+		for _, p := range n.GetOutPorts() {
+			fromId := from.OutPortIndex(p.Name())
+			for _, c := range p.ConnectionObjects() {
+				to := v.findNode(c.NodeObject().Name())
+				toId := to.InPortIndex(c.Name())
+				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
+				index++
+			}
+		}
+	}
+	p := v.mapping.PlatformObject()
+	v.arch = make([]graph.ArchIf, len(p.ArchObjects()))
+	for i, a := range p.ArchObjects() {
+		v.arch[i] = graph.ArchMappingNew(a, v.nodes, v.mapping)
 	}
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
 }
 
-func (v platformView) IdentifyGraph(g interfaces.GraphObject) bool {
+func (v mappingView) IdentifyGraph(g interfaces.GraphObject) bool {
 	return false
 }
 
-func (v platformView) IdentifyPlatform(p interfaces.PlatformObject) bool {
-	return p == v.p
+func (v mappingView) IdentifyPlatform(p interfaces.PlatformObject) bool {
+	return false
+}
+
+func (v mappingView) IdentifyMapping(p interfaces.MappingObject) bool {
+	return false
 }
 
 /*
  *		Handle selection in treeview
  */
 
-func (v *platformView) Select(obj interfaces.GraphElement) {
+func (v *mappingView) Select(obj interfaces.GraphElement) {
 	switch obj.(type) {
 	case interfaces.ArchObject:
 		arch := obj.(interfaces.ArchObject)
@@ -102,7 +135,7 @@ func (v *platformView) Select(obj interfaces.GraphElement) {
 	}
 }
 
-func (v *platformView) selectArch(toSelect graph.ArchIf) {
+func (v *mappingView) selectArch(toSelect graph.ArchIf) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
 		if a.Name() == toSelect.Name() {
@@ -113,7 +146,7 @@ func (v *platformView) selectArch(toSelect graph.ArchIf) {
 	}
 }
 
-func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret graph.ArchIf, ok bool) {
+func (v *mappingView) focusArchFromUserObject(obj interfaces.ArchObject) (ret graph.ArchIf, ok bool) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
 		if obj.Name() == a.UserObj().Name() {
@@ -132,7 +165,7 @@ func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret g
  *		ScaledScene interface
  */
 
-func (v *platformView) Update() (width, height int) {
+func (v *mappingView) Update() (width, height int) {
 	width = v.calcSceneWidth()
 	height = v.calcSceneHeight()
 	v.area.SetSizeRequest(width, height)
@@ -140,11 +173,11 @@ func (v *platformView) Update() (width, height int) {
 	return
 }
 
-func (v *platformView) calcSceneWidth() int {
+func (v *mappingView) calcSceneWidth() int {
 	return int(float64(v.bBox().Max.X+50) * v.parent.Scale())
 }
 
-func (v *platformView) calcSceneHeight() int {
+func (v *mappingView) calcSceneHeight() int {
 	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
 }
 
@@ -152,7 +185,7 @@ func (v *platformView) calcSceneHeight() int {
  *		platformButtonCallback
  */
 
-func (v *platformView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
+func (v *mappingView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
 	pos := v.parent.Position(position)
 	switch evType {
 	case gdk.EVENT_BUTTON_PRESS:
@@ -168,7 +201,7 @@ func (v *platformView) ButtonCallback(area DrawArea, evType gdk.EventType, posit
 	}
 }
 
-func (v *platformView) handleArchSelect(pos image.Point) {
+func (v *mappingView) handleArchSelect(pos image.Point) {
 	for _, a := range v.arch {
 		hit, _ := a.CheckHit(pos)
 		if hit {
@@ -199,7 +232,7 @@ func (v *platformView) handleArchSelect(pos image.Point) {
  *		platformMotionCallback
  */
 
-func (v *platformView) MotionCallback(area DrawArea, position image.Point) {
+func (v *mappingView) MotionCallback(area DrawArea, position image.Point) {
 	pos := v.parent.Position(position)
 	if v.button1Pressed {
 		v.handleDrag(pos)
@@ -208,7 +241,7 @@ func (v *platformView) MotionCallback(area DrawArea, position image.Point) {
 	}
 }
 
-func (v *platformView) handleDrag(pos image.Point) {
+func (v *mappingView) handleDrag(pos image.Point) {
 	for _, a := range v.arch {
 		if a.IsSelected() {
 			box := a.BBox()
@@ -221,7 +254,7 @@ func (v *platformView) handleDrag(pos image.Point) {
 	}
 }
 
-func (v *platformView) handleMouseover(pos image.Point) {
+func (v *mappingView) handleMouseover(pos image.Point) {
 	for _, a := range v.arch {
 		_, mod := a.CheckHit(pos)
 		if mod {
@@ -244,11 +277,11 @@ func (v *platformView) handleMouseover(pos image.Point) {
 	*/
 }
 
-func (v *platformView) repaintArch(a graph.ArchIf) {
+func (v *mappingView) repaintArch(a graph.ArchIf) {
 	v.drawScene(v.archDrawBox(a))
 }
 
-func (v *platformView) archDrawBox(a graph.ArchIf) image.Rectangle {
+func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
 	ret := a.BBox()
 	for _, aa := range v.arch {
 		if aa.IsLinked(a.Name()) {
@@ -262,7 +295,7 @@ func (v *platformView) archDrawBox(a graph.ArchIf) image.Rectangle {
  *		platformDrawCallback
  */
 
-func (v *platformView) DrawCallback(area DrawArea, context *cairo.Context) {
+func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
@@ -270,7 +303,7 @@ func (v *platformView) DrawCallback(area DrawArea, context *cairo.Context) {
 	v.drawChannels(context, r)
 }
 
-func (v *platformView) drawArch(context *cairo.Context, r image.Rectangle) {
+func (v *mappingView) drawArch(context *cairo.Context, r image.Rectangle) {
 	for _, a := range v.arch {
 		if r.Overlaps(a.BBox()) {
 			a.Draw(context)
@@ -278,7 +311,7 @@ func (v *platformView) drawArch(context *cairo.Context, r image.Rectangle) {
 	}
 }
 
-func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
+func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 	for _, a := range v.arch {
 		for _, pr := range a.Processes() {
 			for _, c := range pr.UserObj().OutChannelObjects() {
@@ -295,7 +328,7 @@ func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
 					p1 := a.ChannelPort(c)
 					p2 := a2.ChannelPort(link)
 					if p1 == nil || p2 == nil {
-						log.Printf("platformView.drawChannels error: invalid nil port (%s - %s).\n", a.Name(), la.Name())
+						log.Printf("mappingView.drawChannels error: invalid nil port (%s - %s).\n", a.Name(), la.Name())
 						continue
 					}
 					r, g, b := graph.ColorOption(graph.NormalLine)
@@ -314,11 +347,20 @@ func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
  *		Private functions
  */
 
-func (v *platformView) drawAll() {
+func (v *mappingView) findNode(name string) *graph.Node {
+	for _, d := range v.nodes {
+		if d.Name() == name {
+			return d.(*graph.Node)
+		}
+	}
+	return nil
+}
+
+func (v *mappingView) drawAll() {
 	v.drawScene(v.bBox())
 }
 
-func (v *platformView) bBox() (box image.Rectangle) {
+func (v *mappingView) bBox() (box image.Rectangle) {
 	emptyRect := image.Rectangle{}
 	box = emptyRect
 	for _, a := range v.arch {
@@ -331,8 +373,8 @@ func (v *platformView) bBox() (box image.Rectangle) {
 	return
 }
 
-func (v *platformView) drawScene(r image.Rectangle) {
-	//log.Printf("platformView.drawScene %v\n", r)
+func (v *mappingView) drawScene(r image.Rectangle) {
+	//log.Printf("mappingView.drawScene %v\n", r)
 	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
 	v.area.QueueDrawArea(v.parent.ScaleCoord(x, false), v.parent.ScaleCoord(y, false),
 		v.parent.ScaleCoord(w, true)+1, v.parent.ScaleCoord(h, true)+1)

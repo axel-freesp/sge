@@ -49,27 +49,27 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 	return
 }
 
-func (p *process) Arch() Arch {
+func (p process) Arch() Arch {
 	return p.arch
 }
 
-func (p *process) ArchObject() interfaces.ArchObject {
+func (p process) ArchObject() interfaces.ArchObject {
 	return p.arch.(*arch)
 }
 
-func (p *process) InChannels() []Channel {
+func (p process) InChannels() []Channel {
 	return p.inChannels.Channels()
 }
 
-func (p *process) OutChannels() []Channel {
+func (p process) OutChannels() []Channel {
 	return p.outChannels.Channels()
 }
 
-func (p *process) InChannelObjects() []interfaces.ChannelObject {
+func (p process) InChannelObjects() []interfaces.ChannelObject {
 	return p.inChannels.Exports()
 }
 
-func (p *process) OutChannelObjects() []interfaces.ChannelObject {
+func (p process) OutChannelObjects() []interfaces.ChannelObject {
 	return p.outChannels.Exports()
 }
 

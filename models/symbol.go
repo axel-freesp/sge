@@ -60,6 +60,9 @@ var sConfig = []symbolConfig{
 	{freesp.SymbolIOType, makeFilename("signal-type")},
 	{freesp.SymbolInChannel, makeFilename("inputPic")},
 	{freesp.SymbolOutChannel, makeFilename("outputPic")},
+	{freesp.SymbolMappings, makeFilename("mappingsPic")},
+	{freesp.SymbolMapped, makeFilename("mappedPic")},
+	{freesp.SymbolUnmapped, makeFilename("unmappedPic")},
 }
 
 var normalTable, readonlyTable map[freesp.Symbol]*gdk.Pixbuf

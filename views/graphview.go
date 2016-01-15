@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	//"image"
 	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -91,7 +90,7 @@ func (gvc graphViewCollection) XmlTextView() *XmlTextView {
 func (gvc *graphViewCollection) Add(gv GraphView, title string) {
 	gvc.graphview = append(gvc.graphview, gv)
 	gvc.stack.AddTitled(gv.Widget(), title, title)
-	gv.Widget().Show()
+	gv.Widget().ShowAll()
 }
 
 func (gvc *graphViewCollection) Rename(old, new string) {

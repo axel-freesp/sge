@@ -9,14 +9,16 @@ import (
  */
 
 type Context interface {
-	GetLibrary(libname string) (lib Library, err error)
+	GetLibrary(libname string) (Library, error)
+	GetSignalGraph(filename string) (SignalGraph, error)
+	GetPlatform(filename string) (Platform, error)
 }
 
 type SignalGraphType interface {
 	TreeElement
 	Libraries() []Library
 	Nodes() []Node
-	NodeByName(string) Node
+	NodeByName(string) (Node, bool)
 	InputNodes() []Node
 	OutputNodes() []Node
 	ProcessingNodes() []Node
@@ -171,6 +173,7 @@ type Platform interface {
 	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)
+	ProcessByName(string) (Process, bool)
 	Arch() []Arch
 	PlatformObject() interfaces.PlatformObject
 }
@@ -211,6 +214,22 @@ type Channel interface {
 	IOType() IOType
 	SetIOType(IOType)
 	Link() Channel
+}
+
+type Mapping interface {
+	TreeElement
+	Filenamer
+	MappingObject() interfaces.MappingObject
+	AddMapping(n Node, p Process)
+	SetGraph(SignalGraph)
+	Graph() SignalGraph
+	SetPlatform(Platform)
+	Platform() Platform
+	Mapped(Node) (Process, bool)
+}
+
+type MappedElement interface {
+	TreeElement
 }
 
 func GetRegisteredIOTypes() []string {

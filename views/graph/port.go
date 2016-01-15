@@ -11,22 +11,23 @@ type Port struct {
 }
 
 func PortNew(box image.Rectangle, userObj interfaces.PortObject) *Port {
+	var config DrawConfig
 	if userObj.Direction() == interfaces.InPort {
-		return &Port{SelectableBoxInit(box,
-			ColorInit(ColorOption(InputPort)),
+		config = DrawConfig{ColorInit(ColorOption(InputPort)),
 			ColorInit(ColorOption(HighlightInPort)),
 			ColorInit(ColorOption(SelectInPort)),
 			ColorInit(ColorOption(BoxFrame)),
-			image.Point{}),
-			userObj}
-	}
-	return &Port{SelectableBoxInit(box,
-			ColorInit(ColorOption(OutputPort)),
+			Color{},
+			image.Point{}}
+	} else {
+		config = DrawConfig{ColorInit(ColorOption(OutputPort)),
 			ColorInit(ColorOption(HighlightOutPort)),
 			ColorInit(ColorOption(SelectOutPort)),
 			ColorInit(ColorOption(BoxFrame)),
-			image.Point{}),
-			userObj}
+			Color{},
+			image.Point{}}
+	}
+	return &Port{SelectableBoxInit(box, config), userObj}
 }
 
 var _ PortIf = (*Port)(nil)

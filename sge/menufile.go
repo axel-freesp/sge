@@ -20,6 +20,7 @@ func MenuFileInit(menu *GoAppMenu) {
 	menu.fileNewSg.Connect("activate", func() { fileNewSg(global.fts, global.ftv) })
 	menu.fileNewLib.Connect("activate", func() { fileNewLib(global.fts, global.ftv) })
 	menu.fileNewPlat.Connect("activate", func() { fileNewPlat(global.fts, global.ftv) })
+	menu.fileNewMap.Connect("activate", func() { fileNewMap(global.fts, global.ftv) })
 	menu.fileOpen.Connect("activate", func() { fileOpen(global.fts, global.ftv) })
 	menu.fileSave.Connect("activate", func() { fileSave(global.fts) })
 	menu.fileSaveAs.Connect("activate", func() { fileSaveAs(global.fts) })
@@ -34,6 +35,7 @@ func MenuFileInit(menu *GoAppMenu) {
 var sgFilenameIndex = 0
 var libFilenameIndex = 0
 var platFilenameIndex = 0
+var mapFilenameIndex = 0
 
 func newSGFilename() string {
 	ret := fmt.Sprintf("new-file-%d.sml", sgFilenameIndex)
@@ -49,6 +51,12 @@ func newLibFilename() string {
 
 func newPlatFilename() string {
 	ret := fmt.Sprintf("new-file-%d.spml", platFilenameIndex)
+	platFilenameIndex++
+	return ret
+}
+
+func newMapFilename() string {
+	ret := fmt.Sprintf("new-file-%d.mml", mapFilenameIndex)
 	platFilenameIndex++
 	return ret
 }
@@ -86,7 +94,8 @@ func fileNewLib(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	global.AddNewLibrary(lib)
 	cursor, err := fts.AddLibraryFile(filename, lib)
 	if err != nil {
-		log.Printf("Warning: ftv.AddLibraryFile('%s') failed.\n", filename)
+		log.Printf("Warning: ftv.AddLibraryFile('%s') failed: %s.\n", filename, err)
+		return
 	}
 	setCursorNewId(ftv, cursor.Path)
 }
@@ -108,6 +117,32 @@ func fileNewPlat(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	global.win.Window().ShowAll()
 }
 
+func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
+	log.Println("fileNewMap")
+	filename := newMapFilename()
+	m := freesp.MappingNew(filename, &global)
+	var graph freesp.SignalGraph
+	var platform freesp.Platform
+	// TODO: open dialog to choose graph and platform
+	_ = graph
+	_ = platform
+	log.Printf("fileNewMap: not implemented\n")
+	return
+
+	cursor, err := fts.AddMappingFile(filename, m)
+	if err != nil {
+		log.Printf("Warning: ftv.AddMappingFile('%s') failed: %s.\n", filename, err)
+		return
+	}
+	setCursorNewId(ftv, cursor.Path)
+	mv, err := views.MappingViewNew(m.MappingObject(), &global)
+	if err != nil {
+		log.Fatal("fileNewMap: Could not create graph view.")
+	}
+	global.win.graphViews.Add(mv, filename)
+	global.win.Window().ShowAll()
+}
+
 func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	log.Println("fileOpen")
 	filename, ok := getFilenameToOpen()
@@ -116,24 +151,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	switch tool.Suffix(filename) {
 	case "sml":
-		sg := freesp.SignalGraphNew(filenameToShow(filename), &global)
-		err := sg.ReadFile(filename)
+		sg, err := global.GetSignalGraph(filenameToShow(filename))
 		if err != nil {
-			log.Println(err)
+			log.Printf("fileOpen FIXME: could not get signal graph %s. Try full path!\n", filenameToShow(filename))
 			return
 		}
-		newId, err := fts.AddSignalGraphFile(filename, sg)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		setCursorNewId(ftv, newId)
-		gv, err := views.SignalGraphViewNew(sg.GraphObject(), &global)
-		if err != nil {
-			log.Fatal("fileOpen: Could not create graph view.")
-		}
-		global.win.graphViews.Add(gv, filenameToShow(filename))
-		global.win.Window().ShowAll()
+		cursor := fts.Cursor(sg)
+		setCursorNewId(ftv, cursor.Path)
 	case "alml":
 		lib, err := global.GetLibrary(filenameToShow(filename))
 		if err != nil {
@@ -143,23 +167,31 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		cursor := fts.Cursor(lib)
 		setCursorNewId(ftv, cursor.Path)
 	case "spml":
-		p := freesp.PlatformNew(filenameToShow(filename))
-		err := p.ReadFile(filename)
+		p, err := global.GetPlatform(filenameToShow(filename))
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		newId, err := fts.AddPlatformFile(filename, p)
+		cursor := fts.Cursor(p)
+		setCursorNewId(ftv, cursor.Path)
+	case "mml":
+		m := freesp.MappingNew(filename, &global)
+		err := m.ReadFile(filename)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		setCursorNewId(ftv, newId)
-		pv, err := views.PlatformViewNew(p, &global)
+		cursor, err := fts.AddMappingFile(filename, m)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		setCursorNewId(ftv, cursor.Path)
+		mv, err := views.MappingViewNew(m, &global)
 		if err != nil {
 			log.Fatal("fileOpen: Could not create platform view.")
 		}
-		global.win.graphViews.Add(pv, filenameToShow(filename))
+		global.win.graphViews.Add(mv, filenameToShow(filename))
 		global.win.Window().ShowAll()
 	default:
 	}

@@ -20,13 +20,16 @@ const (
 )
 
 type Global struct {
-	win          *GoAppWindow
-	jl           *jobList
-	fts          *models.FilesTreeStore
-	ftv          *views.FilesTreeView
-	graphviewMap map[freesp.Implementation]views.GraphView
-	libraryMap   map[string]freesp.Library
-	clp          *gtk.Clipboard
+	win            *GoAppWindow
+	jl             *jobList
+	fts            *models.FilesTreeStore
+	ftv            *views.FilesTreeView
+	graphviewMap   map[freesp.Implementation]views.GraphView
+	libraryMap     map[string]freesp.Library
+	signalGraphMap map[string]freesp.SignalGraph
+	platformMap    map[string]freesp.Platform
+	mappingMap     map[string]freesp.Mapping
+	clp            *gtk.Clipboard
 }
 
 var _ views.Context = (*Global)(nil)
@@ -151,6 +154,9 @@ func main() {
 	freesp.Init()
 	global.graphviewMap = make(map[freesp.Implementation]views.GraphView)
 	global.libraryMap = make(map[string]freesp.Library)
+	global.signalGraphMap = make(map[string]freesp.SignalGraph)
+	global.platformMap = make(map[string]freesp.Platform)
+	global.mappingMap = make(map[string]freesp.Mapping)
 
 	var err error
 	iconPath := os.Getenv("SGE_ICON_PATH")
@@ -204,42 +210,27 @@ func main() {
 	// Handle command line arguments: treat each as a filename:
 	for i, p := range unhandledArgs {
 		if i > 0 {
-			filepath := fmt.Sprintf("%s/%s", backend.XmlRoot(), p)
 			switch tool.Suffix(p) {
 			case "sml":
-				var sg freesp.SignalGraph
-				sg = freesp.SignalGraphNew(p, &global)
-				err1 := sg.ReadFile(filepath)
-				if err1 == nil {
-					log.Println("Loading signal graph", filepath)
-					global.fts.AddSignalGraphFile(p, sg)
-					gv, err := views.SignalGraphViewNew(sg.GraphObject(), &global)
-					if err != nil {
-						log.Fatal("Could not create graph view.")
-					}
-					global.win.graphViews.Add(gv, p)
+				_, err := global.GetSignalGraph(p)
+				if err != nil {
+					log.Println(err)
+					continue
 				}
 			case "alml":
 				_, err = global.GetLibrary(p)
 			case "spml":
-				pl := freesp.PlatformNew(p)
-				err := pl.ReadFile(filepath)
+				_, err := global.GetPlatform(p)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
-				_, err = global.fts.AddPlatformFile(p, pl)
+			case "mml":
+				_, err = global.GetMapping(p)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
-				pv, err := views.PlatformViewNew(pl, &global)
-				if err != nil {
-					log.Fatal("Could not create platform view.")
-				}
-				global.win.graphViews.Add(pv, p)
-				log.Printf("Platform %s successfully loaded\n", p)
-
 			default:
 				log.Println("Warning: unknown suffix", tool.Suffix(p))
 			}
@@ -275,10 +266,102 @@ func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
 		return
 	}
 	log.Println("Global.GetLibrary: library", libname, "successfully loaded")
-	if err == nil {
-		g.libraryMap[libname] = lib
-		_, err = g.fts.AddLibraryFile(libname, lib)
+	g.libraryMap[libname] = lib
+	_, err = g.fts.AddLibraryFile(libname, lib)
+	return
+}
+
+func (g *Global) GetSignalGraph(filename string) (sg freesp.SignalGraph, err error) {
+	var ok bool
+	sg, ok = g.signalGraphMap[filename]
+	if ok {
+		return
 	}
+	sg = freesp.SignalGraphNew(filename, g)
+	for _, try := range backend.XmlSearchPaths() {
+		err = sg.ReadFile(fmt.Sprintf("%s/%s", try, filename))
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		err = fmt.Errorf("Global.GetSignalGraph: graph file %s not found", filename)
+		return
+	}
+	_, err = g.fts.AddSignalGraphFile(filename, sg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	var gv views.GraphView
+	gv, err = views.SignalGraphViewNew(sg.GraphObject(), g)
+	if err != nil {
+		err = fmt.Errorf("Global.GetSignalGraph: Could not create graph view.")
+		return
+	}
+	g.win.graphViews.Add(gv, filename)
+	log.Println("Global.GetSignalGraph: graph", filename, "successfully loaded")
+	g.signalGraphMap[filename] = sg
+	return
+}
+
+func (g *Global) GetPlatform(filename string) (p freesp.Platform, err error) {
+	var ok bool
+	p, ok = g.platformMap[filename]
+	if ok {
+		return
+	}
+	p = freesp.PlatformNew(filename)
+	for _, try := range backend.XmlSearchPaths() {
+		log.Printf("Global.GetPlatform: try path %s\n", try)
+		err = p.ReadFile(fmt.Sprintf("%s/%s", try, filename))
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		err = fmt.Errorf("Global.GetPlatform: platform file %s not found", filename)
+		return
+	}
+	pv, err := views.PlatformViewNew(p.PlatformObject(), g)
+	if err != nil {
+		err = fmt.Errorf("Global.GetPlatform: Could not create platform view.")
+		return
+	}
+	g.win.graphViews.Add(pv, filename)
+	log.Println("Global.GetPlatform: platform", filename, "successfully loaded")
+	g.platformMap[filename] = p
+	_, err = g.fts.AddPlatformFile(filename, p)
+	return
+}
+
+func (g *Global) GetMapping(filename string) (m freesp.Mapping, err error) {
+	var ok bool
+	m, ok = g.mappingMap[filename]
+	if ok {
+		return
+	}
+	m = freesp.MappingNew(filename, g)
+	for _, try := range backend.XmlSearchPaths() {
+		log.Printf("Global.GetMapping: try path %s\n", try)
+		err = m.ReadFile(fmt.Sprintf("%s/%s", try, filename))
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		err = fmt.Errorf("Global.GetMapping: platform file %s not found: %s", filename, err)
+		return
+	}
+	mv, err := views.MappingViewNew(m.MappingObject(), g)
+	if err != nil {
+		err = fmt.Errorf("Global.GetMapping: Could not create platform view.")
+		return
+	}
+	g.win.graphViews.Add(mv, filename)
+	log.Println("Global.GetMapping: platform", filename, "successfully loaded")
+	g.mappingMap[filename] = m
+	_, err = g.fts.AddMappingFile(filename, m)
 	return
 }
 

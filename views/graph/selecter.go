@@ -80,8 +80,7 @@ type SelectableBox struct {
     BBoxObject
     SelectObject
     HighlightObject
-    nCol, hCol, sCol, fCol Color
-    pad image.Point
+    config DrawConfig
 }
 
 type Color struct {
@@ -94,11 +93,16 @@ func ColorInit(r, g, b float64) Color {
 
 var _ BoxedSelecter = (*SelectableBox)(nil)
 
-func SelectableBoxInit(box image.Rectangle, nCol, hCol, sCol, fCol Color, pad image.Point) SelectableBox {
+type DrawConfig struct {
+	nCol, hCol, sCol, fCol, tCol Color
+	pad image.Point
+}
+
+func SelectableBoxInit(box image.Rectangle, config DrawConfig) SelectableBox {
     return SelectableBox{BBoxInit(box),
 		SelectObject{false, defaultSelection, defaultSelection},
 		HighlightObject{false, image.Point{}, defaultHighlight},
-		nCol, hCol, sCol, fCol, pad}
+		config}
 }
 
 func (b *SelectableBox) CheckHit(pos image.Point) (hit, modified bool) {
@@ -122,17 +126,17 @@ func (b SelectableBox) DrawDefault(ctxt interface{}){
 		context := ctxt.(*cairo.Context)
 		var color Color
 		if b.IsSelected() {
-			color = b.sCol
+			color = b.config.sCol
 		} else if b.IsHighlighted() {
-			color = b.hCol
+			color = b.config.hCol
 		} else {
-			color = b.nCol
+			color = b.config.nCol
 		}
-		x, y, w, h := boxToDraw(&b, b.pad)
+		x, y, w, h := boxToDraw(&b, b.config.pad)
 		context.SetSourceRGB(color.r, color.g, color.b)
 		context.Rectangle(x, y, w, h)
 		context.FillPreserve()
-		context.SetSourceRGB(b.fCol.r, b.fCol.g, b.fCol.b)
+		context.SetSourceRGB(b.config.fCol.r, b.config.fCol.g, b.config.fCol.b)
 		context.SetLineWidth(2)
 		context.Stroke()
 	}

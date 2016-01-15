@@ -74,13 +74,14 @@ func (t *signalGraphType) NodeObjects() []interfaces.NodeObject {
 	return t.nodes.Exports()
 }
 
-func (t *signalGraphType) NodeByName(name string) Node {
-	for _, n := range t.Nodes() {
+func (t *signalGraphType) NodeByName(name string) (n Node, ok bool) {
+	for _, n = range t.Nodes() {
 		if n.Name() == name {
-			return n
+			ok = true
+			return
 		}
 	}
-	return nil
+	return
 }
 
 func (t *signalGraphType) Libraries() []Library {
@@ -235,14 +236,14 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 		t.nodes.Append(nnode)
 	}
 	for i, c := range g.Connections {
-		n1 := t.NodeByName(c.From)
-		if n1 == nil {
+		n1, ok := t.NodeByName(c.From)
+		if !ok {
 			dump, _ := g.Write()
 			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d: node %s not found\n%s", i, c.From, dump))
 		}
-		n2 := t.NodeByName(c.To)
-		if n2 == nil {
+		n2, ok := t.NodeByName(c.To)
+		if !ok {
 			dump, _ := g.Write()
 			log.Println("createSignalGraphTypeFromXml error:")
 			log.Fatal(fmt.Sprintf("invalid edge %d: node %s not found\n%s", i, c.To, dump))

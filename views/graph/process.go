@@ -16,13 +16,13 @@ type ProcessPort struct {
 func ProcessPortNew(pos image.Point, userObj interfaces.ChannelObject) *ProcessPort {
 	size := image.Point{procPortWidth, procPortHeight}
 	box := image.Rectangle{pos, pos.Add(size)}
-	return &ProcessPort{SelectableBoxInit(box,
-			ColorInit(ColorOption(NormalArchPort)),
+	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
 			ColorInit(ColorOption(SelectArchPort)),
 			ColorInit(ColorOption(BoxFrame)),
-			image.Point{}),
-			userObj}
+			Color{},
+			image.Point{}}
+	return &ProcessPort{SelectableBoxInit(box, config), userObj}
 }
 
 func (p ProcessPort) Draw(ctxt interface{}) {
@@ -75,16 +75,16 @@ type Process struct {
 
 var _ ProcessIf = (*Process)(nil)
 
-func ProcessNew(pos image.Point, userObj interfaces.ProcessObject, arch ArchIf) (ret *Process) {
+func ProcessNew(pos image.Point, userObj interfaces.ProcessObject) (ret *Process) {
 	shape := image.Point{global.processWidth, global.processHeight}
 	box := image.Rectangle{pos, pos.Add(shape)}
-	ret = &Process{NamedBoxObjectInit(box,
-			ColorInit(ColorOption(ProcessNormal)),
+	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
 			ColorInit(ColorOption(ProcessHighlight)),
 			ColorInit(ColorOption(ProcessSelected)),
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
-			image.Point{procPortOutBorder, procPortOutBorder}, userObj), userObj, nil, -1, arch}
+			image.Point{procPortOutBorder, procPortOutBorder}}
+	ret = &Process{NamedBoxObjectInit(box, config, userObj), userObj, nil, -1, nil}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
@@ -93,38 +93,7 @@ func ProcessNew(pos image.Point, userObj interfaces.ProcessObject, arch ArchIf) 
 	}, func(){
 		ret.onDeselect()
 	})
-	idx := 0
-	inCnt := len(userObj.InChannelObjects())
-	outCnt := len(userObj.OutChannelObjects())
-	empty := image.Point{}
-	for _, c := range userObj.InChannelObjects() {
-		var pos image.Point
-		if c.Position() == empty {
-			pos = ret.calcPortPos(idx, inCnt + outCnt)
-		} else {
-			pos = c.Position()
-		}
-		arch.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
-		ret.ports = append(ret.ports, arch.(*Arch).channelMap[c])
-		idx++
-	}
-	for _, c := range userObj.OutChannelObjects() {
-		var pos image.Point
-		if c.Position() == empty {
-			pos = ret.calcPortPos(idx, inCnt + outCnt)
-		} else {
-			pos = c.Position()
-		}
-		arch.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
-		ret.ports = append(ret.ports, arch.(*Arch).channelMap[c])
-		idx++
-	}
 	return
-}
-
-func ProcessBox(pos image.Point) image.Rectangle {
-	size := image.Point{global.processWidth, global.processHeight}
-	return image.Rectangle{pos, pos.Add(size)}
 }
 
 func (p Process) UserObj() interfaces.ProcessObject {
@@ -133,6 +102,36 @@ func (p Process) UserObj() interfaces.ProcessObject {
 
 func (pr Process) ArchObject() ArchIf {
 	return pr.arch
+}
+
+func (pr *Process) SetArchObject(a ArchIf) {
+	pr.arch = a
+	idx := 0
+	inCnt := len(pr.userObj.InChannelObjects())
+	outCnt := len(pr.userObj.OutChannelObjects())
+	empty := image.Point{}
+	for _, c := range pr.userObj.InChannelObjects() {
+		var pos image.Point
+		if c.Position() == empty {
+			pos = pr.calcPortPos(idx, inCnt + outCnt)
+		} else {
+			pos = c.Position()
+		}
+		a.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
+		pr.ports = append(pr.ports, a.(*Arch).channelMap[c])
+		idx++
+	}
+	for _, c := range pr.userObj.OutChannelObjects() {
+		var pos image.Point
+		if c.Position() == empty {
+			pos = pr.calcPortPos(idx, inCnt + outCnt)
+		} else {
+			pos = c.Position()
+		}
+		a.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
+		pr.ports = append(pr.ports, a.(*Arch).channelMap[c])
+		idx++
+	}
 }
 
 func (pr *Process) SelectChannel(ch interfaces.ChannelObject) {
@@ -158,9 +157,17 @@ func (pr Process) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
 
 
 //
-//	Drawer interface
+//	ContainerChild interface
 //
 
+func (pr Process) Layout() image.Rectangle {
+	return pr.BBox()
+}
+
+
+//
+//	Drawer interface
+//
 
 func (pr Process) Draw(ctxt interface{}){
 	pr.DrawDefaultText(ctxt)
@@ -287,16 +294,6 @@ func processChooseColor(mode ColorMode) (r, g, b float64) {
 		r, g, b = ColorOption(ProcessSelected)
 	}
 	return
-}
-
-// obsolete
-func (p Process) calcPortBox(idx, cnt int) image.Rectangle {
-	lX, rX, _, bY := p.portCorners()
-	size := image.Point{procPortWidth, procPortHeight}
-	k := float64(idx + 1) / float64(cnt + 1)
-	x := int(k * float64(rX - lX))
-	pos := image.Point{lX + x, bY}
-	return image.Rectangle{pos, pos.Add(size)}
 }
 
 func (p Process) calcPortPos(idx, cnt int) (pos image.Point) {

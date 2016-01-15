@@ -163,6 +163,12 @@ func (s *FilesTreeStore) AddPlatformFile(filename string, plat freesp.Platform) 
 	return
 }
 
+func (s *FilesTreeStore) AddMappingFile(filename string, m freesp.Mapping) (cursor freesp.Cursor, err error) {
+	cursor = s.Append(rootCursor)
+	m.AddToTree(s, cursor)
+	return
+}
+
 func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj freesp.TreeElement) (newId string, err error) {
 	parent, _, err := tree.getObjAndIterById(parentId)
 	if err != nil {

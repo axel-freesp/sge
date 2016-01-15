@@ -43,6 +43,29 @@ func (p *platform) PlatformObject() interfaces.PlatformObject {
 	return p
 }
 
+func (p *platform) ProcessByName(name string) (pr Process, ok bool) {
+	parts := strings.Split(name, "/")
+	if len(parts) != 2 {
+		return
+	}
+	var a Arch
+	for _, a = range p.Arch() {
+		if a.Name() == parts[0] {
+			break
+		}
+	}
+	if a == nil {
+		return
+	}
+	for _, pr = range a.Processes() {
+		if pr.Name() == parts[1] {
+			ok = true
+			return
+		}
+	}
+	return
+}
+
 /*
  *  Shaper API
  */

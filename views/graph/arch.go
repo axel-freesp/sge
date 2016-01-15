@@ -16,12 +16,13 @@ type ArchPort struct {
 func ArchPortNew(pos image.Point, userObj interfaces.ArchPortObject) *ArchPort {
 	size := image.Point{archPortWidth, archPortHeight}
 	box := image.Rectangle{pos, pos.Add(size)}
-	return &ArchPort{SelectableBoxInit(box,
-			ColorInit(ColorOption(NormalArchPort)),
+	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
 			ColorInit(ColorOption(SelectArchPort)),
 			ColorInit(ColorOption(BoxFrame)),
-			image.Point{}),
+			Color{},
+			image.Point{}}
+	return &ArchPort{SelectableBoxInit(box, config),
 			userObj}
 }
 
@@ -35,7 +36,7 @@ func (p *ArchPort) SetPosition(pos image.Point) {
 //////////////////////
 
 type Arch struct {
-	NamedBoxObject
+	Container
 	userObj interfaces.ArchObject
 	processes []ProcessIf
 	selectedProcess int
@@ -46,15 +47,57 @@ type Arch struct {
 
 var _ ArchIf = (*Arch)(nil)
 
-func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
-	a := &Arch{NamedBoxObjectInit(box,
-			ColorInit(ColorOption(ArchNormal)),
+func ArchNew(userObj interfaces.ArchObject) *Arch {
+	var processes []ProcessIf
+	var children []ContainerChild
+	for _, up := range userObj.ProcessObjects() {
+		p := ProcessNew(up.Position(), up)
+		processes = append(processes, p)
+		children = append(children, p)
+	}
+	config := DrawConfig{ColorInit(ColorOption(ArchNormal)),
 			ColorInit(ColorOption(ArchHighlight)),
 			ColorInit(ColorOption(ArchSelected)),
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
-			image.Point{archPortOutBorder, archPortOutBorder}, userObj), userObj, nil, -1, nil, -1,
+			image.Point{archPortOutBorder, archPortOutBorder}}
+	a := &Arch{ContainerInit(children, config, userObj), userObj, processes, -1, nil, -1,
 		make(map[interfaces.ChannelObject]*ProcessPort)}
+	a.init()
+	return a
+}
+
+func ArchMappingNew(userObj interfaces.ArchObject, nodes []NodeIf, mapping interfaces.MappingObject) *Arch {
+	var processes []ProcessIf
+	var children []ContainerChild
+	for _, up := range userObj.ProcessObjects() {
+		var mappedNodes []*Node
+		for _, n := range nodes {
+			m, ok := mapping.MappedObject(n.UserObj())
+			if ok && m == up {
+				mappedNodes = append(mappedNodes, n.(*Node))
+			}
+		}
+		p := ProcessMappingNew(mappedNodes, up)
+		processes = append(processes, p)
+		children = append(children, p)
+	}
+	config := DrawConfig{ColorInit(ColorOption(ArchNormal)),
+			ColorInit(ColorOption(ArchHighlight)),
+			ColorInit(ColorOption(ArchSelected)),
+			ColorInit(ColorOption(BoxFrame)),
+			ColorInit(ColorOption(Text)),
+			image.Point{archPortOutBorder, archPortOutBorder}}
+	a := &Arch{ContainerInit(children, config, userObj), userObj, processes, -1, nil, -1,
+		make(map[interfaces.ChannelObject]*ProcessPort)}
+	a.init()
+	return a
+}
+
+func (a *Arch) init() {
+	for _, pr := range a.processes {
+		pr.SetArchObject(a)
+	}
 	a.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
 		return a.onHighlight(hit, pos)
 	})
@@ -63,14 +106,10 @@ func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
 	}, func(){
 		a.onDeselect()
 	})
-	for _, up := range userObj.ProcessObjects() {
-		p := ProcessNew(up.Position(), up, a)
-		a.processes = append(a.processes, p)
-	}
 	extCnt := a.numExtChannel()
 	idx := 0
 	empty := image.Point{}
-	for _, up := range userObj.ProcessObjects() {
+	for _, up := range a.userObj.ProcessObjects() {
 		for _, c := range up.InChannelObjects() {
 			if a.channelIsExtern(c) {
 				var pos image.Point
@@ -102,17 +141,6 @@ func ArchNew(box image.Rectangle, userObj interfaces.ArchObject) *Arch {
 			}
 		}
 	}
-	return a
-}
-
-func ArchFit(outer, inner image.Rectangle) image.Rectangle {
-	borderTop := image.Point{-18, -30}
-	borderBottom := image.Point{18, 18}
-	test := image.Rectangle{inner.Min.Add(borderTop), inner.Max.Add(borderBottom)}
-	if outer.Size().X == 0 {
-		return test
-	}
-	return outer.Union(test)
 }
 
 func (a Arch) Processes() []ProcessIf {
@@ -176,7 +204,7 @@ func (a Arch) Draw(ctxt interface{}){
 //
 //	freesp.Positioner interface
 //
-
+// TODO: can this go to container??
 func (a *Arch) SetPosition(pos image.Point) {
 	if a.selectedProcess != -1 {
 		child := a.processes[a.selectedProcess]
@@ -185,7 +213,7 @@ func (a *Arch) SetPosition(pos image.Point) {
 		child.SetPosition(pos.Add(offset))
 		var box image.Rectangle
 		for _, p := range a.processes {
-			box = ArchFit(box, p.BBox())
+			box = ContainerFit(box, p.BBox())
 		}
 		a.box = box
 		empty := image.Point{}

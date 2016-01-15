@@ -99,6 +99,19 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlc := CreateXmlOutChannel(ch)
 				buf, err = xmlc.Write()
 			}
+		case Mapping:
+			m := object.(Mapping)
+			xmlm := CreateXmlMapping(m)
+			buf, err = xmlm.Write()
+		case MappedElement:
+			m := object.(*mapelem)
+			if len(m.node.InPorts()) > 0 && len(m.node.OutPorts()) > 0 {
+				xmlm := CreateXmlNodeMap(m.node.Name(), m.process.Name())
+				buf, err = xmlm.Write()
+			} else {
+				xmlm := CreateXmlIOMap(m.node.Name(), m.process.Name())
+				buf, err = xmlm.Write()
+			}
 		default:
 			err = fmt.Errorf("CreateXML: invalid data type %T (%v)\n", object, object)
 		}
@@ -318,4 +331,36 @@ func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
 		portHint}
 	return backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(),
 		ch.(*channel).linkText, hint)
+}
+
+func CreateXmlIOMap(node, process string) *backend.XmlIOMap {
+	return backend.XmlIOMapNew(node, process)
+}
+
+func CreateXmlNodeMap(node, process string) *backend.XmlNodeMap {
+	return backend.XmlNodeMapNew(node, process)
+}
+
+func CreateXmlMapping(m Mapping) (xmlm *backend.XmlMapping) {
+	xmlm = backend.XmlMappingNew(m.Graph().Filename(), m.Platform().Filename())
+	g := m.Graph().ItsType()
+	for _, n := range g.InputNodes() {
+		p, ok := m.Mapped(n)
+		if ok {
+			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), p.Name()))
+		}
+	}
+	for _, n := range g.OutputNodes() {
+		p, ok := m.Mapped(n)
+		if ok {
+			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), p.Name()))
+		}
+	}
+	for _, n := range g.ProcessingNodes() {
+		p, ok := m.Mapped(n)
+		if ok {
+			xmlm.Mappings = append(xmlm.Mappings, *CreateXmlNodeMap(n.Name(), p.Name()))
+		}
+	}
+	return
 }

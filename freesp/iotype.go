@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
-	"image"
 	"log"
 )
 
@@ -24,14 +23,13 @@ type iotype struct {
 	name     string
 	mode     interfaces.IOMode
 	platform Platform
-	position image.Point
 }
 
 var _ IOType = (*iotype)(nil)
 var _ interfaces.IOTypeObject = (*iotype)(nil)
 
-func IOTypeNew(name string, mode interfaces.IOMode, platform Platform, pos image.Point) (t *iotype, err error) {
-	newT := &iotype{name, mode, platform, pos}
+func IOTypeNew(name string, mode interfaces.IOMode, platform Platform) (t *iotype, err error) {
+	newT := &iotype{name, mode, platform}
 	ioType := ioTypes[name]
 	if ioType != nil {
 		if (*newT) != (*ioType) {
@@ -57,19 +55,6 @@ func (t *iotype) SetIOMode(newMode interfaces.IOMode) {
 
 func (t *iotype) Platform() Platform {
 	return t.platform
-}
-
-/*
- *      Positioner API
- */
-
-func (t *iotype) Position() (p image.Point) {
-	p = t.position
-	return
-}
-
-func (t *iotype) SetPosition(p image.Point) {
-	t.position = p
 }
 
 /*

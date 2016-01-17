@@ -217,6 +217,10 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 		old := obj.(freesp.Platform).Filename()
 		obj.(freesp.Platform).SetFilename(filenameToShow(filename))
 		global.win.graphViews.Rename(old, filenameToShow(filename))
+	case freesp.Mapping:
+		old := obj.(freesp.Mapping).Filename()
+		obj.(freesp.Mapping).SetFilename(filenameToShow(filename))
+		global.win.graphViews.Rename(old, filenameToShow(filename))
 	default:
 		log.Fatalf("fileSaveAs error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
 	}
@@ -255,6 +259,13 @@ func fileSave(fts *models.FilesTreeStore) {
 		}
 	case freesp.Platform:
 		filename = obj.(freesp.Platform).Filename()
+		if isGeneratedFilename(filename) {
+			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
+		} else if !tool.IsSubPath("/", filename) {
+			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
+		}
+	case freesp.Mapping:
+		filename = obj.(freesp.Mapping).Filename()
 		if isGeneratedFilename(filename) {
 			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
 		} else if !tool.IsSubPath("/", filename) {
@@ -332,6 +343,12 @@ func doSave(fts *models.FilesTreeStore, filename string, obj interface{}) (err e
 			return
 		}
 		obj.(freesp.Platform).SetFilename(relpath)
+	case freesp.Mapping:
+		err = obj.(freesp.Mapping).WriteFile(filename)
+		if err != nil {
+			return
+		}
+		obj.(freesp.Mapping).SetFilename(relpath)
 	}
 	setCurrentTopValue(fts, relpath)
 	if tool.IsSubPath(backend.XmlRoot(), filename) {
@@ -421,6 +438,8 @@ func getFilenameProposal(fts *models.FilesTreeStore) (filename string) {
 		filename = obj.(freesp.Library).Filename()
 	case freesp.Platform:
 		filename = obj.(freesp.Platform).Filename()
+	case freesp.Mapping:
+		filename = obj.(freesp.Mapping).Filename()
 	default:
 		log.Fatal("fileSave error: wrong type '%T' of toplevel object (%v)", obj, obj)
 	}

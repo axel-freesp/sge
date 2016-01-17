@@ -13,15 +13,15 @@ type channel struct {
 	link      Channel
 	process   Process
 	linkText  string
-	position  image.Point
+	position  map[interfaces.PositionMode]image.Point
 	archPort  interfaces.ArchPortObject
 }
 
 var _ Channel = (*channel)(nil)
 var _ interfaces.ChannelObject = (*channel)(nil)
 
-func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string, pos image.Point) *channel {
-	return &channel{dir, iotype, nil, process, linkText, pos, nil}
+func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string) *channel {
+	return &channel{dir, iotype, nil, process, linkText, make(map[interfaces.PositionMode]image.Point), nil}
 }
 
 func (c *channel) IOTypeObject() interfaces.IOTypeObject {
@@ -61,16 +61,16 @@ func (c *channel) Link() Channel {
 }
 
 /*
- *      Positioner API
+ *      ModePositioner API
  */
 
-func (c *channel) Position() (p image.Point) {
-	p = c.position
+func (c *channel) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+	p = c.position[mode]
 	return
 }
 
-func (c *channel) SetPosition(p image.Point) {
-	c.position = p
+func (c *channel) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+	c.position[mode] = p
 }
 
 /*

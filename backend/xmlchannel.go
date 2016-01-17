@@ -6,13 +6,8 @@ import (
 )
 
 type XmlChannel struct {
-	IOType string         `xml:"io-type,attr"`
-	Hint   XmlChannelHint `xml:"hint"`
-}
-
-type XmlChannelHint struct {
-	Channel XmlHint `xml:"channel"`
-	Port    XmlHint `xml:"port"`
+	IOType string `xml:"io-type,attr"`
+	XmlModeHint
 }
 
 type XmlInChannel struct {
@@ -27,12 +22,12 @@ type XmlOutChannel struct {
 	Dest    string   `xml:"dest,attr"`
 }
 
-func XmlInChannelNew(name, ioType, source string, hint XmlChannelHint) *XmlInChannel {
-	return &XmlInChannel{XmlChannel{ioType, hint}, xml.Name{freespNamespace, "input-channel"}, source}
+func XmlInChannelNew(name, ioType, source string) *XmlInChannel {
+	return &XmlInChannel{XmlChannel{ioType, XmlModeHint{}}, xml.Name{freespNamespace, "input-channel"}, source}
 }
 
-func XmlOutChannelNew(name, ioType, dest string, hint XmlChannelHint) *XmlOutChannel {
-	return &XmlOutChannel{XmlChannel{ioType, hint}, xml.Name{freespNamespace, "output-channel"}, dest}
+func XmlOutChannelNew(name, ioType, dest string) *XmlOutChannel {
+	return &XmlOutChannel{XmlChannel{ioType, XmlModeHint{}}, xml.Name{freespNamespace, "output-channel"}, dest}
 }
 
 func (c *XmlInChannel) Read(data []byte) (err error) {

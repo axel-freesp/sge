@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
 	"log"
 )
 
@@ -11,16 +12,31 @@ type mapping struct {
 	graph    SignalGraph
 	platform Platform
 	context  Context
-	maps     map[Node]Process
+	maps     map[string]*mapelem
 	filename string
 }
 
+// Ensure node and process are copies:
 type mapelem struct {
-	node    Node
-	process Process
+	node     Node
+	process  Process
+	position image.Point
+}
+
+func mapelemNew(n Node, p Process, nodePos image.Point) (m *mapelem) {
+	m = &mapelem{n, p, nodePos}
+	return
 }
 
 var _ MappedElement = (*mapelem)(nil)
+
+func (m mapelem) Position() image.Point {
+	return m.position
+}
+
+func (m *mapelem) SetPosition(pos image.Point) {
+	m.position = pos
+}
 
 func (m mapelem) AddToTree(tree Tree, cursor Cursor) {
 	var s Symbol
@@ -45,11 +61,19 @@ func (m mapelem) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
 	return
 }
 
+func (m mapelem) NodeObject() interfaces.NodeObject {
+	return m.node.(*node)
+}
+
+func (m mapelem) ProcessObject() interfaces.ProcessObject {
+	return m.process.(*process)
+}
+
 var _ interfaces.MappingObject = (*mapping)(nil)
 var _ Mapping = (*mapping)(nil)
 
 func MappingNew(filename string, context Context) *mapping {
-	return &mapping{nil, nil, context, make(map[Node]Process), filename}
+	return &mapping{nil, nil, context, make(map[string]*mapelem), filename}
 }
 
 //
@@ -68,8 +92,8 @@ func (m mapping) AddToTree(tree Tree, cursor Cursor) {
 	m.platform.AddToTree(tree, child)
 	for _, n := range m.graph.ItsType().Nodes() {
 		child = tree.Append(cursor)
-		p, _ := m.maps[n]
-		mapelem{n, p}.AddToTree(tree, child)
+		melem, _ := m.maps[n.Name()]
+		melem.AddToTree(tree, child)
 	}
 }
 
@@ -96,11 +120,16 @@ func (m mapping) PlatformObject() interfaces.PlatformObject {
 }
 
 func (m mapping) MappedObject(n interfaces.NodeObject) (p interfaces.ProcessObject, ok bool) {
-	var pr Process
-	pr, ok = m.maps[n.(Node)]
+	var melem *mapelem
+	melem, ok = m.maps[n.Name()]
 	if ok {
-		p = pr.(*process)
+		p = melem.process.(*process)
 	}
+	return
+}
+
+func (m mapping) MapElemObject(n interfaces.NodeObject) (melem interfaces.MapElemObject, ok bool) {
+	melem, ok = m.maps[n.Name()]
 	return
 }
 
@@ -113,7 +142,7 @@ func (m *mapping) MappingObject() interfaces.MappingObject {
 }
 
 func (m *mapping) AddMapping(n Node, p Process) {
-	m.maps[n] = p
+	m.maps[n.Name()] = mapelemNew(n, p, image.Point{})
 }
 
 func (m *mapping) SetGraph(g SignalGraph) {
@@ -133,7 +162,11 @@ func (m *mapping) Platform() Platform {
 }
 
 func (m *mapping) Mapped(n Node) (pr Process, ok bool) {
-	pr, ok = m.maps[n]
+	var melem *mapelem
+	melem, ok = m.maps[n.Name()]
+	if ok {
+		pr = melem.process
+	}
 	return
 }
 
@@ -162,7 +195,7 @@ func (m *mapping) ReadFile(filepath string) error {
 	xmlm := backend.XmlMappingNew("", "")
 	err := xmlm.ReadFile(filepath)
 	if err != nil {
-		return fmt.Errorf("library.Read: %v", err)
+		return fmt.Errorf("mapping.ReadFile: %v", err)
 	}
 	return m.createMappingFromXml(xmlm)
 }
@@ -207,7 +240,7 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n] = p
+		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y})
 	}
 	for _, x := range xmlm.Mappings {
 		n, ok = m.graph.ItsType().NodeByName(x.Name)
@@ -220,7 +253,7 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n] = p
+		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y})
 	}
 	return
 }

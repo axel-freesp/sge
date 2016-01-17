@@ -224,7 +224,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], interfaces.IOMode(j.input[iIOModeSelect]), p, image.Point{})
+		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], interfaces.IOMode(j.input[iIOModeSelect]), p)
 
 	case eProcess:
 		switch parentObject.(type) {
@@ -261,7 +261,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		if !ok {
 			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen ioType\n", j.input[iIOTypeSelect])
 		}
-		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect], image.Point{})
+		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect])
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)

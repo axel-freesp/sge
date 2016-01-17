@@ -34,11 +34,11 @@ func NamedBoxObjectInit(box image.Rectangle, config DrawConfig, namer interfaces
 }
 
 func (b NamedBoxObject) Draw(ctxt interface{}){
-	b.DrawDefaultText(ctxt)
+	b.NamedBoxDefaultDraw(ctxt)
 }
 
-func (b NamedBoxObject) DrawDefaultText(ctxt interface{}){
-	b.DrawDefault(ctxt)
+func (b NamedBoxObject) NamedBoxDefaultDraw(ctxt interface{}){
+	b.SelectorDefaultDraw(ctxt)
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)

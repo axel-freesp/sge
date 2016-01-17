@@ -212,11 +212,17 @@ func (v *platformView) handleDrag(pos image.Point) {
 	for _, a := range v.arch {
 		if a.IsSelected() {
 			box := a.BBox()
-			v.repaintArch(a)
+			repaint := box
 			box = box.Add(pos.Sub(v.dragOffs))
 			v.dragOffs = pos
 			a.SetPosition(box.Min)
-			v.repaintArch(a)
+			repaint = repaint.Union(box)
+			for _, aa := range v.arch {
+				if aa.IsLinked(a.Name()) {
+					repaint = repaint.Union(aa.BBox())
+				}
+			}
+			v.drawScene(repaint)
 		}
 	}
 }

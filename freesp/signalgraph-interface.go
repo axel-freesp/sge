@@ -181,12 +181,10 @@ type Platform interface {
 type Arch interface {
 	TreeElement
 	interfaces.Namer
-	interfaces.Positioner
-	interfaces.Shaper
+	interfaces.ModePositioner
 	Platform() Platform
 	IOTypes() []IOType
 	Processes() []Process
-	AddArchPort(interfaces.ChannelObject, int, int)
 }
 
 type IOType interface {
@@ -199,8 +197,7 @@ type IOType interface {
 type Process interface {
 	TreeElement
 	interfaces.Namer
-	interfaces.Positioner
-	//Shaper
+	interfaces.ModePositioner
 	Arch() Arch
 	InChannels() []Channel
 	OutChannels() []Channel
@@ -210,6 +207,7 @@ type Channel interface {
 	TreeElement
 	interfaces.Namer
 	interfaces.Directioner
+	interfaces.ModePositioner
 	Process() Process
 	IOType() IOType
 	SetIOType(IOType)

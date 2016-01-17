@@ -6,8 +6,9 @@ import (
 )
 
 type XmlMap struct {
-	Name    string `xml:"name,attr"`
-	Process string `xml:"process,attr"`
+	Name    string  `xml:"name,attr"`
+	Process string  `xml:"process,attr"`
+	Hint    XmlHint `xml:"hint"` // node position in map graphic
 }
 
 type XmlIOMap struct {
@@ -20,12 +21,12 @@ type XmlNodeMap struct {
 	XmlMap
 }
 
-func XmlIOMapNew(name, process string) *XmlIOMap {
-	return &XmlIOMap{xml.Name{freespNamespace, "map-ionode"}, XmlMap{name, process}}
+func XmlIOMapNew(name, process string, x, y int) *XmlIOMap {
+	return &XmlIOMap{xml.Name{freespNamespace, "map-ionode"}, XmlMap{name, process, XmlHint{x, y}}}
 }
 
-func XmlNodeMapNew(name, process string) *XmlNodeMap {
-	return &XmlNodeMap{xml.Name{freespNamespace, "map-node"}, XmlMap{name, process}}
+func XmlNodeMapNew(name, process string, x, y int) *XmlNodeMap {
+	return &XmlNodeMap{xml.Name{freespNamespace, "map-node"}, XmlMap{name, process, XmlHint{x, y}}}
 }
 
 func (m *XmlIOMap) Read(data []byte) (err error) {

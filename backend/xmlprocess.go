@@ -10,11 +10,11 @@ type XmlProcess struct {
 	Name           string          `xml:"name,attr"`
 	InputChannels  []XmlInChannel  `xml:"input-channel"`
 	OutputChannels []XmlOutChannel `xml:"output-channel"`
-	Rect           XmlRectangle    `xml:"hint"`
+	XmlModeHint
 }
 
 func XmlProcessNew(name string) *XmlProcess {
-	return &XmlProcess{xml.Name{freespNamespace, "process"}, name, nil, nil, XmlRectangle{}}
+	return &XmlProcess{xml.Name{freespNamespace, "process"}, name, nil, nil, XmlModeHint{}}
 }
 
 func (p *XmlProcess) Read(data []byte) (err error) {

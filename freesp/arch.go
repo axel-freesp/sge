@@ -9,45 +9,27 @@ import (
 )
 
 type arch struct {
-	name            string
-	iotypes         ioTypeList
-	processes       processList
-	platform        Platform
-	position, shape image.Point
-	archPorts       []interfaces.ArchPortObject
-}
-
-type archPort struct {
-	channel  interfaces.ChannelObject
-	position image.Point
-}
-
-func (p *archPort) Channel() interfaces.ChannelObject {
-	return p.channel
-}
-
-func (p *archPort) Position() image.Point {
-	return p.position
-}
-
-func (p *archPort) SetPosition(pos image.Point) {
-	p.position = pos
+	name      string
+	iotypes   ioTypeList
+	processes processList
+	platform  Platform
+	position  map[interfaces.PositionMode]image.Point
+	archPorts []interfaces.ArchPortObject
 }
 
 var _ Arch = (*arch)(nil)
 var _ interfaces.ArchObject = (*arch)(nil)
-var _ interfaces.ArchPortObject = (*archPort)(nil)
 
 func ArchNew(name string, platform Platform) *arch {
-	return &arch{name, ioTypeListInit(), processListInit(), platform, image.Point{}, image.Point{}, nil}
+	return &arch{name, ioTypeListInit(), processListInit(), platform,
+		make(map[interfaces.PositionMode]image.Point), nil}
 }
 
 func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 	a.name = xmla.Name
 	for _, xmlt := range xmla.IOType {
 		var t IOType
-		pos := image.Point{xmlt.Hint.X, xmlt.Hint.Y}
-		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform, pos)
+		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
 		if err != nil {
 			return
 		}
@@ -62,15 +44,37 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 		a.processes.Append(pr)
 		for i, c := range pr.InChannelObjects() {
 			xmlc := xmlp.InputChannels[i]
-			a.AddArchPort(c, xmlc.Hint.Port.X, xmlc.Hint.Port.Y)
+			ap := a.AddArchPort(c)
+			for _, xmlh := range xmlc.Entry {
+				mode, ok := modeFromString[xmlh.Mode]
+				if !ok {
+					log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+					continue
+				}
+				ap.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+			}
 		}
 		for i, c := range pr.OutChannelObjects() {
 			xmlc := xmlp.OutputChannels[i]
-			a.AddArchPort(c, xmlc.Hint.Port.X, xmlc.Hint.Port.Y)
+			ap := a.AddArchPort(c)
+			for _, xmlh := range xmlc.Entry {
+				mode, ok := modeFromString[xmlh.Mode]
+				if !ok {
+					log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+					continue
+				}
+				ap.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+			}
 		}
 	}
-	a.position = image.Point{xmla.Rect.X, xmla.Rect.Y}
-	a.shape = image.Point{xmla.Rect.W, xmla.Rect.H}
+	for _, xmlh := range xmla.Entry {
+		mode, ok := modeFromString[xmlh.Mode]
+		if !ok {
+			log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+			continue
+		}
+		a.position[mode] = image.Point{xmlh.X, xmlh.Y}
+	}
 	return
 }
 
@@ -98,11 +102,12 @@ func (a *arch) PortObjects() []interfaces.ArchPortObject {
 	return a.archPorts
 }
 
-func (a *arch) AddArchPort(ch interfaces.ChannelObject, x, y int) {
+func (a *arch) AddArchPort(ch interfaces.ChannelObject) (p *archPort) {
 	// TODO: Do all the checks...
-	p := &archPort{ch, image.Point{x, y}}
+	p = archPortNew(ch)
 	a.archPorts = append(a.archPorts, p)
 	ch.(*channel).archPort = p
+	return
 }
 
 /*
@@ -118,27 +123,16 @@ func (a *arch) SetName(newName string) {
 }
 
 /*
- *  Positioner API
+ *      ModePositioner API
  */
 
-func (a *arch) Position() image.Point {
-	return a.position
+func (a *arch) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+	p = a.position[mode]
+	return
 }
 
-func (a *arch) SetPosition(pos image.Point) {
-	a.position = pos
-}
-
-/*
- *  Shaper API
- */
-
-func (a *arch) Shape() image.Point {
-	return a.shape
-}
-
-func (a *arch) SetShape(shape image.Point) {
-	a.shape = shape
+func (a *arch) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+	a.position[mode] = p
 }
 
 /*

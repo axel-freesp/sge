@@ -1,16 +1,15 @@
 package graph
 
 import (
-	//"log"
+	"log"
 	"image"
+	"github.com/gotk3/gotk3/cairo"
 	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/axel-freesp/sge/tool"
 )
 
 type ProcessMapping struct {
 	Container
 	userObj interfaces.ProcessObject
-	ports []*ProcessPort
 	nodes []*Node
 	selectedPort int
 	arch ArchIf
@@ -26,19 +25,13 @@ func ProcessMappingNew(nodes []*Node, userObj interfaces.ProcessObject) (ret *Pr
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
 			image.Point{procPortOutBorder, procPortOutBorder}}
+	cconfig := ContainerConfig{procPortWidth, procPortHeight}
 	var children []ContainerChild
 	for _, n := range nodes {
 		children = append(children, n)
 	}
-	ret = &ProcessMapping{ContainerInit(children, config, userObj), userObj, nil, nodes, -1, nil}
-	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
-		return ret.onHighlight(hit, pos)
-	})
-	ret.RegisterOnSelect(func(){
-		ret.onSelect()
-	}, func(){
-		ret.onDeselect()
-	})
+	ret = &ProcessMapping{ContainerInit(children, config, userObj, cconfig), userObj, nodes, -1, nil}
+	ret.ContainerInit()
 	return
 }
 
@@ -65,32 +58,75 @@ func (pr ProcessMapping) ArchObject() ArchIf {
 	return pr.arch
 }
 
+func processDrawMappedChannel(p *ContainerPort, ctxt interface{}){
+    switch ctxt.(type) {
+    case *cairo.Context:
+		empty := image.Point{}
+		context := ctxt.(*cairo.Context)
+		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
+		shift2 := image.Point{procPortWidth, procPortHeight}.Div(2)
+		extPort := p.UserObj2.(interfaces.ChannelObject).ArchPortObject()
+		if extPort != nil {
+			extPPos := extPort.ModePosition(interfaces.PositionModeMapping)
+			if extPPos != empty {
+				var pos1, pos2 image.Point
+				if p.UserObj2.(interfaces.ChannelObject).Direction() == interfaces.InPort {
+					pos1 = extPPos.Add(shift1)
+					pos2 = p.Position().Add(shift2)
+				} else {
+					pos1 = p.Position().Add(shift2)
+					pos2 = extPPos.Add(shift1)
+				}
+				var r, g, b float64
+				if p.IsSelected() {
+					r, g, b = ColorOption(SelectChannelLine)
+				} else if p.IsHighlighted() {
+					r, g, b = ColorOption(HighlightChannelLine)
+				} else {
+					r, g, b = ColorOption(NormalChannelLine)
+				}
+				context.SetLineWidth(2)
+				context.SetSourceRGB(r, g, b)
+				DrawArrow(context, pos1, pos2)
+			}
+		}
+    }
+}
+
 func (pr *ProcessMapping) SetArchObject(a ArchIf) {
 	pr.arch = a
 	idx := 0
 	inCnt := len(pr.userObj.InChannelObjects())
 	outCnt := len(pr.userObj.OutChannelObjects())
 	empty := image.Point{}
+	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
+			ColorInit(ColorOption(HighlightArchPort)),
+			ColorInit(ColorOption(SelectArchPort)),
+			ColorInit(ColorOption(BoxFrame)),
+			Color{},
+			image.Point{}}
 	for _, c := range pr.userObj.InChannelObjects() {
-		var pos image.Point
-		if c.Position() == empty {
-			pos = pr.calcPortPos(idx, inCnt + outCnt)
-		} else {
-			pos = c.Position()
+		pos := c.ModePosition(interfaces.PositionModeMapping)
+		if pos == empty {
+			pos = pr.CalcPortPos(idx, inCnt + outCnt)
 		}
-		a.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
-		pr.ports = append(pr.ports, a.(*Arch).channelMap[c])
+		p := pr.AddModePort(pos, config, c, interfaces.PositionModeMapping)
+		p.RegisterOnDraw(func(ctxt interface{}){
+			processDrawMappedChannel(p, ctxt)
+		})
+		a.(*Arch).channelMap[c] = p
 		idx++
 	}
 	for _, c := range pr.userObj.OutChannelObjects() {
-		var pos image.Point
-		if c.Position() == empty {
-			pos = pr.calcPortPos(idx, inCnt + outCnt)
-		} else {
-			pos = c.Position()
+		pos := c.ModePosition(interfaces.PositionModeMapping)
+		if pos == empty {
+			pos = pr.CalcPortPos(idx, inCnt + outCnt)
 		}
-		a.(*Arch).channelMap[c] = ProcessPortNew(pos, c)
-		pr.ports = append(pr.ports, a.(*Arch).channelMap[c])
+		p := pr.AddModePort(pos, config, c, interfaces.PositionModeMapping)
+		p.RegisterOnDraw(func(ctxt interface{}){
+			processDrawMappedChannel(p, ctxt)
+		})
+		a.(*Arch).channelMap[c] = p
 		idx++
 	}
 }
@@ -98,7 +134,7 @@ func (pr *ProcessMapping) SetArchObject(a ArchIf) {
 func (pr *ProcessMapping) SelectChannel(ch interfaces.ChannelObject) {
 	pr.selectedPort = -1
 	for i, p := range pr.ports {
-		if ch == p.userObj {
+		if ch == p.UserObj2.(interfaces.ChannelObject) {
 			p.Select()
 			pr.selectedPort = i
 		} else {
@@ -112,153 +148,37 @@ func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch interfaces.ChannelObj
 		return
 	}
 	ok = true
-	ch = pr.ports[pr.selectedPort].userObj
+	ch = pr.ports[pr.selectedPort].UserObj.(interfaces.ChannelObject)
 	return
 }
 
-
-//
-//	Drawer interface
-//
-
-
-func (pr ProcessMapping) Draw(ctxt interface{}){
-	pr.DrawDefaultText(ctxt)
-	for _, port := range pr.ports {
-		port.Draw(ctxt)
+func (pr ProcessMapping) GetSelectedNode() (ok bool, n *Node) {
+	var ch ContainerChild
+	ok, ch = pr.GetSelectedChild()
+	if !ok {
+		return
 	}
+	n = ch.(*Node)
+	return
 }
-
-
-//
-//	freesp.Positioner interface
-//
 
 func (pr *ProcessMapping) SetPosition(pos image.Point) {
-	if pr.selectedPort != -1 {
-		child := pr.ports[pr.selectedPort]
-		childpos := child.Position()
-		offset := childpos.Sub(pr.Position())
-		newPos := pos.Add(offset)
-		if pr.portIsCorner(childpos) {
-			if tool.AbsInt(newPos.X - childpos.X) > tool.AbsInt(newPos.Y - childpos.Y) {
-				newPos.Y = childpos.Y
-			} else {
-				newPos.X = childpos.X
+	pr.ContainerDefaultSetPosition(pos)
+	pr.userObj.SetModePosition(interfaces.PositionModeMapping, pos)
+	a := pr.arch.(*Arch)
+	if a.mapping != nil {
+		for _, ch := range pr.Children {
+			n := ch.(*Node)
+			melem, ok := a.mapping.MapElemObject(n)
+			if !ok {
+				log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
+				return
 			}
-		} else if pr.portIsSideBorder(childpos) {
-			newPos.X = childpos.X
-		} else {
-			newPos.Y = childpos.Y
-		}
-		child.SetPosition(pr.portClipPos(newPos))
-	} else {
-		shift := pos.Sub(pr.Position())
-		pr.userObj.SetPosition(pos)
-		pr.box = pr.box.Add(shift)
-		for _, p := range pr.ports {
-			p.SetPosition(p.Position().Add(shift))
+			melem.SetPosition(n.Position())
 		}
 	}
 }
 
 
-//
-//	Selecter interface
-//
-
-var _ Selecter  = (*ProcessMapping)(nil)
-
-func (pr *ProcessMapping) onSelect() (selected bool) {
-	for i, p := range pr.ports {
-		if i == pr.selectedPort {
-			p.Select()
-		} else {
-			p.Deselect()
-		}
-	}
-	return
-}
-
-func (pr *ProcessMapping) onDeselect() (selected bool) {
-	for _, p := range pr.ports {
-		p.Deselect()
-	}
-	return
-}
-
-
-
-//
-//	Highlighter interface
-//
-
-var _ Highlighter  = (*ProcessMapping)(nil)
-
-func (pr *ProcessMapping) onHighlight(hit bool, pos image.Point) (modified bool) {
-	pr.selectedPort = -1
-	if hit {
-		for i, p := range pr.ports {
-			phit, mod := p.CheckHit(pos)
-			if phit {
-				pr.selectedPort = i
-			}
-			modified = modified || mod
-		}
-	} else {
-		for _, p := range pr.ports {
-			p.CheckHit(pos)
-		}
-	}
-	return
-}
-
-//
-//	Private functions
-//
-
-func (p ProcessMapping) calcPortPos(idx, cnt int) (pos image.Point) {
-	lX, rX, _, bY := p.portCorners()
-	k := float64(idx + 1) / float64(cnt + 1)
-	x := int(k * float64(rX - lX))
-	pos = image.Point{lX + x, bY}
-	return
-}
-
-func (p ProcessMapping) portIsSideBorder(pos image.Point) bool {
-	lX, rX, _, _ := p.portCorners()
-	return (pos.X == lX || pos.X == rX)
-}
-
-func (p ProcessMapping) portIsCorner(pos image.Point) bool {
-	lX, rX, tY, bY := p.portCorners()
-	return (pos.X == lX || pos.X == rX) && (pos.Y == tY || pos.Y == bY)
-}
-
-func (p ProcessMapping) portCorners() (lX, rX, tY, bY int) {
-	lX = p.BBox().Min.X + 1
-	rX = p.BBox().Max.X - procPortWidth - 1
-	tY = p.BBox().Min.Y + 1
-	bY = p.BBox().Max.Y - procPortHeight - 1
-	return
-}
-
-func (p ProcessMapping) portClipPos(pos image.Point) (ret image.Point) {
-	ret = pos
-	lX, rX, tY, bY := p.portCorners()
-	if ret.X < lX {
-		ret.X = lX
-	}
-	if ret.X > rX {
-		ret.X = rX
-	}
-	if ret.Y < tY {
-		ret.Y = tY
-	}
-	if ret.Y > bY {
-		ret.Y = bY
-	}
-	return
-}
 
 

@@ -25,6 +25,7 @@ type Node struct {
 }
 
 var _ NodeIf = (*Node)(nil)
+var _ ContainerChild = (*Node)(nil)
 
 func NodeNew(pos image.Point, n interfaces.NodeObject) (ret *Node) {
 	dy := NumericOption(PortDY)
@@ -140,7 +141,7 @@ var _ interfaces.Positioner  = (*Port)(nil)
 func (n *Node) SetPosition(pos image.Point) {
 	shift := pos.Sub(n.Position())
 	n.userObj.SetPosition(pos)
-	n.DefaultSetPosition(pos)
+	n.BBoxDefaultSetPosition(pos)
 	for _, p := range n.ports {
 		p.SetPosition(p.Position().Add(shift))
 	}
@@ -155,7 +156,7 @@ var _ Drawer  = (*Node)(nil)
 var _ Drawer  = (*Port)(nil)
 
 func (n Node) Draw(ctxt interface{}){
-	n.DrawDefaultText(ctxt)
+	n.NamedBoxDefaultDraw(ctxt)
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)

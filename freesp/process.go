@@ -10,17 +10,17 @@ import (
 )
 
 type process struct {
-	name            string
-	inChannels      channelList
-	outChannels     channelList
-	arch            Arch
-	position, shape image.Point
+	name        string
+	inChannels  channelList
+	outChannels channelList
+	arch        Arch
+	position    map[interfaces.PositionMode]image.Point
 }
 
 var _ Process = (*process)(nil)
 
 func ProcessNew(name string, arch Arch) *process {
-	return &process{name, channelListInit(), channelListInit(), arch, image.Point{}, image.Point{}}
+	return &process{name, channelListInit(), channelListInit(), arch, make(map[interfaces.PositionMode]image.Point)}
 }
 
 func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType) (err error) {
@@ -32,7 +32,15 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found in arch.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source, image.Point{xmlc.Hint.Channel.X, xmlc.Hint.Channel.Y})
+		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
+		for _, xmlh := range xmlc.Entry {
+			mode, ok := modeFromString[xmlh.Mode]
+			if !ok {
+				log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+				continue
+			}
+			c.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		}
 		p.inChannels.Append(c)
 	}
 	for _, xmlc := range xmlp.OutputChannels {
@@ -41,11 +49,25 @@ func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType
 			err = fmt.Errorf("process.createProcessFromXml error (out): referenced ioType %s not found.\n", xmlc.IOType)
 			return
 		}
-		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest, image.Point{xmlc.Hint.Channel.X, xmlc.Hint.Channel.Y})
+		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
+		for _, xmlh := range xmlc.Entry {
+			mode, ok := modeFromString[xmlh.Mode]
+			if !ok {
+				log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+				continue
+			}
+			c.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		}
 		p.outChannels.Append(c)
 	}
-	p.position = image.Point{xmlp.Rect.X, xmlp.Rect.Y}
-	p.shape = image.Point{xmlp.Rect.W, xmlp.Rect.H}
+	for _, xmlh := range xmlp.Entry {
+		mode, ok := modeFromString[xmlh.Mode]
+		if !ok {
+			log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+			continue
+		}
+		p.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+	}
 	return
 }
 
@@ -86,27 +108,16 @@ func (p *process) SetName(newName string) {
 }
 
 /*
- *  Positioner API
+ *      ModePositioner API
  */
 
-func (p *process) Position() image.Point {
-	return p.position
+func (pr *process) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+	p = pr.position[mode]
+	return
 }
 
-func (p *process) SetPosition(pos image.Point) {
-	p.position = pos
-}
-
-/*
- *  Shaper API
- */
-
-func (p *process) Shape() image.Point {
-	return p.shape
-}
-
-func (p *process) SetShape(shape image.Point) {
-	p.shape = shape
+func (pr *process) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+	pr.position[mode] = p
 }
 
 /*
@@ -196,7 +207,7 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 				pp, dd, ccLinkText, c.iotype.Name())
 			return
 		}
-		cc := ChannelNew(dd, c.iotype, pp, ccLinkText, image.Point{})
+		cc := ChannelNew(dd, c.iotype, pp, ccLinkText)
 		cc.link = c
 		c.link = cc
 		l.Append(c)
@@ -213,8 +224,8 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		newCursor = tree.Insert(cursor)
 		c.AddToTree(tree, newCursor)
 		if p.Arch().Name() != aa.Name() {
-			p.Arch().AddArchPort(c, 0, 0)
-			aa.AddArchPort(cc, 0, 0)
+			p.Arch().(*arch).AddArchPort(c)
+			aa.(*arch).AddArchPort(cc)
 		}
 		//log.Printf("process.AddNewObject: %v successfully added channel %v\n", p, c)
 

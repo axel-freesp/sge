@@ -81,6 +81,7 @@ type SelectableBox struct {
     SelectObject
     HighlightObject
     config DrawConfig
+    onDraw func(ctxt interface{})
 }
 
 type Color struct {
@@ -102,7 +103,7 @@ func SelectableBoxInit(box image.Rectangle, config DrawConfig) SelectableBox {
     return SelectableBox{BBoxInit(box),
 		SelectObject{false, defaultSelection, defaultSelection},
 		HighlightObject{false, image.Point{}, defaultHighlight},
-		config}
+		config, func(ctxt interface{}){}}
 }
 
 func (b *SelectableBox) CheckHit(pos image.Point) (hit, modified bool) {
@@ -117,10 +118,11 @@ func (b *SelectableBox) CheckHit(pos image.Point) (hit, modified bool) {
 //
 
 func (b SelectableBox) Draw(ctxt interface{}){
-	b.DrawDefault(ctxt)
+	b.SelectorDefaultDraw(ctxt)
+	b.onDraw(ctxt)
 }
 
-func (b SelectableBox) DrawDefault(ctxt interface{}){
+func (b SelectableBox) SelectorDefaultDraw(ctxt interface{}){
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
@@ -140,5 +142,9 @@ func (b SelectableBox) DrawDefault(ctxt interface{}){
 		context.SetLineWidth(2)
 		context.Stroke()
 	}
+}
+
+func (b *SelectableBox) RegisterOnDraw(onDraw func(ctxt interface{})) {
+	b.onDraw = onDraw
 }
 

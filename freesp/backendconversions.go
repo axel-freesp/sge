@@ -4,8 +4,19 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	"image"
 	"strings"
 )
+
+var modeFromString = map[string]interfaces.PositionMode{
+	"normal":  interfaces.PositionModeNormal,
+	"mapping": interfaces.PositionModeMapping,
+}
+
+var stringFromMode = map[interfaces.PositionMode]string{
+	interfaces.PositionModeNormal:  "normal",
+	interfaces.PositionModeMapping: "mapping",
+}
 
 func CreateXML(object interface{}) (buf []byte, err error) {
 	if object != nil {
@@ -106,10 +117,10 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 		case MappedElement:
 			m := object.(*mapelem)
 			if len(m.node.InPorts()) > 0 && len(m.node.OutPorts()) > 0 {
-				xmlm := CreateXmlNodeMap(m.node.Name(), m.process.Name())
+				xmlm := CreateXmlNodeMap(m.node.Name(), m.process.Name(), m.Position())
 				buf, err = xmlm.Write()
 			} else {
-				xmlm := CreateXmlIOMap(m.node.Name(), m.process.Name())
+				xmlm := CreateXmlIOMap(m.node.Name(), m.process.Name(), m.Position())
 				buf, err = xmlm.Write()
 			}
 		default:
@@ -288,14 +299,15 @@ func CreateXmlArch(a Arch) *backend.XmlArch {
 	for _, p := range a.Processes() {
 		ret.Processes = append(ret.Processes, *CreateXmlProcess(p))
 	}
-	ret.Rect.X, ret.Rect.Y = a.(*arch).position.X, a.(*arch).position.Y
-	ret.Rect.W, ret.Rect.H = a.(*arch).shape.X, a.(*arch).shape.Y
+	pos := a.ModePosition(interfaces.PositionModeNormal)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
+	pos = a.ModePosition(interfaces.PositionModeMapping)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
 	return ret
 }
 
 func CreateXmlIOType(t IOType) *backend.XmlIOType {
-	hint := backend.XmlHint{t.(*iotype).Position().X, t.(*iotype).Position().Y}
-	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.IOMode()], hint)
+	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.IOMode()])
 }
 
 func CreateXmlProcess(p Process) *backend.XmlProcess {
@@ -306,60 +318,64 @@ func CreateXmlProcess(p Process) *backend.XmlProcess {
 	for _, c := range p.OutChannels() {
 		ret.OutputChannels = append(ret.OutputChannels, *CreateXmlOutChannel(c))
 	}
-	ret.Rect.X, ret.Rect.Y = p.(*process).position.X, p.(*process).position.Y
-	ret.Rect.W, ret.Rect.H = p.(*process).shape.X, p.(*process).shape.Y
+	pos := p.ModePosition(interfaces.PositionModeNormal)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
+	pos = p.ModePosition(interfaces.PositionModeMapping)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
 	return ret
 }
 
 func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
-	var portHint backend.XmlHint
-	if ch.(*channel).archPort != nil {
-		portHint = backend.XmlHint{ch.(*channel).archPort.Position().X, ch.(*channel).archPort.Position().Y}
-	}
-	hint := backend.XmlChannelHint{backend.XmlHint{ch.(*channel).Position().X, ch.(*channel).Position().Y},
-		portHint}
-	return backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(),
-		ch.(*channel).linkText, hint)
+	ret := backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
+	pos := ch.ModePosition(interfaces.PositionModeNormal)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
+	pos = ch.ModePosition(interfaces.PositionModeMapping)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	return ret
 }
 
 func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
-	var portHint backend.XmlHint
-	if ch.(*channel).archPort != nil {
-		portHint = backend.XmlHint{ch.(*channel).archPort.Position().X, ch.(*channel).archPort.Position().Y}
-	}
-	hint := backend.XmlChannelHint{backend.XmlHint{ch.(*channel).Position().X, ch.(*channel).Position().Y},
-		portHint}
-	return backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(),
-		ch.(*channel).linkText, hint)
+	ret := backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
+	pos := ch.ModePosition(interfaces.PositionModeNormal)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
+	pos = ch.ModePosition(interfaces.PositionModeMapping)
+	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	return ret
 }
 
-func CreateXmlIOMap(node, process string) *backend.XmlIOMap {
-	return backend.XmlIOMapNew(node, process)
+func CreateXmlIOMap(node, process string, pos image.Point) *backend.XmlIOMap {
+	return backend.XmlIOMapNew(node, process, pos.X, pos.Y)
 }
 
-func CreateXmlNodeMap(node, process string) *backend.XmlNodeMap {
-	return backend.XmlNodeMapNew(node, process)
+func CreateXmlNodeMap(node, process string, pos image.Point) *backend.XmlNodeMap {
+	return backend.XmlNodeMapNew(node, process, pos.X, pos.Y)
 }
 
 func CreateXmlMapping(m Mapping) (xmlm *backend.XmlMapping) {
 	xmlm = backend.XmlMappingNew(m.Graph().Filename(), m.Platform().Filename())
 	g := m.Graph().ItsType()
 	for _, n := range g.InputNodes() {
+		melem := m.(*mapping).maps[n.Name()]
 		p, ok := m.Mapped(n)
 		if ok {
-			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), p.Name()))
+			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
+			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), pname, melem.Position()))
 		}
 	}
 	for _, n := range g.OutputNodes() {
+		melem := m.(*mapping).maps[n.Name()]
 		p, ok := m.Mapped(n)
 		if ok {
-			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), p.Name()))
+			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
+			xmlm.IOMappings = append(xmlm.IOMappings, *CreateXmlIOMap(n.Name(), pname, melem.Position()))
 		}
 	}
 	for _, n := range g.ProcessingNodes() {
+		melem := m.(*mapping).maps[n.Name()]
 		p, ok := m.Mapped(n)
 		if ok {
-			xmlm.Mappings = append(xmlm.Mappings, *CreateXmlNodeMap(n.Name(), p.Name()))
+			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
+			xmlm.Mappings = append(xmlm.Mappings, *CreateXmlNodeMap(n.Name(), pname, melem.Position()))
 		}
 	}
 	return

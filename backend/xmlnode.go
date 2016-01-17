@@ -13,21 +13,6 @@ type XmlNode struct {
 	Hint    XmlHint      `xml:"hint"`
 }
 
-type XmlHint struct {
-	X int `xml:"x,attr"`
-	Y int `xml:"y,attr"`
-}
-
-type XmlShape struct {
-	W int `xml:"w,attr"`
-	H int `xml:"h,attr"`
-}
-
-type XmlRectangle struct {
-	XmlHint
-	XmlShape
-}
-
 type XmlInputNode struct {
 	XMLName xml.Name `xml:"input"`
 	NPort   string   `xml:"port,attr"`

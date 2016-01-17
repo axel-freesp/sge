@@ -39,6 +39,13 @@ type MappingObject interface {
 	GraphObject() GraphObject
 	PlatformObject() PlatformObject
 	MappedObject(NodeObject) (ProcessObject, bool)
+	MapElemObject(NodeObject) (MapElemObject, bool)
+}
+
+type MapElemObject interface {
+	Positioner
+	NodeObject() NodeObject
+	ProcessObject() ProcessObject
 }
 
 type PlatformObject interface {
@@ -47,34 +54,32 @@ type PlatformObject interface {
 
 type ArchObject interface {
 	Namer
-	Positioner
-	Shaper
+	ModePositioner
 	ProcessObjects() []ProcessObject
 	IOTypeObjects() []IOTypeObject
 	PortObjects() []ArchPortObject
 }
 
 type ArchPortObject interface {
-	Positioner
+	ModePositioner
 	Channel() ChannelObject
 }
 
 type IOTypeObject interface {
 	Namer
-	Positioner
 	IOModer
 }
 
 type ProcessObject interface {
 	Namer
-	Positioner
+	ModePositioner
 	ArchObject() ArchObject
 	InChannelObjects() []ChannelObject
 	OutChannelObjects() []ChannelObject
 }
 
 type ChannelObject interface {
-	Positioner
+	ModePositioner
 	Directioner
 	IOTypeObject() IOTypeObject
 	ProcessObject() ProcessObject
@@ -95,6 +100,18 @@ type Positioner interface {
 	Position() image.Point
 	SetPosition(image.Point)
 }
+
+type ModePositioner interface {
+	ModePosition(PositionMode) image.Point
+	SetModePosition(PositionMode, image.Point)
+}
+
+type PositionMode int
+
+const (
+	PositionModeNormal PositionMode = iota
+	PositionModeMapping
+)
 
 type Shaper interface {
 	Shape() image.Point

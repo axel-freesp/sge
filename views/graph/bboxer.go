@@ -1,6 +1,7 @@
 package graph
 
 import (
+    //"log"
     "image"
 )
 
@@ -29,14 +30,13 @@ func (b BBoxObject) Position() image.Point {
     return b.box.Min
 }
 
-func (b *BBoxObject) DefaultSetPosition(pos image.Point) {
-    size := b.Shape()
-    b.box.Min = pos
-    b.SetShape(size)
+func (b *BBoxObject) BBoxDefaultSetPosition(pos image.Point) {
+    shift := pos.Sub(b.Position())
+    b.box = b.box.Add(shift)
 }
 
 func (b *BBoxObject) SetPosition(pos image.Point) {
-    b.DefaultSetPosition(pos)
+    b.BBoxDefaultSetPosition(pos)
 }
 
 

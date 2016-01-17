@@ -5,6 +5,19 @@ import (
 	"image"
 )
 
+//
+//		Context (implemented by *sge.Global)
+//
+type Context interface {
+	SelectNode(NodeObject)          // single click selection
+	EditNode(NodeObject)            // double click selection
+	SelectPort(PortObject)          // single click selection
+	SelectConnect(ConnectionObject) // single click selection
+	SelectArch(ArchObject)
+	SelectProcess(ProcessObject)
+	SelectChannel(ChannelObject)
+}
+
 /*
  * 	Graph user objects
  */

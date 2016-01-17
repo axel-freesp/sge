@@ -12,6 +12,19 @@ type Context interface {
 	GetLibrary(libname string) (Library, error)
 	GetSignalGraph(filename string) (SignalGraph, error)
 	GetPlatform(filename string) (Platform, error)
+	GetMapping(filename string) (Mapping, error)
+	RemoveLibrary(name string)
+	RemoveSignalGraph(name string)
+	RemovePlatform(name string)
+	RemoveMapping(name string)
+	RenameLibrary(oldName, newName string)
+	RenameSignalGraph(oldName, newName string)
+	RenamePlatform(oldName, newName string)
+	RenameMapping(oldName, newName string)
+	AddNewLibrary(Library)
+	AddNewSignalGraph(SignalGraph)
+	AddNewPlatform(Platform)
+	AddNewMapping(Mapping)
 }
 
 type SignalGraphType interface {

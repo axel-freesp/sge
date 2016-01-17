@@ -29,8 +29,12 @@ type Global struct {
 	clp            *gtk.Clipboard
 }
 
-var _ views.Context = (*Global)(nil)
+var _ interfaces.Context = (*Global)(nil)
 var _ freesp.Context = (*Global)(nil)
+
+//
+//		interfaces.Context interface
+//
 
 func (g *Global) SelectNode(node interfaces.NodeObject) {
 	n := node.(freesp.Node)
@@ -95,6 +99,10 @@ func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
+
+//
+//		freesp.Context interface
+//
 
 func (g *Global) GetLibrary(libname string) (lib freesp.Library, err error) {
 	var ok bool
@@ -216,21 +224,12 @@ func (g *Global) GetMapping(filename string) (m freesp.Mapping, err error) {
 	return
 }
 
-func (g *Global) AddNewLibrary(lib freesp.Library) {
-	g.libraryMap[lib.Filename()] = lib
-}
-
-func (g *Global) RenameLibrary(oldName, newName string) {
-	lib, ok := g.libraryMap[oldName]
-	if !ok {
-		log.Fatalf("Global.RenameLibrary error: library %s not found\n", oldName)
-	}
-	delete(g.libraryMap, oldName)
-	g.libraryMap[newName] = lib
-}
-
 func (g *Global) RemoveLibrary(name string) {
-	l := g.libraryMap[name]
+	l, ok := g.libraryMap[name]
+	if !ok {
+		log.Printf("Global.RemoveLibrary warning: library %s not found.\n", name)
+		return
+	}
 	nodeTypes := l.NodeTypes()
 	signalTypes := l.SignalTypes()
 	for _, nt := range nodeTypes {
@@ -244,7 +243,114 @@ func (g *Global) RemoveLibrary(name string) {
 		}
 	}
 	delete(g.libraryMap, name)
+	cursor := g.fts.Cursor(l)
+	g.fts.RemoveToplevel(cursor.Path)
 }
+
+func (g *Global) RemoveSignalGraph(name string) {
+	// TODO: check if used in existing mappings
+	sg, ok := g.signalGraphMap[name]
+	if !ok {
+		log.Printf("Global.RemoveSignalGraph warning: graph %s not found.\n", name)
+		return
+	}
+	delete(g.signalGraphMap, name)
+	var nodes []freesp.Node
+	for _, n := range sg.ItsType().Nodes() {
+		nodes = append(nodes, n)
+	}
+	CleanupNodeTypesFromNodes(nodes)
+	CleanupSignalTypesFromNodes(nodes)
+	cursor := g.fts.Cursor(sg)
+	g.fts.RemoveToplevel(cursor.Path)
+	g.win.graphViews.RemoveGraphView(sg.GraphObject())
+}
+
+func (g *Global) RemovePlatform(name string) {
+	// TODO: check if used in existing mappings
+	p, ok := g.platformMap[name]
+	if !ok {
+		log.Printf("Global.RemovePlatform warning: platform %s not found.\n", name)
+		return
+	}
+	delete(g.platformMap, name)
+	cursor := g.fts.Cursor(p)
+	g.fts.RemoveToplevel(cursor.Path)
+	g.win.graphViews.RemovePlatformView(p.PlatformObject())
+}
+
+func (g *Global) RemoveMapping(name string) {
+	m, ok := g.mappingMap[name]
+	if !ok {
+		log.Printf("Global.RemoveMapping warning: mapping %s not found.\n", name)
+		return
+	}
+	delete(g.mappingMap, name)
+	cursor := g.fts.Cursor(m)
+	g.fts.RemoveToplevel(cursor.Path)
+	g.win.graphViews.RemoveMappingView(m.MappingObject())
+	// TODO: remove depending graphs and platforms if not used otherwise
+}
+
+func (g *Global) RenameLibrary(oldName, newName string) {
+	lib, ok := g.libraryMap[oldName]
+	if !ok {
+		log.Printf("Global.RenameLibrary warning: library %s not found\n", oldName)
+		return
+	}
+	delete(g.libraryMap, oldName)
+	g.libraryMap[newName] = lib
+}
+
+func (g *Global) RenameSignalGraph(oldName, newName string) {
+	sg, ok := g.signalGraphMap[oldName]
+	if !ok {
+		log.Printf("Global.RenameSignalGraph warning: graph %s not found\n", oldName)
+		return
+	}
+	delete(g.signalGraphMap, oldName)
+	g.signalGraphMap[newName] = sg
+}
+
+func (g *Global) RenamePlatform(oldName, newName string) {
+	p, ok := g.platformMap[oldName]
+	if !ok {
+		log.Printf("Global.RenamePlatform warning: platform %s not found\n", oldName)
+		return
+	}
+	delete(g.platformMap, oldName)
+	g.platformMap[newName] = p
+}
+
+func (g *Global) RenameMapping(oldName, newName string) {
+	m, ok := g.mappingMap[oldName]
+	if !ok {
+		log.Printf("Global.RenameMapping warning: mapping %s not found\n", oldName)
+		return
+	}
+	delete(g.mappingMap, oldName)
+	g.mappingMap[newName] = m
+}
+
+func (g *Global) AddNewLibrary(lib freesp.Library) {
+	g.libraryMap[lib.Filename()] = lib
+}
+
+func (g *Global) AddNewSignalGraph(sg freesp.SignalGraph) {
+	g.signalGraphMap[sg.Filename()] = sg
+}
+
+func (g *Global) AddNewPlatform(p freesp.Platform) {
+	g.platformMap[p.Filename()] = p
+}
+
+func (g *Global) AddNewMapping(m freesp.Mapping) {
+	g.mappingMap[m.Filename()] = m
+}
+
+//
+//		Local functions
+//
 
 func CleanupNodeType(nt freesp.NodeType) {
 	for _, impl := range nt.Implementation() {

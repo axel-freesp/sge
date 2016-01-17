@@ -7,28 +7,20 @@ import (
 	"log"
 )
 
-type Context interface {
-	SelectNode(node interfaces.NodeObject)          // single click selection
-	EditNode(node interfaces.NodeObject)            // double click selection
-	SelectPort(port interfaces.PortObject)          // single click selection
-	SelectConnect(conn interfaces.ConnectionObject) // single click selection
-	SelectArch(arch interfaces.ArchObject)
-	SelectProcess(arch interfaces.ProcessObject)
-	SelectChannel(arch interfaces.ChannelObject)
-}
-
 type GraphView interface {
 	Widget() *gtk.Widget
 	Sync()
 	Select(obj interfaces.GraphElement)
 	IdentifyGraph(interfaces.GraphObject) bool
 	IdentifyPlatform(interfaces.PlatformObject) bool
+	IdentifyMapping(interfaces.MappingObject) bool
 }
 
 type GraphViewCollection interface {
 	Add(gv GraphView, title string)
 	RemoveGraphView(g interfaces.GraphObject)
 	RemovePlatformView(p interfaces.PlatformObject)
+	RemoveMappingView(m interfaces.MappingObject)
 	Rename(old, new string)
 	Widget() *gtk.Widget
 	XmlTextView() *XmlTextView
@@ -131,6 +123,20 @@ func (gvc *graphViewCollection) RemovePlatformView(p interfaces.PlatformObject) 
 			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
 			gvc.stack.Remove(v.Widget())
 			//views.SignalGraphViewDestroy(v)
+		} else {
+			tmp = append(tmp, v)
+		}
+	}
+	gvc.graphview = tmp
+}
+
+func (gvc *graphViewCollection) RemoveMappingView(m interfaces.MappingObject) {
+	var tmp []GraphView
+	for _, v := range gvc.graphview {
+		if v.IdentifyMapping(m) {
+			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
+			gvc.stack.Remove(v.Widget())
+			//views.MappingViewDestroy(v)
 		} else {
 			tmp = append(tmp, v)
 		}

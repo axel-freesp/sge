@@ -17,7 +17,7 @@ type signalGraphView struct {
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	sgType      interfaces.GraphObject
-	context     Context
+	context     interfaces.Context
 
 	dragOffs       image.Point
 	button1Pressed bool
@@ -26,7 +26,7 @@ type signalGraphView struct {
 var _ ScaledScene = (*signalGraphView)(nil)
 var _ GraphView = (*signalGraphView)(nil)
 
-func SignalGraphViewNew(g interfaces.GraphObject, context Context) (viewer *signalGraphView, err error) {
+func SignalGraphViewNew(g interfaces.GraphObject, context interfaces.Context) (viewer *signalGraphView, err error) {
 	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -94,6 +94,10 @@ func (v signalGraphView) IdentifyGraph(g interfaces.GraphObject) bool {
 }
 
 func (v signalGraphView) IdentifyPlatform(g interfaces.PlatformObject) bool {
+	return false
+}
+
+func (v signalGraphView) IdentifyMapping(g interfaces.MappingObject) bool {
 	return false
 }
 

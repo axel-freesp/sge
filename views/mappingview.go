@@ -17,7 +17,7 @@ type mappingView struct {
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	arch        []graph.ArchIf
-	context     Context
+	context     interfaces.Context
 
 	dragOffs       image.Point
 	button1Pressed bool
@@ -26,7 +26,7 @@ type mappingView struct {
 var _ ScaledScene = (*mappingView)(nil)
 var _ GraphView = (*mappingView)(nil)
 
-func MappingViewNew(m interfaces.MappingObject, context Context) (viewer *mappingView, err error) {
+func MappingViewNew(m interfaces.MappingObject, context interfaces.Context) (viewer *mappingView, err error) {
 	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -101,8 +101,8 @@ func (v mappingView) IdentifyPlatform(p interfaces.PlatformObject) bool {
 	return false
 }
 
-func (v mappingView) IdentifyMapping(p interfaces.MappingObject) bool {
-	return false
+func (v mappingView) IdentifyMapping(m interfaces.MappingObject) bool {
+	return v.mapping == m
 }
 
 /*

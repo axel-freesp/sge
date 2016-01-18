@@ -105,9 +105,9 @@ func (v mappingView) IdentifyMapping(m interfaces.MappingObject) bool {
 	return v.mapping == m
 }
 
-/*
- *		Handle selection in treeview
- */
+//
+//		Handle selection in treeview
+//
 
 func (v *mappingView) Select(obj interfaces.GraphElement) {
 	switch obj.(type) {
@@ -131,6 +131,44 @@ func (v *mappingView) Select(obj interfaces.GraphElement) {
 			a.SelectChannel(ch)
 			v.repaintArch(a)
 		}
+	case interfaces.NodeObject:
+		n := obj.(interfaces.NodeObject)
+		melem, ok := v.mapping.MapElemObject(n)
+		if !ok {
+			// todo: unmapped nodes
+			return
+		}
+		p := melem.ProcessObject()
+		a, ok := v.focusArchFromUserObject(p.ArchObject())
+		if !ok {
+			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
+			return
+		}
+		pr := a.SelectProcess(p)
+		if pr == nil {
+			log.Printf("mappingView.Select error: process %v not found\n", p)
+			return
+		}
+		pr.(*graph.ProcessMapping).SelectNode(n)
+		v.repaintArch(a)
+	case interfaces.MapElemObject:
+		melem := obj.(interfaces.MapElemObject)
+		p := melem.ProcessObject()
+		a, ok := v.focusArchFromUserObject(p.ArchObject())
+		if !ok {
+			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
+			return
+		}
+		pr := a.SelectProcess(p)
+		if pr == nil {
+			log.Printf("mappingView.Select error: process %v not found\n", p)
+			return
+		}
+		n := melem.NodeObject()
+		if n != nil {
+			pr.(*graph.ProcessMapping).SelectNode(n)
+		}
+		v.repaintArch(a)
 	default:
 	}
 }
@@ -142,6 +180,7 @@ func (v *mappingView) selectArch(toSelect graph.ArchIf) {
 			if !a.Select() {
 				v.repaintArch(a)
 			}
+			return
 		}
 	}
 }
@@ -161,9 +200,9 @@ func (v *mappingView) focusArchFromUserObject(obj interfaces.ArchObject) (ret gr
 	return
 }
 
-/*
- *		ScaledScene interface
- */
+//
+//		ScaledScene interface
+//
 
 func (v *mappingView) Update() (width, height int) {
 	width = v.calcSceneWidth()
@@ -181,9 +220,9 @@ func (v *mappingView) calcSceneHeight() int {
 	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
 }
 
-/*
- *		platformButtonCallback
- */
+//
+//		platformButtonCallback
+//
 
 func (v *mappingView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
 	pos := v.parent.Position(position)
@@ -212,13 +251,28 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 			var ok bool
 			var pr interfaces.ProcessObject
 			var ch interfaces.ChannelObject
-			ok, pr = a.GetSelectedProcess()
+			var n interfaces.NodeObject
+			var p graph.ProcessIf
+			ok, pr, p = a.GetSelectedProcess()
 			if ok {
+				//log.Printf("mappingView.handleArchSelect: select process %v\n", pr)
 				v.context.SelectProcess(pr)
-			}
-			ok, ch = a.GetSelectedChannel()
-			if ok {
-				v.context.SelectChannel(ch)
+				ok, ch = a.GetSelectedChannel()
+				if ok {
+					//log.Printf("mappingView.handleArchSelect: select channel %v\n", ch)
+					v.context.SelectChannel(ch)
+				} else {
+					ok, n = p.(*graph.ProcessMapping).GetSelectedNode()
+					if ok {
+						var melem interfaces.MapElemObject
+						melem, ok = v.mapping.MapElemObject(n)
+						if !ok {
+							// todo: unmapped node
+						} else {
+							v.context.SelectMapElement(melem)
+						}
+					}
+				}
 			}
 		} else {
 			if a.Deselect() {
@@ -228,9 +282,9 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 	}
 }
 
-/*
- *		platformMotionCallback
- */
+//
+//		platformMotionCallback
+//
 
 func (v *mappingView) MotionCallback(area DrawArea, position image.Point) {
 	pos := v.parent.Position(position)
@@ -291,9 +345,9 @@ func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
 	return ret
 }
 
-/*
- *		platformDrawCallback
- */
+//
+//		platformDrawCallback
+//
 
 func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
@@ -343,9 +397,9 @@ func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 	}
 }
 
-/*
- *		Private functions
- */
+//
+//		Private methods
+//
 
 func (v *mappingView) findNode(name string) *graph.Node {
 	for _, d := range v.nodes {
@@ -374,7 +428,6 @@ func (v *mappingView) bBox() (box image.Rectangle) {
 }
 
 func (v *mappingView) drawScene(r image.Rectangle) {
-	//log.Printf("mappingView.drawScene %v\n", r)
 	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
 	v.area.QueueDrawArea(v.parent.ScaleCoord(x, false), v.parent.ScaleCoord(y, false),
 		v.parent.ScaleCoord(w, true)+1, v.parent.ScaleCoord(h, true)+1)

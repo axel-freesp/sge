@@ -31,7 +31,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		MenuEditCurrent(menu, treeStore, global.jl)
 		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
-		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel:
+		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel, freesp.MappedElement:
 			global.win.graphViews.Select(obj)
 		case freesp.Implementation:
 			impl := obj.(freesp.Implementation)

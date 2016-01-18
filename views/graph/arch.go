@@ -204,22 +204,25 @@ func (a *Arch) ChannelPort(ch interfaces.ChannelObject) ArchPortIf {
 
 
 
-func (a *Arch) SelectProcess(pr interfaces.ProcessObject) {
-	for i, p := range a.Children {
-		if pr == p.(ProcessIf).UserObj() {
-			a.SelectChild(a.Children[i])
+func (a *Arch) SelectProcess(pr interfaces.ProcessObject) (p ProcessIf) {
+	for _, ch := range a.Children {
+		if pr == ch.(ProcessIf).UserObj() {
+			a.SelectChild(ch)
+			p = ch.(ProcessIf)
 			return
 		}
 	}
+	return
 }
 
-func (a Arch) GetSelectedProcess() (ok bool, pr interfaces.ProcessObject) {
+func (a Arch) GetSelectedProcess() (ok bool, pr interfaces.ProcessObject, p ProcessIf) {
 	var ch ContainerChild
 	ok, ch = a.GetSelectedChild()
 	if !ok {
 		return
 	}
-	pr = ch.(ProcessIf).UserObj()
+	p = ch.(ProcessIf)
+	pr = p.UserObj()
 	return
 }
 

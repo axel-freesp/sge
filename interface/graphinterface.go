@@ -16,6 +16,7 @@ type Context interface {
 	SelectArch(ArchObject)
 	SelectProcess(ProcessObject)
 	SelectChannel(ChannelObject)
+	SelectMapElement(MapElemObject)
 }
 
 /*

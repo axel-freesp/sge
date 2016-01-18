@@ -76,9 +76,9 @@ func (v platformView) IdentifyMapping(g interfaces.MappingObject) bool {
 	return false
 }
 
-/*
- *		Handle selection in treeview
- */
+//
+//		Handle selection in treeview
+//
 
 func (v *platformView) Select(obj interfaces.GraphElement) {
 	switch obj.(type) {
@@ -132,9 +132,9 @@ func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret g
 	return
 }
 
-/*
- *		ScaledScene interface
- */
+//
+//		ScaledScene interface
+//
 
 func (v *platformView) Update() (width, height int) {
 	width = v.calcSceneWidth()
@@ -152,9 +152,9 @@ func (v *platformView) calcSceneHeight() int {
 	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
 }
 
-/*
- *		platformButtonCallback
- */
+//
+//		platformButtonCallback
+//
 
 func (v *platformView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
 	pos := v.parent.Position(position)
@@ -183,13 +183,13 @@ func (v *platformView) handleArchSelect(pos image.Point) {
 			var ok bool
 			var pr interfaces.ProcessObject
 			var ch interfaces.ChannelObject
-			ok, pr = a.GetSelectedProcess()
+			ok, pr, _ = a.GetSelectedProcess()
 			if ok {
 				v.context.SelectProcess(pr)
-			}
-			ok, ch = a.GetSelectedChannel()
-			if ok {
-				v.context.SelectChannel(ch)
+				ok, ch = a.GetSelectedChannel()
+				if ok {
+					v.context.SelectChannel(ch)
+				}
 			}
 		} else {
 			if a.Deselect() {
@@ -199,9 +199,9 @@ func (v *platformView) handleArchSelect(pos image.Point) {
 	}
 }
 
-/*
- *		platformMotionCallback
- */
+//
+//		platformMotionCallback
+//
 
 func (v *platformView) MotionCallback(area DrawArea, position image.Point) {
 	pos := v.parent.Position(position)
@@ -268,9 +268,9 @@ func (v *platformView) archDrawBox(a graph.ArchIf) image.Rectangle {
 	return ret
 }
 
-/*
- *		platformDrawCallback
- */
+//
+//		platformDrawCallback
+//
 
 func (v *platformView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
@@ -320,9 +320,9 @@ func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
 	}
 }
 
-/*
- *		Private functions
- */
+//
+//		Private methods
+//
 
 func (v *platformView) drawAll() {
 	v.drawScene(v.bBox())

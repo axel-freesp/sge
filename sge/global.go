@@ -100,6 +100,14 @@ func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
+func (g *Global) SelectMapElement(obj interfaces.MapElemObject) {
+	melem := obj.(freesp.MappedElement)
+	cursor := g.fts.Cursor(melem)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
 //
 //		freesp.Context interface
 //

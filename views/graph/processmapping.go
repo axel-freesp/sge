@@ -35,21 +35,6 @@ func ProcessMappingNew(nodes []*Node, userObj interfaces.ProcessObject) (ret *Pr
 	return
 }
 
-func ProcessMappingBox(pos image.Point) image.Rectangle {
-	size := image.Point{global.processWidth, global.processHeight}
-	return image.Rectangle{pos, pos.Add(size)}
-}
-
-func ProcessMappingFit(outer, inner image.Rectangle) image.Rectangle {
-	borderTop := image.Point{-18, -30}
-	borderBottom := image.Point{18, 18}
-	test := image.Rectangle{inner.Min.Add(borderTop), inner.Max.Add(borderBottom)}
-	if outer.Size().X == 0 {
-		return test
-	}
-	return outer.Union(test)
-}
-
 func (p ProcessMapping) UserObj() interfaces.ProcessObject {
 	return p.userObj
 }
@@ -132,33 +117,35 @@ func (pr *ProcessMapping) SetArchObject(a ArchIf) {
 }
 
 func (pr *ProcessMapping) SelectChannel(ch interfaces.ChannelObject) {
-	pr.selectedPort = -1
-	for i, p := range pr.ports {
-		if ch == p.UserObj2.(interfaces.ChannelObject) {
-			p.Select()
-			pr.selectedPort = i
-		} else {
-			p.Deselect()
+	pr.SelectModePort(ch)
+}
+
+func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
+	var c interfaces.ModePositioner
+	ok, c = pr.GetSelectedModePort()
+	if !ok {
+		return
+	}
+	ch = c.(interfaces.ChannelObject)
+	return
+}
+
+func (pr *ProcessMapping) SelectNode(n interfaces.NodeObject) {
+	for _, ch := range pr.Children {
+		if n == ch.(NodeIf).UserObj() {
+			pr.SelectChild(ch)
+			return
 		}
 	}
 }
 
-func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
-	if pr.selectedPort == -1 {
-		return
-	}
-	ok = true
-	ch = pr.ports[pr.selectedPort].UserObj.(interfaces.ChannelObject)
-	return
-}
-
-func (pr ProcessMapping) GetSelectedNode() (ok bool, n *Node) {
+func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
 	var ch ContainerChild
 	ok, ch = pr.GetSelectedChild()
 	if !ok {
 		return
 	}
-	n = ch.(*Node)
+	n = ch.(NodeIf)
 	return
 }
 

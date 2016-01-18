@@ -35,8 +35,8 @@ type ArchIf interface {
 	UserObj() interfaces.ArchObject
 	IsLinked(name string) bool
 	ChannelPort(interfaces.ChannelObject) ArchPortIf
-	SelectProcess(interfaces.ProcessObject)
-	GetSelectedProcess() (ok bool, pr interfaces.ProcessObject)
+	SelectProcess(interfaces.ProcessObject) ProcessIf
+	GetSelectedProcess() (ok bool, pr interfaces.ProcessObject, p ProcessIf)
 	SelectChannel(ch interfaces.ChannelObject)
 	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
 }

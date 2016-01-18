@@ -38,14 +38,14 @@ func (m *mapelem) SetPosition(pos image.Point) {
 	m.position = pos
 }
 
-func (m mapelem) AddToTree(tree Tree, cursor Cursor) {
+func (m *mapelem) AddToTree(tree Tree, cursor Cursor) {
 	var s Symbol
 	if m.process == nil {
 		s = SymbolUnmapped
 	} else {
 		s = SymbolMapped
 	}
-	err := tree.AddEntry(cursor, s, m.node.Name(), &m, mayEdit)
+	err := tree.AddEntry(cursor, s, m.node.Name(), m, mayEdit)
 	if err != nil {
 		log.Fatalf("mapping.AddToTree error: AddEntry failed: %s\n", err)
 	}

@@ -243,41 +243,43 @@ func (v *mappingView) ButtonCallback(area DrawArea, evType gdk.EventType, positi
 func (v *mappingView) handleArchSelect(pos image.Point) {
 	for _, a := range v.arch {
 		hit, _ := a.CheckHit(pos)
-		if hit {
-			if !a.Select() {
-				v.repaintArch(a)
-			}
-			v.context.SelectArch(a.UserObj())
-			var ok bool
-			var pr interfaces.ProcessObject
-			var ch interfaces.ChannelObject
-			var n interfaces.NodeObject
-			var p graph.ProcessIf
-			ok, pr, p = a.GetSelectedProcess()
-			if ok {
-				//log.Printf("mappingView.handleArchSelect: select process %v\n", pr)
-				v.context.SelectProcess(pr)
-				ok, ch = a.GetSelectedChannel()
-				if ok {
-					//log.Printf("mappingView.handleArchSelect: select channel %v\n", ch)
-					v.context.SelectChannel(ch)
-				} else {
-					ok, n = p.(*graph.ProcessMapping).GetSelectedNode()
-					if ok {
-						var melem interfaces.MapElemObject
-						melem, ok = v.mapping.MapElemObject(n)
-						if !ok {
-							// todo: unmapped node
-						} else {
-							v.context.SelectMapElement(melem)
-						}
-					}
-				}
-			}
-		} else {
+		if !hit {
 			if a.Deselect() {
 				v.repaintArch(a)
 			}
+			continue
+		}
+		if !a.Select() {
+			v.repaintArch(a)
+		}
+		v.context.SelectArch(a.UserObj())
+		var ok bool
+		var pr interfaces.ProcessObject
+		var ch interfaces.ChannelObject
+		var n interfaces.NodeObject
+		var p graph.ProcessIf
+		ok, pr, p = a.GetSelectedProcess()
+		if !ok {
+			continue
+		}
+		//log.Printf("mappingView.handleArchSelect: select process %v\n", pr)
+		v.context.SelectProcess(pr)
+		ok, ch = a.GetSelectedChannel()
+		if ok {
+			//log.Printf("mappingView.handleArchSelect: select channel %v\n", ch)
+			v.context.SelectChannel(ch)
+			continue
+		}
+		ok, n = p.(*graph.ProcessMapping).GetSelectedNode()
+		if !ok {
+			continue
+		}
+		var melem interfaces.MapElemObject
+		melem, ok = v.mapping.MapElemObject(n)
+		if !ok {
+			// todo: unmapped node
+		} else {
+			v.context.SelectMapElement(melem)
 		}
 	}
 }
@@ -355,6 +357,16 @@ func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
 	v.drawArch(context, r)
 	v.drawChannels(context, r)
+	v.drawConnections(context, r)
+}
+
+func (v *mappingView) drawConnections(context *cairo.Context, r image.Rectangle) {
+	for _, c := range v.connections {
+		box := c.BBox()
+		if r.Overlaps(box) {
+			c.Draw(context)
+		}
+	}
 }
 
 func (v *mappingView) drawArch(context *cairo.Context, r image.Rectangle) {

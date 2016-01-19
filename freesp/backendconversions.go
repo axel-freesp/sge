@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var validModes = []interfaces.PositionMode{interfaces.PositionModeNormal, interfaces.PositionModeMapping}
+
 var modeFromString = map[string]interfaces.PositionMode{
 	"normal":  interfaces.PositionModeNormal,
 	"mapping": interfaces.PositionModeMapping,
@@ -299,10 +301,7 @@ func CreateXmlArch(a Arch) *backend.XmlArch {
 	for _, p := range a.Processes() {
 		ret.Processes = append(ret.Processes, *CreateXmlProcess(p))
 	}
-	pos := a.ModePosition(interfaces.PositionModeNormal)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
-	pos = a.ModePosition(interfaces.PositionModeMapping)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	ret.Entry = CreateXmlModePosition(a).Entry
 	return ret
 }
 
@@ -318,28 +317,23 @@ func CreateXmlProcess(p Process) *backend.XmlProcess {
 	for _, c := range p.OutChannels() {
 		ret.OutputChannels = append(ret.OutputChannels, *CreateXmlOutChannel(c))
 	}
-	pos := p.ModePosition(interfaces.PositionModeNormal)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
-	pos = p.ModePosition(interfaces.PositionModeMapping)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	ret.Entry = CreateXmlModePosition(p).Entry
 	return ret
 }
 
 func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
 	ret := backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
-	pos := ch.ModePosition(interfaces.PositionModeNormal)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
-	pos = ch.ModePosition(interfaces.PositionModeMapping)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	ret.Entry = CreateXmlModePosition(ch).Entry
+	c := ch.(*channel)
+	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archPort).Entry
 	return ret
 }
 
 func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
 	ret := backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
-	pos := ch.ModePosition(interfaces.PositionModeNormal)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeNormal], pos.X, pos.Y))
-	pos = ch.ModePosition(interfaces.PositionModeMapping)
-	ret.Entry = append(ret.Entry, *backend.XmlModeHintEntryNew(stringFromMode[interfaces.PositionModeMapping], pos.X, pos.Y))
+	ret.Entry = CreateXmlModePosition(ch).Entry
+	c := ch.(*channel)
+	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archPort).Entry
 	return ret
 }
 
@@ -377,6 +371,15 @@ func CreateXmlMapping(m Mapping) (xmlm *backend.XmlMapping) {
 			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
 			xmlm.Mappings = append(xmlm.Mappings, *CreateXmlNodeMap(n.Name(), pname, melem.Position()))
 		}
+	}
+	return
+}
+
+func CreateXmlModePosition(x interfaces.ModePositioner) (h *backend.XmlModeHint) {
+	h = backend.XmlModeHintNew()
+	for _, m := range validModes {
+		pos := x.ModePosition(m)
+		h.Entry = append(h.Entry, *backend.XmlModeHintEntryNew(stringFromMode[m], pos.X, pos.Y))
 	}
 	return
 }

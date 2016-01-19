@@ -2,6 +2,7 @@ package freesp
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
 	"log"
@@ -22,6 +23,75 @@ var _ interfaces.ChannelObject = (*channel)(nil)
 
 func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string) *channel {
 	return &channel{dir, iotype, nil, process, linkText, make(map[interfaces.PositionMode]image.Point), nil}
+}
+
+func createInChannelFromXml(xmlc backend.XmlInChannel, p Process) (ch *channel, err error) {
+	var iot IOType
+	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
+	if err != nil {
+		return
+	}
+	ch = ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
+	ch.channelPositionsFromXml(xmlc.XmlChannel)
+	ap := p.Arch().(*arch).AddArchPort(ch)
+	ap.archPortPositionsFromXml(xmlc.XmlChannel)
+	ch.archPort = ap
+	return
+}
+
+func createOutChannelFromXml(xmlc backend.XmlOutChannel, p Process) (ch *channel, err error) {
+	var iot IOType
+	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
+	if err != nil {
+		return
+	}
+	ch = ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
+	ch.channelPositionsFromXml(xmlc.XmlChannel)
+	ap := p.Arch().(*arch).AddArchPort(ch)
+	ap.archPortPositionsFromXml(xmlc.XmlChannel)
+	ch.archPort = ap
+	return
+}
+
+func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
+	for _, xmlh := range xmlc.Entry {
+		mode, ok := modeFromString[xmlh.Mode]
+		if !ok {
+			log.Printf("createInChannelFromXml warning: hint mode %s not defined\n",
+				xmlh.Mode)
+			continue
+		}
+		ch.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+	}
+	return
+}
+
+func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
+	for _, xmlh := range xmlc.ArchPortHints.Entry {
+		mode, ok := modeFromString[xmlh.Mode]
+		if !ok {
+			log.Printf("archPortPositionsFromXml warning: hint mode %s not defined\n",
+				xmlh.Mode)
+			continue
+		}
+		ap.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+	}
+	return
+}
+
+func channelGetIOTypeFromArch(a Arch, iotype string) (iot IOType, err error) {
+	var ok bool
+	for _, iot = range a.IOTypes() {
+		if iot.Name() == iotype {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		err = fmt.Errorf("createInChannelFromXml error: referenced ioType %s not found in arch %s.\n",
+			iotype, a.Name())
+	}
+	return
 }
 
 func (c *channel) IOTypeObject() interfaces.IOTypeObject {
@@ -60,9 +130,9 @@ func (c *channel) Link() Channel {
 	return c.link
 }
 
-/*
- *      ModePositioner API
- */
+//
+//      ModePositioner API
+//
 
 func (c *channel) ModePosition(mode interfaces.PositionMode) (p image.Point) {
 	p = c.position[mode]
@@ -73,9 +143,9 @@ func (c *channel) SetModePosition(mode interfaces.PositionMode, p image.Point) {
 	c.position[mode] = p
 }
 
-/*
- *  Directioner API
- */
+//
+//  Directioner API
+//
 
 func (c *channel) Direction() interfaces.PortDirection {
 	return c.direction
@@ -85,9 +155,9 @@ func (c *channel) SetDirection(newDir interfaces.PortDirection) {
 	c.direction = newDir
 }
 
-/*
- *  Namer API
- */
+//
+//  Namer API
+//
 
 func (c *channel) Name() string {
 	if c.link != nil {
@@ -105,9 +175,9 @@ func (c *channel) SetName(newName string) {
 	log.Panicf("channel.SetName is forbidden.\n")
 }
 
-/*
- *  fmt.Stringer API
- */
+//
+//  fmt.Stringer API
+//
 
 func (c *channel) String() string {
 	var dirtext string
@@ -120,9 +190,9 @@ func (c *channel) String() string {
 		dirtext, c.Name(), c.link.Process().Arch().Name(), c.link.Process().Name(), c.linkText)
 }
 
-/*
- *  TreeElement API
- */
+//
+//  TreeElement API
+//
 
 func (c *channel) AddToTree(tree Tree, cursor Cursor) {
 	var symbol Symbol
@@ -147,10 +217,17 @@ func (c *channel) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 	return
 }
 
-/*
- *      channelList
- *
- */
+func (c *channel) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *channel:
+		return te.(*channel).Name() == c.Name()
+	}
+	return false
+}
+
+//
+//      channelList
+//
 
 type channelList struct {
 	channels []Channel

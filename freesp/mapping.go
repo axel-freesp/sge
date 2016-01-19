@@ -80,9 +80,9 @@ func MappingNew(filename string, context Context) *mapping {
 //		TreeElement interface
 //
 
-func (m mapping) AddToTree(tree Tree, cursor Cursor) {
+func (m *mapping) AddToTree(tree Tree, cursor Cursor) {
 	var child Cursor
-	err := tree.AddEntry(cursor, SymbolMappings, m.Filename(), &m, mayAddObject)
+	err := tree.AddEntry(cursor, SymbolMappings, m.Filename(), m, mayAddObject)
 	if err != nil {
 		log.Fatalf("mapping.AddToTree error: AddEntry failed: %s\n", err)
 	}
@@ -105,6 +105,14 @@ func (m mapping) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCur
 func (m mapping) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	log.Fatalf("mapping.RemoveObject error: Nothing to remove\n")
 	return
+}
+
+func (m *mapping) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *mapping:
+		return te.(*mapping).Filename() == m.Filename()
+	}
+	return false
 }
 
 //
@@ -209,6 +217,10 @@ func (m mapping) Write() (data []byte, err error) {
 func (m mapping) WriteFile(filepath string) error {
 	xmlm := CreateXmlMapping(&m)
 	return xmlm.WriteFile(filepath)
+}
+
+func (m *mapping) Remove(tree Tree) {
+	tree.Remove(tree.Cursor(m))
 }
 
 //

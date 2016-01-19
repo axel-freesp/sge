@@ -32,9 +32,9 @@ func (c *connection) ToObject() interfaces.PortObject {
 	return c.to.(*port)
 }
 
-/*
- *  fmt.Stringer API
- */
+//
+//  fmt.Stringer API
+//
 
 var _ fmt.Stringer = (*connection)(nil)
 
@@ -45,9 +45,9 @@ func (c *connection) String() (s string) {
 	return
 }
 
-/*
- *  TreeElement API
- */
+//
+//  TreeElement API
+//
 
 var _ TreeElement = (*connection)(nil)
 
@@ -68,4 +68,12 @@ func (c *connection) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 func (c *connection) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	log.Fatal("Connection.AddNewObject - nothing to remove.")
 	return
+}
+
+func (c *connection) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *connection:
+		return te.(*connection) == c
+	}
+	return false
 }

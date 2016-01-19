@@ -281,6 +281,11 @@ func (g *Global) RemovePlatform(name string) {
 		log.Printf("Global.RemovePlatform warning: platform %s not found.\n", name)
 		return
 	}
+	for _, a := range p.Arch() {
+		for _, iot := range a.IOTypes() {
+			freesp.RemoveRegisteredIOType(iot)
+		}
+	}
 	delete(g.platformMap, name)
 	cursor := g.fts.Cursor(p)
 	g.fts.RemoveToplevel(cursor.Path)

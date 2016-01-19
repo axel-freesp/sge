@@ -34,6 +34,7 @@ func IOTypeNew(name string, mode interfaces.IOMode, platform Platform) (t *iotyp
 	if ioType != nil {
 		if (*newT) != (*ioType) {
 			err = fmt.Errorf("IOTypeNew error: adding existing io type %s, which is incompatible.", name)
+			err = fmt.Errorf("%s\nexisting: %v - new: %v\n", err, ioType, newT)
 			return
 		}
 		t = ioType
@@ -57,9 +58,9 @@ func (t *iotype) Platform() Platform {
 	return t.platform
 }
 
-/*
- *  Namer API
- */
+//
+//  Namer API
+//
 
 func (t *iotype) Name() string {
 	return t.name
@@ -77,9 +78,9 @@ func (t *iotype) SetName(newName string) {
 	registeredIOTypes.Append(t.name)
 }
 
-/*
- *  TreeElement API
- */
+//
+//  TreeElement API
+//
 
 func (t *iotype) AddToTree(tree Tree, cursor Cursor) {
 	err := tree.AddEntry(cursor, SymbolIOType, t.Name(), t, mayEdit|mayAddObject|mayRemove)
@@ -98,10 +99,17 @@ func (t *iotype) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
 	return
 }
 
-/*
- *      ioTypeList
- *
- */
+func (t *iotype) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *iotype:
+		return te.(*iotype).Name() == t.Name()
+	}
+	return false
+}
+
+//
+//      ioTypeList
+//
 
 type ioTypeList struct {
 	ioTypes []IOType

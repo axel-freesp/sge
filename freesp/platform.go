@@ -66,9 +66,9 @@ func (p *platform) ProcessByName(name string) (pr Process, ok bool) {
 	return
 }
 
-/*
- *  Shaper API
- */
+//
+//  Shaper API
+//
 
 func (p *platform) Shape() image.Point {
 	return p.shape
@@ -78,9 +78,9 @@ func (p *platform) SetShape(shape image.Point) {
 	p.shape = shape
 }
 
-/*
- *  Filenamer API
- */
+//
+//  Filenamer API
+//
 
 func (p *platform) Filename() string {
 	return p.filename
@@ -110,15 +110,17 @@ func (p *platform) ReadFile(filepath string) (err error) {
 		return
 	}
 	err = p.createPlatformFromXml(xmlp)
+	if err != nil {
+		log.Printf("platform.ReadFile error: %s\n", err)
+	}
 	return
 }
 
 func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) {
 	for _, xmla := range xmlp.Arch {
-		a := ArchNew(xmla.Name, p)
-		err = a.createArchFromXml(xmla)
+		var a *arch
+		a, err = createArchFromXml(xmla, p)
 		if err != nil {
-			err = fmt.Errorf("platform.createPlatformFromXml error: %s", err)
 			return
 		}
 		p.archlist.Append(a)
@@ -203,9 +205,9 @@ func (p *platform) Remove(tree Tree) {
 	tree.Remove(tree.Cursor(p))
 }
 
-/*
- *  TreeElement API
- */
+//
+//  TreeElement API
+//
 
 func (p *platform) AddToTree(tree Tree, cursor Cursor) {
 	err := tree.AddEntry(cursor, SymbolPlatform, p.Filename(), p, mayAddObject)

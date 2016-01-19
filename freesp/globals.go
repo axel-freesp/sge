@@ -39,3 +39,12 @@ func RemoveRegisteredSignalType(st SignalType) {
 		registeredSignalTypes.Remove(name)
 	}
 }
+
+func RemoveRegisteredIOType(iot IOType) {
+	name := iot.Name()
+	delete(ioTypes, name)
+	_, ok := registeredIOTypes.Find(name)
+	if ok {
+		registeredIOTypes.Remove(name)
+	}
+}

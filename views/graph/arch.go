@@ -85,41 +85,20 @@ func (a *Arch) init() {
 	for _, pr := range a.Children {
 		pr.(ProcessIf).SetArchObject(a)
 	}
-	a.Layout()
 }
 
 func (a *Arch) initMappingPorts() {
-	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
-			ColorInit(ColorOption(HighlightArchPort)),
-			ColorInit(ColorOption(SelectArchPort)),
-			ColorInit(ColorOption(BoxFrame)),
-			Color{},
-			image.Point{}}
-	extCnt := a.numExtChannel()
 	idx := 0
-	empty := image.Point{}
 	for _, up := range a.userObj.ProcessObjects() {
 		for _, c := range up.InChannelObjects() {
 			if a.channelIsExtern(c) {
-				ap := c.ArchPortObject()
-				pos := ap.ModePosition(interfaces.PositionModeMapping)
-				if pos == empty {
-					pos = a.CalcPortPos(idx, extCnt)
-				}
-				cp := a.AddModePort(pos, config, ap, interfaces.PositionModeMapping)
-				ap.SetModePosition(interfaces.PositionModeMapping, cp.Position())
+				a.addExternalPort(c, interfaces.PositionModeMapping, idx)
 				idx++
 			}
 		}
 		for _, c := range up.OutChannelObjects() {
 			if a.channelIsExtern(c) {
-				ap := c.ArchPortObject()
-				pos := ap.ModePosition(interfaces.PositionModeMapping)
-				if pos == empty {
-					pos = a.CalcPortPos(idx, extCnt)
-				}
-				cp := a.AddModePort(pos, config, ap, interfaces.PositionModeMapping)
-				ap.SetModePosition(interfaces.PositionModeMapping, cp.Position())
+				a.addExternalPort(c, interfaces.PositionModeMapping, idx)
 				idx++
 			}
 		}
@@ -128,42 +107,39 @@ func (a *Arch) initMappingPorts() {
 }
 
 func (a *Arch) initPorts() {
+	idx := 0
+	for _, up := range a.userObj.ProcessObjects() {
+		for _, c := range up.InChannelObjects() {
+			if a.channelIsExtern(c) {
+				a.addExternalPort(c, interfaces.PositionModeNormal, idx)
+				idx++
+			}
+		}
+		for _, c := range up.OutChannelObjects() {
+			if a.channelIsExtern(c) {
+				a.addExternalPort(c, interfaces.PositionModeNormal, idx)
+				idx++
+			}
+		}
+	}
+	a.Layout()
+}
+
+func (a *Arch) addExternalPort(c interfaces.ChannelObject, mode interfaces.PositionMode, idx int) {
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
 			ColorInit(ColorOption(SelectArchPort)),
 			ColorInit(ColorOption(BoxFrame)),
 			Color{},
 			image.Point{}}
-	extCnt := a.numExtChannel()
-	idx := 0
 	empty := image.Point{}
-	for _, up := range a.userObj.ProcessObjects() {
-		for _, c := range up.InChannelObjects() {
-			if a.channelIsExtern(c) {
-				ap := c.ArchPortObject()
-				pos := ap.ModePosition(interfaces.PositionModeNormal)
-				if pos == empty {
-					pos = a.CalcPortPos(idx, extCnt)
-				}
-				cp := a.AddModePort(pos, config, ap, interfaces.PositionModeNormal)
-				ap.SetModePosition(interfaces.PositionModeNormal, cp.Position())
-				idx++
-			}
-		}
-		for _, c := range up.OutChannelObjects() {
-			if a.channelIsExtern(c) {
-				ap := c.ArchPortObject()
-				pos := ap.ModePosition(interfaces.PositionModeNormal)
-				if pos == empty {
-					pos = a.CalcPortPos(idx, extCnt)
-				}
-				cp := a.AddModePort(pos, config, ap, interfaces.PositionModeNormal)
-				ap.SetModePosition(interfaces.PositionModeNormal, cp.Position())
-				idx++
-			}
-		}
+	ap := c.ArchPortObject()
+	pos := ap.ModePosition(mode)
+	if pos == empty {
+		pos = a.CalcPortPos(idx, a.numExtChannel())
 	}
-	a.Layout()
+	cp := a.AddModePort(pos, config, ap, mode)
+	ap.SetModePosition(mode, cp.Position())
 }
 
 func (a Arch) Processes() []ProcessIf {

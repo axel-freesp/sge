@@ -1,7 +1,6 @@
 package graph
 
 import (
-	//"log"
     "image"
 	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/tool"
@@ -99,7 +98,6 @@ func (c *Container) AddPort(pos image.Point, config DrawConfig, userObj interfac
 
 func (c *Container) AddModePort(pos image.Point, config DrawConfig, userObj interfaces.ModePositioner, mode interfaces.PositionMode) (p *ContainerPort) {
 	size := image.Point{c.config.portWidth, c.config.portHeight}
-	pos = c.portClipPos(pos)
 	box := image.Rectangle{pos, pos.Add(size)}
 	p = ContainerPortNew(box, config, nil, userObj, mode)
 	c.ports = append(c.ports, p)
@@ -137,7 +135,8 @@ func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
 		} else {
 			pos = c.CalcPortPos(i, len(c.ports))
 		}
-		p.SetPosition(c.portClipPos(pos))
+		pos = c.portClipPos(pos)
+		p.SetPosition(pos)
 	}
 	return
 }

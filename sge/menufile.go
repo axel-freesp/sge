@@ -175,24 +175,13 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		cursor := fts.Cursor(p)
 		setCursorNewId(ftv, cursor.Path)
 	case "mml":
-		m := freesp.MappingNew(filename, &global)
-		err := m.ReadFile(filename)
+		m, err := global.GetMapping(filenameToShow(filename))
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		cursor, err := fts.AddMappingFile(filename, m)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		cursor := fts.Cursor(m)
 		setCursorNewId(ftv, cursor.Path)
-		mv, err := views.MappingViewNew(m, &global)
-		if err != nil {
-			log.Fatal("fileOpen: Could not create platform view.")
-		}
-		global.win.graphViews.Add(mv, filenameToShow(filename))
-		global.win.Window().ShowAll()
 	default:
 	}
 }

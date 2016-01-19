@@ -16,10 +16,6 @@ func archPortNew(ch interfaces.ChannelObject) *archPort {
 	return &archPort{ch, make(map[interfaces.PositionMode]image.Point)}
 }
 
-func (p *archPort) AddPosition(mode interfaces.PositionMode, x, y int) {
-	p.position[mode] = image.Point{x, y}
-}
-
 func (p *archPort) Channel() interfaces.ChannelObject {
 	return p.channel
 }

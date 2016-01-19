@@ -25,8 +25,8 @@ func ArchNew(name string, platform Platform) *arch {
 		make(map[interfaces.PositionMode]image.Point), nil}
 }
 
-func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
-	a.name = xmla.Name
+func createArchFromXml(xmla backend.XmlArch, platform Platform) (a *arch, err error) {
+	a = ArchNew(xmla.Name, platform)
 	for _, xmlt := range xmla.IOType {
 		var t IOType
 		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
@@ -36,36 +36,12 @@ func (a *arch) createArchFromXml(xmla backend.XmlArch) (err error) {
 		a.iotypes.Append(t.(*iotype))
 	}
 	for _, xmlp := range xmla.Processes {
-		pr := ProcessNew(xmlp.Name, a)
-		err = pr.createProcessFromXml(xmlp, a.IOTypes())
+		var pr *process
+		pr, err = createProcessFromXml(xmlp, a)
 		if err != nil {
-			err = fmt.Errorf("arch.createArchFromXml error: %s\n", err)
+			return
 		}
 		a.processes.Append(pr)
-		for i, c := range pr.InChannelObjects() {
-			xmlc := xmlp.InputChannels[i]
-			ap := a.AddArchPort(c)
-			for _, xmlh := range xmlc.Entry {
-				mode, ok := modeFromString[xmlh.Mode]
-				if !ok {
-					log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
-					continue
-				}
-				ap.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
-			}
-		}
-		for i, c := range pr.OutChannelObjects() {
-			xmlc := xmlp.OutputChannels[i]
-			ap := a.AddArchPort(c)
-			for _, xmlh := range xmlc.Entry {
-				mode, ok := modeFromString[xmlh.Mode]
-				if !ok {
-					log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
-					continue
-				}
-				ap.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
-			}
-		}
 	}
 	for _, xmlh := range xmla.Entry {
 		mode, ok := modeFromString[xmlh.Mode]
@@ -110,9 +86,9 @@ func (a *arch) AddArchPort(ch interfaces.ChannelObject) (p *archPort) {
 	return
 }
 
-/*
- *  Namer API
- */
+//
+//  Namer API
+//
 
 func (a *arch) Name() string {
 	return a.name
@@ -122,9 +98,9 @@ func (a *arch) SetName(newName string) {
 	a.name = newName
 }
 
-/*
- *      ModePositioner API
- */
+//
+//      ModePositioner API
+//
 
 func (a *arch) ModePosition(mode interfaces.PositionMode) (p image.Point) {
 	p = a.position[mode]
@@ -135,17 +111,17 @@ func (a *arch) SetModePosition(mode interfaces.PositionMode, p image.Point) {
 	a.position[mode] = p
 }
 
-/*
- *  fmt.Stringer API
- */
+//
+//  fmt.Stringer API
+//
 
 func (a *arch) String() string {
 	return fmt.Sprintf("Arch(%s)", a.name)
 }
 
-/*
- *  TreeElement API
- */
+//
+//  TreeElement API
+//
 
 func (a *arch) AddToTree(tree Tree, cursor Cursor) {
 	//log.Printf("arch.AddToTree: %s\n", a.Name())
@@ -265,10 +241,17 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	return
 }
 
-/*
- *      archList
- *
- */
+func (a *arch) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *arch:
+		return te.(*arch).Name() == a.Name()
+	}
+	return false
+}
+
+//
+//      archList
+//
 
 type archList struct {
 	archs   []Arch

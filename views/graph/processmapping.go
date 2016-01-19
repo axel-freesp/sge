@@ -81,8 +81,18 @@ func processDrawMappedChannel(p *ContainerPort, ctxt interface{}){
 func (pr *ProcessMapping) SetArchObject(a ArchIf) {
 	pr.arch = a
 	idx := 0
-	inCnt := len(pr.userObj.InChannelObjects())
-	outCnt := len(pr.userObj.OutChannelObjects())
+	for _, c := range pr.userObj.InChannelObjects() {
+		pr.addPort(c, a, idx)
+		idx++
+	}
+	for _, c := range pr.userObj.OutChannelObjects() {
+		pr.addPort(c, a, idx)
+		idx++
+	}
+}
+
+func (pr *ProcessMapping) addPort(c interfaces.ChannelObject, a ArchIf, idx int) {
+	cnt := len(pr.userObj.InChannelObjects()) + len(pr.userObj.OutChannelObjects())
 	empty := image.Point{}
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
@@ -90,30 +100,16 @@ func (pr *ProcessMapping) SetArchObject(a ArchIf) {
 			ColorInit(ColorOption(BoxFrame)),
 			Color{},
 			image.Point{}}
-	for _, c := range pr.userObj.InChannelObjects() {
-		pos := c.ModePosition(interfaces.PositionModeMapping)
-		if pos == empty {
-			pos = pr.CalcPortPos(idx, inCnt + outCnt)
-		}
-		p := pr.AddModePort(pos, config, c, interfaces.PositionModeMapping)
-		p.RegisterOnDraw(func(ctxt interface{}){
-			processDrawMappedChannel(p, ctxt)
-		})
-		a.(*Arch).channelMap[c] = p
-		idx++
+	pos := c.ModePosition(interfaces.PositionModeMapping)
+	if pos == empty {
+		pos = pr.CalcPortPos(idx, cnt)
 	}
-	for _, c := range pr.userObj.OutChannelObjects() {
-		pos := c.ModePosition(interfaces.PositionModeMapping)
-		if pos == empty {
-			pos = pr.CalcPortPos(idx, inCnt + outCnt)
-		}
-		p := pr.AddModePort(pos, config, c, interfaces.PositionModeMapping)
-		p.RegisterOnDraw(func(ctxt interface{}){
-			processDrawMappedChannel(p, ctxt)
-		})
-		a.(*Arch).channelMap[c] = p
-		idx++
-	}
+	p := pr.AddModePort(pos, config, c, interfaces.PositionModeMapping)
+	p.RegisterOnDraw(func(ctxt interface{}){
+		processDrawMappedChannel(p, ctxt)
+	})
+	a.(*Arch).channelMap[c] = p
+	//log.Printf("ProcessMapping.addPort: pos=%v\n", p.Position())
 }
 
 func (pr *ProcessMapping) SelectChannel(ch interfaces.ChannelObject) {

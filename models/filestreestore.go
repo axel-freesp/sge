@@ -338,6 +338,16 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter 
 	}
 	if !ok {
 		err = fmt.Errorf("getIterAndPathFromObject error: object not found.")
+		for i := 0; !ok; i++ {
+			path = fmt.Sprintf("%d", i)
+			_, ok = s.lookup[path]
+			if !ok {
+				break
+			} else {
+				err = fmt.Errorf("%s, path:%s", err, path)
+				ok = false
+			}
+		}
 		return
 	}
 	iter, err = s.treestore.GetIterFromString(path)
@@ -348,6 +358,7 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj freesp.TreeElement) (iter 
 func (s *FilesTreeStore) Cursor(obj freesp.TreeElement) (cursor freesp.Cursor) {
 	_, path, err := s.getIterAndPathFromObject(obj)
 	if err != nil {
+		log.Printf("%s\n", err)
 		log.Panicf("FilesTreeStore.Cursor: obj %T: %v not found.\n", obj, obj)
 	}
 	return freesp.Cursor{path, freesp.AppendCursor}

@@ -5,8 +5,15 @@ import (
 )
 
 /*
- *  Behaviour Model
+ *  File handling Model
  */
+
+type FileManagerIf interface {
+	New() FileDataIf
+	Access(name string) FileDataIf
+	Remove(name string)
+	Rename(oldName, newName string)
+}
 
 type Context interface {
 	GetLibrary(libname string) (Library, error)
@@ -27,6 +34,10 @@ type Context interface {
 	AddNewMapping(Mapping)
 }
 
+/*
+ *  Behaviour Model
+ */
+
 type SignalGraphType interface {
 	TreeElement
 	Libraries() []Library
@@ -42,16 +53,14 @@ type SignalGraphType interface {
 
 type SignalGraph interface {
 	TreeElement
-	Filenamer
-	Remover
+	FileDataIf
 	ItsType() SignalGraphType
 	GraphObject() interfaces.GraphObject
 }
 
 type Library interface {
 	TreeElement
-	Filenamer
-	Remover
+	FileDataIf
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
 	AddNodeType(NodeType) error
@@ -181,8 +190,7 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 
 type Platform interface {
 	TreeElement
-	Filenamer
-	Remover
+	FileDataIf
 	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)
@@ -229,7 +237,7 @@ type Channel interface {
 
 type Mapping interface {
 	TreeElement
-	Filenamer
+	FileDataIf
 	MappingObject() interfaces.MappingObject
 	AddMapping(n Node, p Process)
 	SetGraph(SignalGraph)
@@ -255,6 +263,11 @@ func GetIOTypeByName(name string) (ioType IOType, ok bool) {
 type Filenamer interface {
 	Filename() string
 	SetFilename(string)
+}
+
+type FileDataIf interface {
+	Filenamer
+	Remover
 	Read(data []byte) error
 	ReadFile(filepath string) error
 	Write() (data []byte, err error)

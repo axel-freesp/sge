@@ -8,6 +8,7 @@ import (
 type XmlChannel struct {
 	IOType string `xml:"io-type,attr"`
 	XmlModeHint
+	ArchPortHints XmlModeHint `xml:"arch-port"`
 }
 
 type XmlInChannel struct {
@@ -23,11 +24,11 @@ type XmlOutChannel struct {
 }
 
 func XmlInChannelNew(name, ioType, source string) *XmlInChannel {
-	return &XmlInChannel{XmlChannel{ioType, XmlModeHint{}}, xml.Name{freespNamespace, "input-channel"}, source}
+	return &XmlInChannel{XmlChannel{ioType, XmlModeHint{}, XmlModeHint{}}, xml.Name{freespNamespace, "input-channel"}, source}
 }
 
 func XmlOutChannelNew(name, ioType, dest string) *XmlOutChannel {
-	return &XmlOutChannel{XmlChannel{ioType, XmlModeHint{}}, xml.Name{freespNamespace, "output-channel"}, dest}
+	return &XmlOutChannel{XmlChannel{ioType, XmlModeHint{}, XmlModeHint{}}, xml.Name{freespNamespace, "output-channel"}, dest}
 }
 
 func (c *XmlInChannel) Read(data []byte) (err error) {

@@ -23,50 +23,32 @@ func ProcessNew(name string, arch Arch) *process {
 	return &process{name, channelListInit(), channelListInit(), arch, make(map[interfaces.PositionMode]image.Point)}
 }
 
-func (p *process) createProcessFromXml(xmlp backend.XmlProcess, ioTypes []IOType) (err error) {
-	p.name = xmlp.Name
+func createProcessFromXml(xmlp backend.XmlProcess, a Arch) (pr *process, err error) {
+	pr = ProcessNew(xmlp.Name, a)
 	for _, xmlc := range xmlp.InputChannels {
-		var iot IOType
-		iot, ok := p.arch.(*arch).iotypes.Find(xmlc.IOType)
-		if !ok {
-			err = fmt.Errorf("process.createProcessFromXml error (in): referenced ioType %s not found in arch.\n", xmlc.IOType)
+		var ch *channel
+		ch, err = createInChannelFromXml(xmlc, pr)
+		if err != nil {
 			return
 		}
-		c := ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
-		for _, xmlh := range xmlc.Entry {
-			mode, ok := modeFromString[xmlh.Mode]
-			if !ok {
-				log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
-				continue
-			}
-			c.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
-		}
-		p.inChannels.Append(c)
+		pr.inChannels.Append(ch)
 	}
 	for _, xmlc := range xmlp.OutputChannels {
-		iot, ok := p.arch.(*arch).iotypes.Find(xmlc.IOType)
-		if !ok {
-			err = fmt.Errorf("process.createProcessFromXml error (out): referenced ioType %s not found.\n", xmlc.IOType)
+		var ch *channel
+		ch, err = createOutChannelFromXml(xmlc, pr)
+		if err != nil {
 			return
 		}
-		c := ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
-		for _, xmlh := range xmlc.Entry {
-			mode, ok := modeFromString[xmlh.Mode]
-			if !ok {
-				log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
-				continue
-			}
-			c.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
-		}
-		p.outChannels.Append(c)
+		pr.outChannels.Append(ch)
 	}
 	for _, xmlh := range xmlp.Entry {
 		mode, ok := modeFromString[xmlh.Mode]
 		if !ok {
-			log.Printf("process.createProcessFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+			log.Printf("createProcessFromXml Warning: hint mode %s not defined\n",
+				xmlh.Mode)
 			continue
 		}
-		p.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		pr.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
 	}
 	return
 }

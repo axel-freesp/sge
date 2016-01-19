@@ -209,6 +209,10 @@ func (l *library) RemoveSignalType(st SignalType) {
 
 var _ TreeElement = (*library)(nil)
 
+//
+//		TreeElement interface
+//
+
 func (l *library) AddToTree(tree Tree, cursor Cursor) {
 	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l, mayAddObject)
 	if err != nil {
@@ -305,4 +309,12 @@ func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 		log.Fatalf("library.RemoveObject error: invalid type %T\n", obj)
 	}
 	return
+}
+
+func (l *library) Identify(te TreeElement) bool {
+	switch te.(type) {
+	case *library:
+		return te.(*library).Filename() == l.Filename()
+	}
+	return false
 }

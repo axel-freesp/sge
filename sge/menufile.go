@@ -32,115 +32,32 @@ func MenuFileInit(menu *GoAppMenu) {
  *		Callbacks
  */
 
-var sgFilenameIndex = 0
-var libFilenameIndex = 0
-var platFilenameIndex = 0
-var mapFilenameIndex = 0
-
-func newSGFilename() string {
-	ret := fmt.Sprintf("new-file-%d.sml", sgFilenameIndex)
-	sgFilenameIndex++
-	return ret
-}
-
-func newLibFilename() string {
-	ret := fmt.Sprintf("new-file-%d.alml", libFilenameIndex)
-	libFilenameIndex++
-	return ret
-}
-
-func newPlatFilename() string {
-	ret := fmt.Sprintf("new-file-%d.spml", platFilenameIndex)
-	platFilenameIndex++
-	return ret
-}
-
-func newMapFilename() string {
-	ret := fmt.Sprintf("new-file-%d.mml", mapFilenameIndex)
-	platFilenameIndex++
-	return ret
-}
-
 func fileNewSg(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
-	log.Println("fileNewSg")
-	filename := newSGFilename()
-	sg := freesp.SignalGraphNew(filename, &global)
-	newId, err := fts.AddSignalGraphFile(sg.Filename(), sg)
+	_, err := global.SignalGraphMgr().New()
 	if err != nil {
-		log.Printf("Warning: ftv.AddSignalGraphFile('%s') failed.\n", filename)
+		log.Printf("fileNewSg: %s\n", err)
 	}
-	setCursorNewId(ftv, newId)
-	gv, err := views.SignalGraphViewNew(sg.GraphObject(), &global)
-	if err != nil {
-		log.Fatal("fileNewSg: Could not create graph view.")
-	}
-	global.win.graphViews.Add(gv, filename)
-	global.win.Window().ShowAll()
-}
-
-func setCursorNewId(ftv *views.FilesTreeView, newId string) {
-	path, err := gtk.TreePathNewFromString(newId)
-	if err != nil {
-		log.Println("expandNewId error: TreePathNewFromString failed:", err)
-		return
-	}
-	ftv.TreeView().SetCursor(path, ftv.TreeView().GetExpanderColumn(), false)
 }
 
 func fileNewLib(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
-	log.Println("fileNewLib")
-	filename := newLibFilename()
-	lib := freesp.LibraryNew(filename, &global)
-	global.AddNewLibrary(lib)
-	cursor, err := fts.AddLibraryFile(filename, lib)
+	_, err := global.LibraryMgr().New()
 	if err != nil {
-		log.Printf("Warning: ftv.AddLibraryFile('%s') failed: %s.\n", filename, err)
-		return
+		log.Printf("fileNewLib: %s\n", err)
 	}
-	setCursorNewId(ftv, cursor.Path)
 }
 
 func fileNewPlat(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
-	log.Println("fileNewPlat")
-	filename := newPlatFilename()
-	pl := freesp.PlatformNew(filename)
-	newId, err := fts.AddPlatformFile(pl.Filename(), pl)
+	_, err := global.PlatformMgr().New()
 	if err != nil {
-		log.Printf("fileNewPlat Warning: ftv.AddPlatformFile('%s') failed.\n", filename)
+		log.Printf("fileNewPlat: %s\n", err)
 	}
-	setCursorNewId(ftv, newId)
-	pv, err := views.PlatformViewNew(pl.PlatformObject(), &global)
-	if err != nil {
-		log.Fatal("fileNewPlat: Could not create graph view.")
-	}
-	global.win.graphViews.Add(pv, filename)
-	global.win.Window().ShowAll()
 }
 
 func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
-	log.Println("fileNewMap")
-	filename := newMapFilename()
-	m := freesp.MappingNew(filename, &global)
-	var graph freesp.SignalGraph
-	var platform freesp.Platform
-	// TODO: open dialog to choose graph and platform
-	_ = graph
-	_ = platform
-	log.Printf("fileNewMap: not implemented\n")
-	return
-
-	cursor, err := fts.AddMappingFile(filename, m)
+	_, err := global.MappingMgr().New()
 	if err != nil {
-		log.Printf("Warning: ftv.AddMappingFile('%s') failed: %s.\n", filename, err)
-		return
+		log.Printf("fileNewMap: %s\n", err)
 	}
-	setCursorNewId(ftv, cursor.Path)
-	mv, err := views.MappingViewNew(m.MappingObject(), &global)
-	if err != nil {
-		log.Fatal("fileNewMap: Could not create graph view.")
-	}
-	global.win.graphViews.Add(mv, filename)
-	global.win.Window().ShowAll()
 }
 
 func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
@@ -149,40 +66,24 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	if !ok {
 		return
 	}
+	var err error
 	switch tool.Suffix(filename) {
 	case "sml":
-		sg, err := global.GetSignalGraph(filenameToShow(filename))
+		_, err = global.SignalGraphMgr().Access(filenameToShow(filename))
 		if err != nil {
 			log.Printf("fileOpen FIXME: could not get signal graph %s. Try full path!\n", filenameToShow(filename))
-			return
 		}
-		cursor := fts.Cursor(sg)
-		setCursorNewId(ftv, cursor.Path)
 	case "alml":
-		lib, err := global.GetLibrary(filenameToShow(filename))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		cursor := fts.Cursor(lib)
-		setCursorNewId(ftv, cursor.Path)
+		_, err = global.LibraryMgr().Access(filenameToShow(filename))
 	case "spml":
-		p, err := global.GetPlatform(filenameToShow(filename))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		cursor := fts.Cursor(p)
-		setCursorNewId(ftv, cursor.Path)
+		_, err = global.PlatformMgr().Access(filenameToShow(filename))
 	case "mml":
-		m, err := global.GetMapping(filenameToShow(filename))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		cursor := fts.Cursor(m)
-		setCursorNewId(ftv, cursor.Path)
+		_, err = global.MappingMgr().Access(filenameToShow(filename))
 	default:
+		return
+	}
+	if err != nil {
+		log.Printf("fileOpen: %s\n", err)
 	}
 }
 
@@ -193,29 +94,11 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 		return
 	}
 	obj := getCurrentTopObject(fts)
-	switch obj.(type) {
-	case freesp.SignalGraph:
-		old := obj.(freesp.SignalGraph).Filename()
-		obj.(freesp.SignalGraph).SetFilename(filenameToShow(filename))
-		global.win.graphViews.Rename(old, filenameToShow(filename))
-	case freesp.Library:
-		oldName := obj.(freesp.Library).Filename()
-		obj.(freesp.Library).SetFilename(filenameToShow(filename))
-		global.RenameLibrary(oldName, filenameToShow(filename))
-	case freesp.Platform:
-		old := obj.(freesp.Platform).Filename()
-		obj.(freesp.Platform).SetFilename(filenameToShow(filename))
-		global.win.graphViews.Rename(old, filenameToShow(filename))
-	case freesp.Mapping:
-		old := obj.(freesp.Mapping).Filename()
-		obj.(freesp.Mapping).SetFilename(filenameToShow(filename))
-		global.win.graphViews.Rename(old, filenameToShow(filename))
-	default:
-		log.Fatalf("fileSaveAs error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
-	}
+	oldName := obj.(freesp.FileDataIf).Filename()
+	global.FileMgr(obj).Rename(oldName, filenameToShow(filename))
 	err := doSave(fts, filename, obj)
 	if err != nil {
-		log.Println(err)
+		log.Printf("fileSaveAs: %s\n", err)
 	}
 }
 
@@ -228,43 +111,18 @@ func fileSave(fts *models.FilesTreeStore) {
 	if len(currentDir) == 0 {
 		currentDir = backend.XmlRoot()
 	}
-	var filename string
 	obj := getCurrentTopObject(fts)
-	ok := true
-	switch obj.(type) {
-	case freesp.SignalGraph:
-		filename = obj.(freesp.SignalGraph).Filename()
-		if isGeneratedFilename(filename) {
-			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
-		} else if !tool.IsSubPath("/", filename) {
-			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
+	filename := obj.(freesp.FileDataIf).Filename()
+	if isGeneratedFilename(filename) {
+		oldName := filename
+		ok := true
+		filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
+		if !ok {
+			return
 		}
-	case freesp.Library:
-		filename = obj.(freesp.Library).Filename()
-		if isGeneratedFilename(filename) {
-			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
-		} else if !tool.IsSubPath("/", filename) {
-			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
-		}
-	case freesp.Platform:
-		filename = obj.(freesp.Platform).Filename()
-		if isGeneratedFilename(filename) {
-			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
-		} else if !tool.IsSubPath("/", filename) {
-			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
-		}
-	case freesp.Mapping:
-		filename = obj.(freesp.Mapping).Filename()
-		if isGeneratedFilename(filename) {
-			filename, ok = getFilenameToSave(fmt.Sprintf("%s/%s", currentDir, filename))
-		} else if !tool.IsSubPath("/", filename) {
-			filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
-		}
-	default:
-		log.Fatalf("fileSave error: wrong type '%T' of toplevel object (%v)\n", obj, obj)
-	}
-	if !ok {
-		return
+		global.FileMgr(obj).Rename(oldName, filenameToShow(filename))
+	} else if !tool.IsSubPath("/", filename) {
+		filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
 	}
 	err := doSave(fts, filename, obj)
 	if err != nil {
@@ -282,18 +140,7 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 	if err != nil {
 		return
 	}
-	switch obj.(type) {
-	case freesp.SignalGraph:
-		global.RemoveSignalGraph(obj.(freesp.SignalGraph).Filename())
-	case freesp.Library:
-		global.RemoveLibrary(obj.(freesp.Library).Filename())
-	case freesp.Platform:
-		global.RemovePlatform(obj.(freesp.Platform).Filename())
-	case freesp.Mapping:
-		global.RemoveMapping(obj.(freesp.Mapping).Filename())
-	default:
-		log.Fatalf("fileClose error: invalid object type %T\n", obj)
-	}
+	global.FileMgr(obj).Remove(obj.(freesp.Filenamer).Filename())
 	jl.Reset()
 	MenuEditPost(menu, fts, jl)
 }
@@ -306,33 +153,10 @@ func doSave(fts *models.FilesTreeStore, filename string, obj interface{}) (err e
 	relpath := tool.RelPath(backend.XmlRoot(), filename)
 	log.Println("doSave: filename =", filename)
 	log.Println("doSave: relative filename =", relpath)
-	switch obj.(type) {
-	case freesp.SignalGraph:
-		err = obj.(freesp.SignalGraph).WriteFile(filename)
-		if err != nil {
-			return
-		}
-		obj.(freesp.SignalGraph).SetFilename(relpath)
-	case freesp.Library:
-		err = obj.(freesp.Library).WriteFile(filename)
-		if err != nil {
-			return
-		}
-		obj.(freesp.Library).SetFilename(relpath)
-	case freesp.Platform:
-		err = obj.(freesp.Platform).WriteFile(filename)
-		if err != nil {
-			return
-		}
-		obj.(freesp.Platform).SetFilename(relpath)
-	case freesp.Mapping:
-		err = obj.(freesp.Mapping).WriteFile(filename)
-		if err != nil {
-			return
-		}
-		obj.(freesp.Mapping).SetFilename(relpath)
+	err = obj.(freesp.FileDataIf).WriteFile(filename)
+	if err != nil {
+		return
 	}
-	setCurrentTopValue(fts, relpath)
 	if tool.IsSubPath(backend.XmlRoot(), filename) {
 		currentDir = tool.Dirname(filename)
 	}
@@ -399,7 +223,7 @@ func setCurrentTopValue(fts *models.FilesTreeStore, value string) {
 	fts.SetValueById(id0, value)
 }
 
-func getCurrentTopObject(fts *models.FilesTreeStore) interface{} {
+func getCurrentTopObject(fts *models.FilesTreeStore) freesp.TreeElement {
 	id0 := getToplevelId(fts)
 	obj, err := fts.GetObjectById(id0)
 	if err != nil {

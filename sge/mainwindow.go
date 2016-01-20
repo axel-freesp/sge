@@ -31,8 +31,6 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		MenuEditCurrent(menu, treeStore, global.jl)
 		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
-		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel, freesp.MappedElement:
-			global.win.graphViews.Select(obj)
 		case freesp.Implementation:
 			impl := obj.(freesp.Implementation)
 			if impl.ImplementationType() == freesp.NodeTypeGraph {
@@ -41,9 +39,10 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					cursor := treeStore.Cursor(obj)
 					ntCursor := treeStore.Parent(cursor)
 					nt := treeStore.Object(ntCursor).(freesp.NodeType)
-					_, ok := global.libraryMap[nt.DefinedAt()]
+					_, err = global.libraryMgr.Access(nt.DefinedAt())
 					log.Printf("treeSelectionChangedCB: Need library %s: %v\n", nt.DefinedAt(), ok)
-					if !ok {
+					if err != nil {
+						log.Printf("%s\n", err)
 						return
 					}
 					gv, err = views.SignalGraphViewNew(impl.GraphObject(), &global)
@@ -52,10 +51,12 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 					}
 					global.win.graphViews.Add(gv, nt.TypeName())
 					global.graphviewMap[impl] = gv
-					gv.Widget().ShowAll()
+					global.ShowAll()
 				}
 				gv.Sync()
 			}
+		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel, freesp.MappedElement:
+			global.win.graphViews.Select(obj)
 		}
 	}
 }
@@ -66,11 +67,7 @@ func main() {
 	gtk.Init(&unhandledArgs)
 	backend.Init()
 	freesp.Init()
-	global.graphviewMap = make(map[freesp.Implementation]views.GraphView)
-	global.libraryMap = make(map[string]freesp.Library)
-	global.signalGraphMap = make(map[string]freesp.SignalGraph)
-	global.platformMap = make(map[string]freesp.Platform)
-	global.mappingMap = make(map[string]freesp.Mapping)
+	GlobalInit(&global)
 
 	var err error
 	iconPath := os.Getenv("SGE_ICON_PATH")
@@ -126,27 +123,19 @@ func main() {
 		if i > 0 {
 			switch tool.Suffix(p) {
 			case "sml":
-				_, err := global.GetSignalGraph(p)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				_, err = global.SignalGraphMgr().Access(p)
 			case "alml":
-				_, err = global.GetLibrary(p)
+				_, err = global.LibraryMgr().Access(p)
 			case "spml":
-				_, err := global.GetPlatform(p)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				_, err = global.PlatformMgr().Access(p)
 			case "mml":
-				_, err = global.GetMapping(p)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				_, err = global.MappingMgr().Access(p)
 			default:
 				log.Println("Warning: unknown suffix", tool.Suffix(p))
+			}
+			if err != nil {
+				log.Println(err)
+				continue
 			}
 		}
 	}

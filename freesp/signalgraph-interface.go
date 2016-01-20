@@ -4,34 +4,36 @@ import (
 	interfaces "github.com/axel-freesp/sge/interface"
 )
 
-/*
- *  File handling Model
- */
-
-type FileManagerIf interface {
-	New() FileDataIf
-	Access(name string) FileDataIf
-	Remove(name string)
-	Rename(oldName, newName string)
+type Context interface {
+	SignalGraphMgr() FileManagerIf
+	LibraryMgr() FileManagerIf
+	PlatformMgr() FileManagerIf
+	MappingMgr() FileManagerIf
+	/*
+		AddNewLibrary() (Library, error)
+		AddNewSignalGraph() (SignalGraph, error)
+		AddNewPlatform() (Platform, error)
+		AddNewMapping() (Mapping, error)
+		GetLibrary(libname string) (Library, error)
+		GetSignalGraph(filename string) (SignalGraph, error)
+		GetPlatform(filename string) (Platform, error)
+		GetMapping(filename string) (Mapping, error)
+		RemoveLibrary(name string)
+		RemoveSignalGraph(name string)
+		RemovePlatform(name string)
+		RemoveMapping(name string)
+		RenameLibrary(oldName, newName string)
+		RenameSignalGraph(oldName, newName string)
+		RenamePlatform(oldName, newName string)
+		RenameMapping(oldName, newName string)
+	*/
 }
 
-type Context interface {
-	GetLibrary(libname string) (Library, error)
-	GetSignalGraph(filename string) (SignalGraph, error)
-	GetPlatform(filename string) (Platform, error)
-	GetMapping(filename string) (Mapping, error)
-	RemoveLibrary(name string)
-	RemoveSignalGraph(name string)
-	RemovePlatform(name string)
-	RemoveMapping(name string)
-	RenameLibrary(oldName, newName string)
-	RenameSignalGraph(oldName, newName string)
-	RenamePlatform(oldName, newName string)
-	RenameMapping(oldName, newName string)
-	AddNewLibrary(Library)
-	AddNewSignalGraph(SignalGraph)
-	AddNewPlatform(Platform)
-	AddNewMapping(Mapping)
+type FileManagerIf interface {
+	New() (FileDataIf, error)
+	Access(name string) (FileDataIf, error)
+	Remove(name string)
+	Rename(oldName, newName string)
 }
 
 /*

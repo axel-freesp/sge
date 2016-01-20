@@ -189,24 +189,15 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
 		if l == nil {
+			var f FileDataIf
 			var lib Library
-			lib, err = t.context.GetLibrary(ref.Name)
-			l = lib.(*library)
-			/*
-				l = LibraryNew(ref.Name)
-				fmt.Println("createSignalGraphTypeFromXml: loading library", ref.Name)
-				for _, try := range backend.XmlSearchPaths() {
-					fmt.Printf("createSignalGraphTypeFromXml: try %s/%s\n", try, ref.Name)
-					err = l.ReadFile(fmt.Sprintf("%s/%s", try, ref.Name))
-					if err == nil {
-						break
-					}
-				}
-			*/
+			f, err = t.context.LibraryMgr().Access(ref.Name)
 			if err != nil {
 				err = newSignalGraphError(fmt.Sprintf("signalGraph.Read: referenced library file %s not found", ref.Name))
 				return
 			}
+			lib = f.(Library)
+			l = lib.(*library)
 			libraries[ref.Name] = l
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
 		}

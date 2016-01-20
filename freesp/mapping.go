@@ -228,16 +228,19 @@ func (m *mapping) Remove(tree Tree) {
 //
 
 func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
-	m.graph, err = m.context.GetSignalGraph(xmlm.SignalGraph)
+	var f FileDataIf
+	f, err = m.context.SignalGraphMgr().Access(xmlm.SignalGraph)
 	if err != nil {
 		err = fmt.Errorf("mapping.CreateMappingFromXml: graph.ReadFile failed: %s\n", err)
 		return
 	}
-	m.platform, err = m.context.GetPlatform(xmlm.Platform)
+	m.graph = f.(SignalGraph)
+	f, err = m.context.PlatformMgr().Access(xmlm.Platform)
 	if err != nil {
 		err = fmt.Errorf("mapping.CreateMappingFromXml: platform.ReadFile failed: %s\n", err)
 		return
 	}
+	m.platform = f.(Platform)
 	var n Node
 	var p Process
 	var ok bool

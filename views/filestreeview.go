@@ -50,7 +50,15 @@ func (v *FilesTreeView) init(model *models.FilesTreeStore) error {
 	}
 	v.view.AppendColumn(col1)
 	v.view.AppendColumn(col2)
-	//v.view.ExpandAll()
 	v.scrolled.Add(v.view)
 	return nil
+}
+
+func (v *FilesTreeView) SetCursorNewId(newId string) (err error) {
+	path, err := gtk.TreePathNewFromString(newId)
+	if err != nil {
+		return
+	}
+	v.TreeView().SetCursor(path, v.TreeView().GetExpanderColumn(), false)
+	return
 }

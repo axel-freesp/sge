@@ -317,7 +317,7 @@ func parseSignalGraph(text, context string) (job *PasteJob, ok bool) {
 		return
 	}
 	for _, l := range xmlsg.Libraries {
-		_, err := global.GetLibrary(l.Name)
+		_, err := global.LibraryMgr().Access(l.Name)
 		if err != nil {
 			fmt.Printf("parseSignalGraph error: referenced library %s not accessible.\n", l.Name)
 			return

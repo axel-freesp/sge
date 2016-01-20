@@ -108,7 +108,7 @@ func (s *FilesTreeStore) GetValueById(id string) (ret string, err error) {
 func (s *FilesTreeStore) SetValueById(id, value string) (err error) {
 	iter, err := s.treestore.GetIterFromString(id)
 	if err != nil {
-		err = gtkErr("FilesTreeStore.GetValueById", "GetIterFromString()", err)
+		err = gtkErr("FilesTreeStore.SetValueById", "GetIterFromString()", err)
 		return
 	}
 	err = s.setValue(value, iter)
@@ -143,27 +143,27 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret freesp.TreeElement, 
 	return
 }
 
-func (s *FilesTreeStore) AddSignalGraphFile(filename string, graph freesp.SignalGraph) (newId string, err error) {
+func (s *FilesTreeStore) AddSignalGraphFile(graph freesp.SignalGraph) (newId string, err error) {
 	cursor := s.Append(rootCursor)
 	graph.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
 
-func (s *FilesTreeStore) AddLibraryFile(filename string, lib freesp.Library) (cursor freesp.Cursor, err error) {
+func (s *FilesTreeStore) AddLibraryFile(lib freesp.Library) (cursor freesp.Cursor, err error) {
 	cursor = s.Append(rootCursor)
 	lib.AddToTree(s, cursor)
 	return
 }
 
-func (s *FilesTreeStore) AddPlatformFile(filename string, plat freesp.Platform) (newId string, err error) {
+func (s *FilesTreeStore) AddPlatformFile(plat freesp.Platform) (newId string, err error) {
 	cursor := s.Append(rootCursor)
 	plat.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
 
-func (s *FilesTreeStore) AddMappingFile(filename string, m freesp.Mapping) (cursor freesp.Cursor, err error) {
+func (s *FilesTreeStore) AddMappingFile(m freesp.Mapping) (cursor freesp.Cursor, err error) {
 	cursor = s.Append(rootCursor)
 	m.AddToTree(s, cursor)
 	return

@@ -29,7 +29,8 @@ func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	if len(cursor.Path) != 0 {
 		obj = fts.Object(cursor)
 	}
-	global.win.graphViews.XmlTextView().Set(obj)
+	global.GVC().XmlTextView().Set(obj)
+	global.GVC().Sync()
 }
 
 func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {

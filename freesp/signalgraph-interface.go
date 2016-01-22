@@ -234,6 +234,10 @@ type Mapping interface {
 
 type MappedElement interface {
 	TreeElement
+	Mapping() Mapping
+	Node() Node
+	Process() Process
+	SetProcess(Process)
 }
 
 func GetRegisteredIOTypes() []string {

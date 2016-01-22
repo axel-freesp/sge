@@ -21,10 +21,11 @@ type mapelem struct {
 	node     Node
 	process  Process
 	position image.Point
+	mapping  Mapping
 }
 
-func mapelemNew(n Node, p Process, nodePos image.Point) (m *mapelem) {
-	m = &mapelem{n, p, nodePos}
+func mapelemNew(n Node, p Process, nodePos image.Point, mapping Mapping) (m *mapelem) {
+	m = &mapelem{n, p, nodePos, mapping}
 	return
 }
 
@@ -73,6 +74,22 @@ func (m mapelem) ProcessObject() (p interfaces.ProcessObject, ok bool) {
 	return
 }
 
+func (m mapelem) Mapping() Mapping {
+	return m.mapping
+}
+
+func (m mapelem) Node() Node {
+	return m.node
+}
+
+func (m mapelem) Process() Process {
+	return m.process
+}
+
+func (m *mapelem) SetProcess(p Process) {
+	m.process = p
+}
+
 var _ interfaces.MappingObject = (*mapping)(nil)
 var _ Mapping = (*mapping)(nil)
 
@@ -98,7 +115,7 @@ func (m *mapping) AddToTree(tree Tree, cursor Cursor) {
 		child = tree.Append(cursor)
 		melem, ok := m.maps[n.Name()]
 		if !ok {
-			melem = mapelemNew(n, nil, image.Point{})
+			melem = mapelemNew(n, nil, image.Point{}, m)
 			m.maps[n.Name()] = melem
 		}
 		melem.AddToTree(tree, child)
@@ -161,7 +178,7 @@ func (m *mapping) MappingObject() interfaces.MappingObject {
 }
 
 func (m *mapping) AddMapping(n Node, p Process) {
-	m.maps[n.Name()] = mapelemNew(n, p, image.Point{})
+	m.maps[n.Name()] = mapelemNew(n, p, image.Point{}, m)
 }
 
 func (m *mapping) SetGraph(g SignalGraph) {
@@ -267,7 +284,7 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y})
+		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y}, m)
 	}
 	for _, x := range xmlm.Mappings {
 		n, ok = m.graph.ItsType().NodeByName(x.Name)
@@ -280,7 +297,7 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y})
+		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y}, m)
 	}
 	return
 }

@@ -42,6 +42,7 @@ const (
 	iIOModeSelect                    = "IOModeSelect"
 	iProcessName                     = "ProcessName"
 	iArchName                        = "ArchName"
+	iProcessSelect                   = "ProcessSelect"
 )
 
 type elementType string
@@ -63,6 +64,7 @@ const (
 	eProcess                    = "Process"
 	eIOType                     = "IOType"
 	eChannel                    = "Channel"
+	eMapElement                 = "MapElement"
 )
 
 var inputElementMap = map[elementType][]inputElement{
@@ -78,6 +80,7 @@ var inputElementMap = map[elementType][]inputElement{
 	eIOType:         {iIOTypeName, iIOModeSelect},
 	eProcess:        {iProcessName},
 	eArch:           {iArchName},
+	eMapElement:     {iProcessSelect},
 }
 
 var scopeStrings = []string{"Local", "Global"}
@@ -148,6 +151,7 @@ type EditMenuDialog struct {
 	ioTypeSelector           *gtk.ComboBoxText
 	processSelector          *gtk.ComboBoxText
 	ioModeSelector           *gtk.ComboBoxText
+	processMapSelector       *gtk.ComboBoxText
 
 	nodeNameEntry       *gtk.Entry
 	inputNodeNameEntry  *gtk.Entry
@@ -504,6 +508,31 @@ var inputHandling = map[inputElement]inputElementHandling{
 			return newComboBox(&dialog.channelDirectionSelector, directionStrings)
 		},
 	},
+	iProcessSelect: {"Select arch/process to map:",
+		func(dialog *EditMenuDialog) string {
+			return dialog.processMapSelector.GetActiveText()
+		},
+		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
+			fts := dialog.fts
+			var choices []string
+			var melem freesp.MappedElement
+			object := fts.Object(fts.Current())
+			switch object.(type) {
+			case freesp.MappedElement:
+				melem = object.(freesp.MappedElement)
+			default:
+				return
+			}
+			mapping := melem.Mapping()
+			for _, a := range mapping.Platform().Arch() {
+				for _, pr := range a.Processes() {
+					choices = append(choices, fmt.Sprintf("%s/%s", a.Name(), pr.Name()))
+				}
+			}
+			choices = append(choices, "<unmapped>")
+			return newComboBox(&dialog.processMapSelector, choices)
+		},
+	},
 }
 
 func getText(entry *gtk.Entry) string {
@@ -575,6 +604,7 @@ var stackAlternatives = []elementType{
 	eIOType,
 	eProcess,
 	eChannel,
+	eMapElement,
 }
 
 func (dialog *EditMenuDialog) fillStack() error {

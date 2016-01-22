@@ -120,7 +120,7 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			m := object.(*mapelem)
 			var pname string
 			if m.process != nil {
-				m.process.Name()
+				pname = fmt.Sprintf("%s/%s", m.process.Arch().Name(), m.process.Name())
 			}
 			if len(m.node.InPorts()) > 0 && len(m.node.OutPorts()) > 0 {
 				xmlm := CreateXmlNodeMap(m.node.Name(), pname, m.Position())

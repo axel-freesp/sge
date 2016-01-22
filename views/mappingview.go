@@ -432,7 +432,7 @@ func (v *mappingView) repaintArch(a graph.ArchIf) {
 }
 
 func (v *mappingView) repaintUnmapped(p graph.ProcessIf) {
-	v.drawScene(p.BBox())
+	v.drawScene(v.unmappedDrawBox())
 }
 
 func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
@@ -445,6 +445,26 @@ func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
 	return ret
 }
 
+func (v *mappingView) unmappedDrawBox() image.Rectangle {
+	ret := v.unmapped.BBox()
+	for _, c := range v.connections {
+		if v.connectionLinksUnmapped(c) {
+			ret = ret.Union(c.BBox())
+		}
+	}
+	return ret
+}
+
+func (v *mappingView) connectionLinksUnmapped(c graph.ConnectIf) bool {
+	for _, ch := range v.unmapped.(*graph.ProcessMapping).Children {
+		name := ch.(graph.NamedBox).Name()
+		if name == c.From().Name() || name == c.To().Name() {
+			return true
+		}
+	}
+	return false
+}
+
 //
 //		platformDrawCallback
 //
@@ -453,12 +473,12 @@ func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
 	x1, y1, x2, y2 := context.ClipExtents()
 	r := image.Rect(int(x1), int(y1), int(x2), int(y2))
-	v.drawArch(context, r)
-	v.drawChannels(context, r)
-	v.drawConnections(context, r)
 	if r.Overlaps(v.unmapped.BBox()) {
 		v.unmapped.Draw(context)
 	}
+	v.drawArch(context, r)
+	v.drawChannels(context, r)
+	v.drawConnections(context, r)
 }
 
 func (v *mappingView) drawConnections(context *cairo.Context, r image.Rectangle) {
@@ -524,7 +544,8 @@ func (v *mappingView) findNode(name string) *graph.Node {
 }
 
 func (v *mappingView) drawAll() {
-	v.drawScene(v.bBox())
+	r := image.Rect(0, 0, v.calcSceneWidth(), v.calcSceneHeight())
+	v.drawScene(r)
 }
 
 func (v *mappingView) bBox() (box image.Rectangle) {

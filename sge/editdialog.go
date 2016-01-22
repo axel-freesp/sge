@@ -132,6 +132,19 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		}
 		dialog.processSelector.SetActive(i)
 		dialog.processSelector.SetSensitive(false)
+	case freesp.MappedElement:
+		pr := obj.(freesp.MappedElement).Process()
+		i := 0
+		for _, a := range obj.(freesp.MappedElement).Mapping().Platform().Arch() {
+			for _, p := range a.Processes() {
+				if pr == p {
+					dialog.processMapSelector.SetActive(i)
+					return
+				}
+				i++
+			}
+		}
+		dialog.processMapSelector.SetActive(i)
 	default:
 		log.Fatalf("editdialog.go: getActiveElementType error: invalid active object type %T\n", obj)
 	}
@@ -188,6 +201,8 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 		e = eIOType
 	case freesp.Channel:
 		e = eChannel
+	case freesp.MappedElement:
+		e = eMapElement
 	default:
 		log.Fatalf("editdialog.go: getActiveElementType error: invalid active object type %T\n", obj)
 	}

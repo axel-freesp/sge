@@ -195,6 +195,25 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		link := c.Link()
 		id := fts.Cursor(link)
 		fts.SetValueById(id.Path, link.Name())
+	case eMapElement:
+		c := obj.(freesp.MappedElement)
+		pr := c.Process()
+		if pr == nil {
+			(*old)[iProcessSelect] = "<unmapped>"
+		} else {
+			(*old)[iProcessSelect] = fmt.Sprintf("%s/%s", pr.Arch().Name(), pr.Name())
+		}
+		for _, a := range c.Mapping().Platform().Arch() {
+			for _, pr = range a.Processes() {
+				if (*detail)[iProcessSelect] == fmt.Sprintf("%s/%s", a.Name(), pr.Name()) {
+					c.SetProcess(pr)
+					fts.SetValueById(j.objId, (*detail)[iProcessSelect])
+					return
+				}
+			}
+		}
+		c.SetProcess(nil)
+		fts.SetValueById(j.objId, (*detail)[iProcessSelect])
 	default:
 		log.Printf("jobApplier.Apply(JobEdit): error: invalid job description\n")
 	}

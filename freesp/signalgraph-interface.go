@@ -8,32 +8,20 @@ type Context interface {
 	SignalGraphMgr() FileManagerIf
 	LibraryMgr() FileManagerIf
 	PlatformMgr() FileManagerIf
-	MappingMgr() FileManagerIf
-	/*
-		AddNewLibrary() (Library, error)
-		AddNewSignalGraph() (SignalGraph, error)
-		AddNewPlatform() (Platform, error)
-		AddNewMapping() (Mapping, error)
-		GetLibrary(libname string) (Library, error)
-		GetSignalGraph(filename string) (SignalGraph, error)
-		GetPlatform(filename string) (Platform, error)
-		GetMapping(filename string) (Mapping, error)
-		RemoveLibrary(name string)
-		RemoveSignalGraph(name string)
-		RemovePlatform(name string)
-		RemoveMapping(name string)
-		RenameLibrary(oldName, newName string)
-		RenameSignalGraph(oldName, newName string)
-		RenamePlatform(oldName, newName string)
-		RenameMapping(oldName, newName string)
-	*/
+	MappingMgr() FileManagerMappingIf
 }
 
 type FileManagerIf interface {
-	New() (FileDataIf, error)
-	Access(name string) (FileDataIf, error)
+	New() (ToplevelTreeElement, error)
+	Access(name string) (ToplevelTreeElement, error)
 	Remove(name string)
-	Rename(oldName, newName string)
+	Rename(oldName, newName string) error
+}
+
+type FileManagerMappingIf interface {
+	FileManagerIf
+	SetGraphForNew(g SignalGraph)
+	SetPlatformForNew(p Platform)
 }
 
 /*
@@ -54,15 +42,13 @@ type SignalGraphType interface {
 }
 
 type SignalGraph interface {
-	TreeElement
-	FileDataIf
+	ToplevelTreeElement
 	ItsType() SignalGraphType
 	GraphObject() interfaces.GraphObject
 }
 
 type Library interface {
-	TreeElement
-	FileDataIf
+	ToplevelTreeElement
 	SignalTypes() []SignalType
 	NodeTypes() []NodeType
 	AddNodeType(NodeType) error
@@ -93,7 +79,6 @@ type Implementation interface {
 	SetElemName(string)
 	Graph() SignalGraphType
 	GraphObject() interfaces.GraphObject
-	// missing: input mapping, output mapping
 }
 
 type ImplementationType int
@@ -191,8 +176,7 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
  */
 
 type Platform interface {
-	TreeElement
-	FileDataIf
+	ToplevelTreeElement
 	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)
@@ -238,8 +222,7 @@ type Channel interface {
 }
 
 type Mapping interface {
-	TreeElement
-	FileDataIf
+	ToplevelTreeElement
 	MappingObject() interfaces.MappingObject
 	AddMapping(n Node, p Process)
 	SetGraph(SignalGraph)
@@ -265,6 +248,10 @@ func GetIOTypeByName(name string) (ioType IOType, ok bool) {
 type Filenamer interface {
 	Filename() string
 	SetFilename(string)
+}
+
+type Remover interface {
+	Remove(Tree)
 }
 
 type FileDataIf interface {

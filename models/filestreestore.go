@@ -150,9 +150,10 @@ func (s *FilesTreeStore) AddSignalGraphFile(graph freesp.SignalGraph) (newId str
 	return
 }
 
-func (s *FilesTreeStore) AddLibraryFile(lib freesp.Library) (cursor freesp.Cursor, err error) {
-	cursor = s.Append(rootCursor)
+func (s *FilesTreeStore) AddLibraryFile(lib freesp.Library) (newId string, err error) {
+	cursor := s.Append(rootCursor)
 	lib.AddToTree(s, cursor)
+	newId = cursor.Path
 	return
 }
 
@@ -163,9 +164,10 @@ func (s *FilesTreeStore) AddPlatformFile(plat freesp.Platform) (newId string, er
 	return
 }
 
-func (s *FilesTreeStore) AddMappingFile(m freesp.Mapping) (cursor freesp.Cursor, err error) {
-	cursor = s.Append(rootCursor)
+func (s *FilesTreeStore) AddMappingFile(m freesp.Mapping) (newId string, err error) {
+	cursor := s.Append(rootCursor)
 	m.AddToTree(s, cursor)
+	newId = cursor.Path
 	return
 }
 

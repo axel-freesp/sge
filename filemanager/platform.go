@@ -24,7 +24,7 @@ func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
 //      FileManagerIf interface
 //
 
-func (f *fileManagerPF) New() (pl freesp.FileDataIf, err error) {
+func (f *fileManagerPF) New() (pl freesp.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	pl = freesp.PlatformNew(filename)
 	f.platformMap[filename] = pl.(freesp.Platform)
@@ -46,7 +46,7 @@ func (f *fileManagerPF) New() (pl freesp.FileDataIf, err error) {
 	return
 }
 
-func (f *fileManagerPF) Access(name string) (pl freesp.FileDataIf, err error) {
+func (f *fileManagerPF) Access(name string) (pl freesp.ToplevelTreeElement, err error) {
 	var ok bool
 	pl, ok = f.platformMap[name]
 	if ok {
@@ -71,7 +71,13 @@ func (f *fileManagerPF) Access(name string) (pl freesp.FileDataIf, err error) {
 	f.context.GVC().Add(pv, name)
 	log.Printf("fileManagerPF.Access: platform %s successfully loaded.\n", name)
 	f.platformMap[name] = pl.(freesp.Platform)
-	_, err = f.context.FTS().AddPlatformFile(pl.(freesp.Platform))
+	var newId string
+	newId, err = f.context.FTS().AddPlatformFile(pl.(freesp.Platform))
+	if err != nil {
+		err = fmt.Errorf("fileManagerPF.Access: %s", err)
+		return
+	}
+	f.context.FTV().SetCursorNewId(newId)
 	return
 }
 
@@ -93,13 +99,22 @@ func (f *fileManagerPF) Remove(name string) {
 	f.context.GVC().RemovePlatformView(pl.PlatformObject())
 }
 
-func (f *fileManagerPF) Rename(oldName, newName string) {
+func (f *fileManagerPF) Rename(oldName, newName string) (err error) {
 	pl, ok := f.platformMap[oldName]
 	if !ok {
-		log.Printf("fileManagerPF.Rename warning: platform %s not found\n", oldName)
+		err = fmt.Errorf("fileManagerPF.Rename error: platform %s not found\n", oldName)
 		return
 	}
+	_, ok = f.platformMap[newName]
+	if ok {
+		err = fmt.Errorf("fileManagerPF.Rename error: cannot rename platform %s to be %s: already exists\n", oldName, newName)
+		return
+	}
+	cursor := f.context.FTS().Cursor(pl)
+	f.context.FTS().SetValueById(cursor.Path, newName)
+	f.context.GVC().Rename(oldName, newName)
 	delete(f.platformMap, oldName)
 	pl.SetFilename(newName)
 	f.platformMap[newName] = pl
+	return
 }

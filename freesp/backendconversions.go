@@ -118,11 +118,15 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			buf, err = xmlm.Write()
 		case MappedElement:
 			m := object.(*mapelem)
+			var pname string
+			if m.process != nil {
+				m.process.Name()
+			}
 			if len(m.node.InPorts()) > 0 && len(m.node.OutPorts()) > 0 {
-				xmlm := CreateXmlNodeMap(m.node.Name(), m.process.Name(), m.Position())
+				xmlm := CreateXmlNodeMap(m.node.Name(), pname, m.Position())
 				buf, err = xmlm.Write()
 			} else {
-				xmlm := CreateXmlIOMap(m.node.Name(), m.process.Name(), m.Position())
+				xmlm := CreateXmlIOMap(m.node.Name(), pname, m.Position())
 				buf, err = xmlm.Write()
 			}
 		default:

@@ -59,7 +59,7 @@ type MappingObject interface {
 type MapElemObject interface {
 	Positioner
 	NodeObject() NodeObject
-	ProcessObject() ProcessObject
+	ProcessObject() (ProcessObject, bool)
 }
 
 type PlatformObject interface {

@@ -17,13 +17,14 @@ const (
 )
 
 type Global struct {
-	win                                                 *GoAppWindow
-	jl                                                  *jobList
-	fts                                                 *models.FilesTreeStore
-	ftv                                                 *views.FilesTreeView
-	graphviewMap                                        map[freesp.Implementation]views.GraphView
-	clp                                                 *gtk.Clipboard
-	signalGraphMgr, libraryMgr, platformMgr, mappingMgr freesp.FileManagerIf
+	win                                     *GoAppWindow
+	jl                                      *jobList
+	fts                                     *models.FilesTreeStore
+	ftv                                     *views.FilesTreeView
+	graphviewMap                            map[freesp.Implementation]views.GraphView
+	clp                                     *gtk.Clipboard
+	signalGraphMgr, libraryMgr, platformMgr freesp.FileManagerIf
+	mappingMgr                              freesp.FileManagerMappingIf
 }
 
 var _ interfaces.Context = (*Global)(nil)
@@ -54,7 +55,7 @@ func (g *Global) PlatformMgr() freesp.FileManagerIf {
 	return g.platformMgr
 }
 
-func (g *Global) MappingMgr() freesp.FileManagerIf {
+func (g *Global) MappingMgr() freesp.FileManagerMappingIf {
 	return g.mappingMgr
 }
 

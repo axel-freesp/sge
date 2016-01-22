@@ -32,7 +32,7 @@ func ArchNew(userObj interfaces.ArchObject) *Arch {
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
 			image.Point{archPortOutBorder, archPortOutBorder}}
-	cconfig := ContainerConfig{archPortWidth, archPortHeight}
+	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
 		make(map[interfaces.ChannelObject]*ContainerPort), processes, interfaces.PositionModeNormal, nil}
 	a.init()
@@ -61,7 +61,7 @@ func ArchMappingNew(userObj interfaces.ArchObject, nodes []NodeIf, mapping inter
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
 			image.Point{archPortOutBorder, archPortOutBorder}}
-	cconfig := ContainerConfig{archPortWidth, archPortHeight}
+	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
 		make(map[interfaces.ChannelObject]*ContainerPort), processes, interfaces.PositionModeMapping, mapping}
 	a.init()
@@ -247,6 +247,8 @@ const (
 	archPortWidth = 10
 	archPortHeight = 10
 	archPortOutBorder = 8
+	archMinWidth = 50
+	archMinHeight = 30
 )
 
 func (a Arch) drawLocalChannel(ctxt interface{}, ch interfaces.ChannelObject) {

@@ -22,7 +22,7 @@ func ProcessNew(pos image.Point, userObj interfaces.ProcessObject) (ret *Process
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
 			image.Point{procPortWidth, procPortHeight}}
-	cconfig := ContainerConfig{procPortWidth, procPortHeight}
+	cconfig := ContainerConfig{procPortWidth, procPortHeight, procMinWidth, procMinHeight}
 	ret = &Process{ContainerInit(nil, config, userObj, cconfig), userObj, nil}
 	shape := image.Point{global.processWidth, global.processHeight}
 	ret.box = image.Rectangle{pos, pos.Add(shape)}
@@ -138,5 +138,7 @@ const (
 	procPortWidth = 8
 	procPortHeight = 8
 	procPortOutBorder = 6
+	procMinWidth = 120
+	procMinHeight = 80
 )
 

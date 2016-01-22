@@ -65,8 +65,12 @@ func (m mapelem) NodeObject() interfaces.NodeObject {
 	return m.node.(*node)
 }
 
-func (m mapelem) ProcessObject() interfaces.ProcessObject {
-	return m.process.(*process)
+func (m mapelem) ProcessObject() (p interfaces.ProcessObject, ok bool) {
+	ok = m.process != nil
+	if ok {
+		p = m.process.(*process)
+	}
+	return
 }
 
 var _ interfaces.MappingObject = (*mapping)(nil)
@@ -92,7 +96,11 @@ func (m *mapping) AddToTree(tree Tree, cursor Cursor) {
 	m.platform.AddToTree(tree, child)
 	for _, n := range m.graph.ItsType().Nodes() {
 		child = tree.Append(cursor)
-		melem, _ := m.maps[n.Name()]
+		melem, ok := m.maps[n.Name()]
+		if !ok {
+			melem = mapelemNew(n, nil, image.Point{})
+			m.maps[n.Name()] = melem
+		}
 		melem.AddToTree(tree, child)
 	}
 }
@@ -131,7 +139,10 @@ func (m mapping) MappedObject(n interfaces.NodeObject) (p interfaces.ProcessObje
 	var melem *mapelem
 	melem, ok = m.maps[n.Name()]
 	if ok {
-		p = melem.process.(*process)
+		ok = melem.process != nil
+		if ok {
+			p = melem.process.(*process)
+		}
 	}
 	return
 }
@@ -175,6 +186,7 @@ func (m *mapping) Mapped(n Node) (pr Process, ok bool) {
 	if ok {
 		pr = melem.process
 	}
+	ok = pr != nil
 	return
 }
 

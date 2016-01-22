@@ -18,6 +18,7 @@ type mappingView struct {
 	connections []graph.ConnectIf
 	arch        []graph.ArchIf
 	context     interfaces.Context
+	unmapped    graph.ProcessIf
 
 	dragOffs       image.Point
 	button1Pressed bool
@@ -27,7 +28,7 @@ var _ ScaledScene = (*mappingView)(nil)
 var _ GraphView = (*mappingView)(nil)
 
 func MappingViewNew(m interfaces.MappingObject, context interfaces.Context) (viewer *mappingView, err error) {
-	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, image.Point{}, false}
+	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -55,6 +56,39 @@ func (v *mappingView) init() (err error) {
 	}
 	v.parent.Container().Add(v.area)
 	return
+}
+
+type unmappedProcess struct {
+	pos image.Point
+}
+
+var _ interfaces.ProcessObject = (*unmappedProcess)(nil)
+
+func (p *unmappedProcess) Name() string {
+	return "unmapped"
+}
+
+func (p *unmappedProcess) SetName(string) {
+}
+
+func (p *unmappedProcess) ModePosition(interfaces.PositionMode) image.Point {
+	return p.pos
+}
+
+func (p *unmappedProcess) SetModePosition(m interfaces.PositionMode, pos image.Point) {
+	p.pos = pos
+}
+
+func (p *unmappedProcess) ArchObject() interfaces.ArchObject {
+	return nil
+}
+
+func (p *unmappedProcess) InChannelObjects() []interfaces.ChannelObject {
+	return nil
+}
+
+func (p *unmappedProcess) OutChannelObjects() []interfaces.ChannelObject {
+	return nil
 }
 
 func (v *mappingView) Sync() {
@@ -89,6 +123,15 @@ func (v *mappingView) Sync() {
 	for i, a := range p.ArchObjects() {
 		v.arch[i] = graph.ArchMappingNew(a, v.nodes, v.mapping)
 	}
+	var unmappedNodes []*graph.Node
+	for _, n := range v.nodes {
+		_, ok := v.mapping.MappedObject(n.UserObj())
+		if !ok {
+			unmappedNodes = append(unmappedNodes, n.(*graph.Node))
+		}
+	}
+	v.unmapped = graph.ProcessMappingNew(unmappedNodes, &unmappedProcess{})
+	// TODO: add v.unmapped to scene
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
 }
@@ -138,8 +181,12 @@ func (v *mappingView) Select(obj interfaces.GraphElement) {
 			// todo: unmapped nodes
 			return
 		}
-		p := melem.ProcessObject()
-		a, ok := v.focusArchFromUserObject(p.ArchObject())
+		p, ok := melem.ProcessObject()
+		if !ok {
+			return
+		}
+		var a graph.ArchIf
+		a, ok = v.focusArchFromUserObject(p.ArchObject())
 		if !ok {
 			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
 			return
@@ -153,22 +200,33 @@ func (v *mappingView) Select(obj interfaces.GraphElement) {
 		v.repaintArch(a)
 	case interfaces.MapElemObject:
 		melem := obj.(interfaces.MapElemObject)
-		p := melem.ProcessObject()
-		a, ok := v.focusArchFromUserObject(p.ArchObject())
-		if !ok {
-			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
-			return
-		}
-		pr := a.SelectProcess(p)
-		if pr == nil {
-			log.Printf("mappingView.Select error: process %v not found\n", p)
-			return
+		p, isMapped := melem.ProcessObject()
+		var pr graph.ProcessIf
+		var a graph.ArchIf
+		if !isMapped {
+			pr = v.unmapped
+		} else {
+			var ok bool
+			a, ok = v.focusArchFromUserObject(p.ArchObject())
+			if !ok {
+				log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
+				return
+			}
+			pr = a.SelectProcess(p)
+			if pr == nil {
+				log.Printf("mappingView.Select error: process %v not found\n", p)
+				return
+			}
 		}
 		n := melem.NodeObject()
 		if n != nil {
 			pr.(*graph.ProcessMapping).SelectNode(n)
 		}
-		v.repaintArch(a)
+		if isMapped {
+			v.repaintArch(a)
+		} else {
+			v.repaintUnmapped(v.unmapped)
+		}
 	default:
 	}
 }
@@ -282,6 +340,30 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 			v.context.SelectMapElement(melem)
 		}
 	}
+	hit, _ := v.unmapped.CheckHit(pos)
+	if !hit {
+		if v.unmapped.Deselect() {
+			v.repaintUnmapped(v.unmapped)
+		}
+		return
+	}
+	if !v.unmapped.Select() {
+		v.repaintUnmapped(v.unmapped)
+	}
+	var ok bool
+	var n interfaces.NodeObject
+	//log.Printf("mappingView.handleArchSelect: select process %v\n", pr)
+	ok, n = v.unmapped.(*graph.ProcessMapping).GetSelectedNode()
+	if !ok {
+		return
+	}
+	var melem interfaces.MapElemObject
+	melem, ok = v.mapping.MapElemObject(n)
+	if !ok {
+		// todo: unmapped node
+	} else {
+		v.context.SelectMapElement(melem)
+	}
 }
 
 //
@@ -308,6 +390,14 @@ func (v *mappingView) handleDrag(pos image.Point) {
 			v.repaintArch(a)
 		}
 	}
+	if v.unmapped.IsSelected() {
+		box := v.unmapped.BBox()
+		v.repaintUnmapped(v.unmapped)
+		box = box.Add(pos.Sub(v.dragOffs))
+		v.dragOffs = pos
+		v.unmapped.SetPosition(box.Min)
+		v.repaintUnmapped(v.unmapped)
+	}
 }
 
 func (v *mappingView) handleMouseover(pos image.Point) {
@@ -316,6 +406,10 @@ func (v *mappingView) handleMouseover(pos image.Point) {
 		if mod {
 			v.repaintArch(a)
 		}
+	}
+	_, mod := v.unmapped.CheckHit(pos)
+	if mod {
+		v.repaintUnmapped(v.unmapped)
 	}
 	/*
 		for _, n := range v.nodes {
@@ -335,6 +429,10 @@ func (v *mappingView) handleMouseover(pos image.Point) {
 
 func (v *mappingView) repaintArch(a graph.ArchIf) {
 	v.drawScene(v.archDrawBox(a))
+}
+
+func (v *mappingView) repaintUnmapped(p graph.ProcessIf) {
+	v.drawScene(p.BBox())
 }
 
 func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
@@ -358,6 +456,9 @@ func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 	v.drawArch(context, r)
 	v.drawChannels(context, r)
 	v.drawConnections(context, r)
+	if r.Overlaps(v.unmapped.BBox()) {
+		v.unmapped.Draw(context)
+	}
 }
 
 func (v *mappingView) drawConnections(context *cairo.Context, r image.Rectangle) {
@@ -436,6 +537,7 @@ func (v *mappingView) bBox() (box image.Rectangle) {
 			box = box.Union(a.BBox())
 		}
 	}
+	box = box.Union(v.unmapped.BBox())
 	return
 }
 

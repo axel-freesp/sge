@@ -26,7 +26,7 @@ type Container struct {
 }
 
 type ContainerConfig struct {
-	portWidth, portHeight int
+	portWidth, portHeight, minWidth, minHeight int
 }
 
 
@@ -113,8 +113,18 @@ func (c *Container) Layout() (box image.Rectangle) {
 }
 
 func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
-	for _, ch := range c.Children {
-		box = ContainerFit(box, ch.Layout())
+	if len(c.Children) > 0 {
+		for _, ch := range c.Children {
+			box = ContainerFit(box, ch.Layout())
+		}
+	} else {
+		box = c.box
+	}
+	if box.Max.X - box.Min.X < c.config.minWidth {
+		box.Max.X = box.Min.X + c.config.minWidth
+	}
+	if box.Max.Y - box.Min.Y < c.config.minHeight {
+		box.Max.Y = box.Min.Y + c.config.minHeight
 	}
 	c.box = box
 	empty := image.Point{}

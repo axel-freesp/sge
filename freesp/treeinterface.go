@@ -20,8 +20,9 @@ type TreeElement interface {
 	//Identify(TreeElement) bool
 }
 
-type Remover interface {
-	Remove(Tree)
+type ToplevelTreeElement interface {
+	TreeElement
+	FileDataIf
 }
 
 type Cursor struct {

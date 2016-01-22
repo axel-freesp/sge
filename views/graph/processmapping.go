@@ -25,7 +25,7 @@ func ProcessMappingNew(nodes []*Node, userObj interfaces.ProcessObject) (ret *Pr
 			ColorInit(ColorOption(BoxFrame)),
 			ColorInit(ColorOption(Text)),
 			image.Point{procPortOutBorder, procPortOutBorder}}
-	cconfig := ContainerConfig{procPortWidth, procPortHeight}
+	cconfig := ContainerConfig{procPortWidth, procPortHeight, procMinWidth, procMinHeight}
 	var children []ContainerChild
 	for _, n := range nodes {
 		children = append(children, n)
@@ -148,16 +148,18 @@ func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
 func (pr *ProcessMapping) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
 	pr.userObj.SetModePosition(interfaces.PositionModeMapping, pos)
-	a := pr.arch.(*Arch)
-	if a.mapping != nil {
-		for _, ch := range pr.Children {
-			n := ch.(*Node)
-			melem, ok := a.mapping.MapElemObject(n)
-			if !ok {
-				log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
-				return
+	if pr.arch != nil {	// else is unmapped process
+		a := pr.arch.(*Arch)
+		if a.mapping != nil {
+			for _, ch := range pr.Children {
+				n := ch.(*Node)
+				melem, ok := a.mapping.MapElemObject(n)
+				if !ok {
+					log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
+					return
+				}
+				melem.SetPosition(n.Position())
 			}
-			melem.SetPosition(n.Position())
 		}
 	}
 }

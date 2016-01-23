@@ -62,11 +62,11 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		return []elementType{}
 	}
 	switch object.(type) {
-	case freesp.SignalGraph, freesp.SignalGraphType:
+	case freesp.SignalGraphIf, freesp.SignalGraphTypeIf:
 		activeElem = eSignalGraph
-	case freesp.Node:
+	case freesp.NodeIf:
 		activeElem = eNode
-	case freesp.NodeType:
+	case freesp.NodeTypeIf:
 		activeElem = eNodeType
 	case freesp.Port:
 		activeElem = ePort
@@ -76,19 +76,19 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		activeElem = eConnection
 	case freesp.SignalType:
 		activeElem = eSignalType
-	case freesp.Library:
+	case freesp.LibraryIf:
 		activeElem = eLibrary
-	case freesp.Implementation:
+	case freesp.ImplementationIf:
 		activeElem = eImplementation
-	case freesp.Platform:
+	case freesp.PlatformIf:
 		activeElem = ePlatform
-	case freesp.Arch:
+	case freesp.ArchIf:
 		activeElem = eArch
-	case freesp.IOType:
+	case freesp.IOTypeIf:
 		activeElem = eIOType
-	case freesp.Process:
+	case freesp.ProcessIf:
 		activeElem = eProcess
-	case freesp.Channel:
+	case freesp.ChannelIf:
 		activeElem = eChannel
 	default:
 		return []elementType{}

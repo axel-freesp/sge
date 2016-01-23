@@ -11,13 +11,13 @@ import (
 type fileManagerSG struct {
 	filenameFactory
 	context        FilemanagerContextIf
-	signalGraphMap map[string]freesp.SignalGraph
+	signalGraphMap map[string]freesp.SignalGraphIf
 }
 
 var _ freesp.FileManagerIf = (*fileManagerSG)(nil)
 
 func FileManagerSGNew(context FilemanagerContextIf) *fileManagerSG {
-	return &fileManagerSG{FilenameFactoryInit("sml"), context, make(map[string]freesp.SignalGraph)}
+	return &fileManagerSG{FilenameFactoryInit("sml"), context, make(map[string]freesp.SignalGraphIf)}
 }
 
 //
@@ -28,14 +28,14 @@ func (f *fileManagerSG) New() (sg freesp.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	sg = freesp.SignalGraphNew(filename, f.context)
 	var newId string
-	newId, err = f.context.FTS().AddSignalGraphFile(sg.(freesp.SignalGraph))
+	newId, err = f.context.FTS().AddToplevel(sg.(freesp.SignalGraphIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.New: %s", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraph).GraphObject(), f.context)
+	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraphIf).GraphObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.New: %s", err)
 		return
@@ -63,21 +63,21 @@ func (f *fileManagerSG) Access(name string) (sg freesp.ToplevelTreeElement, err 
 		return
 	}
 	var newId string
-	newId, err = f.context.FTS().AddSignalGraphFile(sg.(freesp.SignalGraph))
+	newId, err = f.context.FTS().AddToplevel(sg.(freesp.SignalGraphIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.Access: %s", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 
 	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraph).GraphObject(), f.context)
+	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraphIf).GraphObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.Access: %s", err)
 		return
 	}
 	f.context.GVC().Add(gv, name)
-	f.signalGraphMap[name] = sg.(freesp.SignalGraph)
+	f.signalGraphMap[name] = sg.(freesp.SignalGraphIf)
 	log.Printf("fileManagerSG.Access: graph %s successfully loaded.\n", name)
 	return
 }
@@ -90,14 +90,14 @@ func (f *fileManagerSG) Remove(name string) {
 		return
 	}
 	delete(f.signalGraphMap, name)
-	var nodes []freesp.Node
+	var nodes []freesp.NodeIf
 	for _, n := range sg.ItsType().Nodes() {
 		nodes = append(nodes, n)
 	}
 	f.context.CleanupNodeTypesFromNodes(nodes)
 	f.context.CleanupSignalTypesFromNodes(nodes)
-	cursor := f.context.FTS().Cursor(sg)
-	f.context.FTS().RemoveToplevel(cursor.Path)
+	id, _ := f.context.FTS().GetToplevelId(sg)
+	f.context.FTS().RemoveToplevel(id)
 	f.context.GVC().RemoveGraphView(sg.GraphObject())
 }
 
@@ -112,8 +112,8 @@ func (f *fileManagerSG) Rename(oldName, newName string) (err error) {
 		err = fmt.Errorf("fileManagerSG.Rename error: cannot rename graph %s to be %s: already exists\n", oldName, newName)
 		return
 	}
-	cursor := f.context.FTS().Cursor(sg)
-	f.context.FTS().SetValueById(cursor.Path, newName)
+	id, _ := f.context.FTS().GetToplevelId(sg)
+	f.context.FTS().SetValueById(id, newName)
 	f.context.GVC().Rename(oldName, newName)
 	delete(f.signalGraphMap, oldName)
 	sg.SetFilename(newName)

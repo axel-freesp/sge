@@ -1,5 +1,16 @@
 package freesp
 
+type TreeViewIf interface {
+	SelectId(id string) error
+}
+
+type TreeMgrIf interface {
+	AddToplevel(ToplevelTreeElement) (newId string, err error)
+	RemoveToplevel(id string) (deleted []IdWithObject, err error)
+	SetValueById(id, value string) error
+	GetToplevelId(ToplevelTreeElement) (id string, err error)
+}
+
 type Tree interface {
 	Current() Cursor
 	Append(c Cursor) Cursor
@@ -17,12 +28,12 @@ type TreeElement interface {
 	AddToTree(tree Tree, cursor Cursor)
 	AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
 	RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
-	//Identify(TreeElement) bool
 }
 
 type ToplevelTreeElement interface {
 	TreeElement
 	FileDataIf
+	RemoveFromTree(Tree)
 }
 
 type Cursor struct {

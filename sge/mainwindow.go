@@ -31,14 +31,14 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		MenuEditCurrent(menu, treeStore, global.jl)
 		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
-		case freesp.Implementation:
-			impl := obj.(freesp.Implementation)
+		case freesp.ImplementationIf:
+			impl := obj.(freesp.ImplementationIf)
 			if impl.ImplementationType() == freesp.NodeTypeGraph {
 				gv, ok := global.graphviewMap[impl]
 				if !ok {
 					cursor := treeStore.Cursor(obj)
 					ntCursor := treeStore.Parent(cursor)
-					nt := treeStore.Object(ntCursor).(freesp.NodeType)
+					nt := treeStore.Object(ntCursor).(freesp.NodeTypeIf)
 					_, err = global.libraryMgr.Access(nt.DefinedAt())
 					log.Printf("treeSelectionChangedCB: Need library %s: %v\n", nt.DefinedAt(), ok)
 					if err != nil {
@@ -55,7 +55,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				}
 				gv.Sync()
 			}
-		case freesp.Node, freesp.Port, freesp.Connection, freesp.Arch, freesp.Process, freesp.Channel, freesp.MappedElement:
+		case freesp.NodeIf, freesp.Port, freesp.Connection, freesp.ArchIf, freesp.ProcessIf, freesp.ChannelIf, freesp.MappedElementIf:
 			global.win.graphViews.Select(obj)
 		}
 	}

@@ -43,13 +43,13 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 	var i int
 	var t string
 	switch obj.(type) {
-	case freesp.Node:
+	case freesp.NodeIf:
 		// TODO: check auto-generated types
-		if len(obj.(freesp.Node).InPorts()) > 0 {
-			if len(obj.(freesp.Node).OutPorts()) > 0 {
-				dialog.nodeNameEntry.SetText(obj.(freesp.Node).Name())
+		if len(obj.(freesp.NodeIf).InPorts()) > 0 {
+			if len(obj.(freesp.NodeIf).OutPorts()) > 0 {
+				dialog.nodeNameEntry.SetText(obj.(freesp.NodeIf).Name())
 				for i, t = range freesp.GetRegisteredNodeTypes() {
-					if obj.(freesp.Node).ItsType().TypeName() == t {
+					if obj.(freesp.NodeIf).ItsType().TypeName() == t {
 						break
 					}
 				}
@@ -57,9 +57,9 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 				dialog.nodeTypeSelector.SetSensitive(false)
 			} else {
 				// assume one input port
-				dialog.outputNodeNameEntry.SetText(obj.(freesp.Node).Name())
+				dialog.outputNodeNameEntry.SetText(obj.(freesp.NodeIf).Name())
 				for i, t = range freesp.GetRegisteredSignalTypes() {
-					if obj.(freesp.Node).InPorts()[0].SignalType().TypeName() == t {
+					if obj.(freesp.NodeIf).InPorts()[0].SignalType().TypeName() == t {
 						break
 					}
 				}
@@ -68,17 +68,17 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 			}
 		} else {
 			// assume one output port
-			dialog.inputNodeNameEntry.SetText(obj.(freesp.Node).Name())
+			dialog.inputNodeNameEntry.SetText(obj.(freesp.NodeIf).Name())
 			for i, t = range freesp.GetRegisteredSignalTypes() {
-				if obj.(freesp.Node).OutPorts()[0].SignalType().TypeName() == t {
+				if obj.(freesp.NodeIf).OutPorts()[0].SignalType().TypeName() == t {
 					break
 				}
 			}
 			dialog.inputTypeSelector.SetActive(i)
 			dialog.inputTypeSelector.SetSensitive(false)
 		}
-	case freesp.NodeType:
-		dialog.typeNameEntry.SetText(obj.(freesp.NodeType).TypeName())
+	case freesp.NodeTypeIf:
+		dialog.typeNameEntry.SetText(obj.(freesp.NodeTypeIf).TypeName())
 	case freesp.PortType:
 		dialog.portNameEntry.SetText(obj.(freesp.PortType).Name())
 		if obj.(freesp.PortType).Direction() == interfaces.OutPort {
@@ -98,44 +98,44 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		dialog.channelIdEntry.SetText(st.ChannelId())
 		dialog.scopeSelector.SetActive(int(st.Scope()))
 		dialog.modeSelector.SetActive(int(st.Mode()))
-	case freesp.Implementation:
-		dialog.implNameEntry.SetText(obj.(freesp.Implementation).ElementName())
-	case freesp.Arch:
-		dialog.archNameEntry.SetText(obj.(freesp.Arch).Name())
-	case freesp.Process:
-		dialog.processNameEntry.SetText(obj.(freesp.Process).Name())
-	case freesp.IOType:
-		dialog.ioTypeNameEntry.SetText(obj.(freesp.IOType).Name())
+	case freesp.ImplementationIf:
+		dialog.implNameEntry.SetText(obj.(freesp.ImplementationIf).ElementName())
+	case freesp.ArchIf:
+		dialog.archNameEntry.SetText(obj.(freesp.ArchIf).Name())
+	case freesp.ProcessIf:
+		dialog.processNameEntry.SetText(obj.(freesp.ProcessIf).Name())
+	case freesp.IOTypeIf:
+		dialog.ioTypeNameEntry.SetText(obj.(freesp.IOTypeIf).Name())
 		for i, t = range ioModeStrings {
-			if string(obj.(freesp.IOType).IOMode()) == t {
+			if string(obj.(freesp.IOTypeIf).IOMode()) == t {
 				break
 			}
 		}
 		dialog.ioModeSelector.SetActive(i)
-	case freesp.Channel:
-		if obj.(freesp.Channel).Direction() == interfaces.OutPort {
+	case freesp.ChannelIf:
+		if obj.(freesp.ChannelIf).Direction() == interfaces.OutPort {
 			dialog.channelDirectionSelector.SetActive(1)
 		}
 		dialog.channelDirectionSelector.SetSensitive(false)
 		for i, t = range freesp.GetRegisteredIOTypes() {
-			if obj.(freesp.Channel).IOType().Name() == t {
+			if obj.(freesp.ChannelIf).IOType().Name() == t {
 				break
 			}
 		}
 		dialog.ioTypeSelector.SetActive(i)
 		pr := getOtherProcesses(dialog.fts, obj)
-		var p freesp.Process
+		var p freesp.ProcessIf
 		for i, p = range pr {
-			if obj.(freesp.Channel).Link().Process() == p {
+			if obj.(freesp.ChannelIf).Link().Process() == p {
 				break
 			}
 		}
 		dialog.processSelector.SetActive(i)
 		dialog.processSelector.SetSensitive(false)
-	case freesp.MappedElement:
-		pr := obj.(freesp.MappedElement).Process()
+	case freesp.MappedElementIf:
+		pr := obj.(freesp.MappedElementIf).Process()
 		i := 0
-		for _, a := range obj.(freesp.MappedElement).Mapping().Platform().Arch() {
+		for _, a := range obj.(freesp.MappedElementIf).Mapping().Platform().Arch() {
 			for _, p := range a.Processes() {
 				if pr == p {
 					dialog.processMapSelector.SetActive(i)
@@ -158,13 +158,13 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 		log.Fatalf("editdialog.go: getActiveElementType error: failed to get context: %s\n", err)
 	}
 	switch obj.(type) {
-	case freesp.SignalGraph:
+	case freesp.SignalGraphIf:
 		e = eSignalGraph
-		log.Fatalf("editdialog.go: getActiveElementType error: SignalGraph is read-only\n")
-	case freesp.Node:
+		log.Fatalf("editdialog.go: getActiveElementType error: SignalGraphIf is read-only\n")
+	case freesp.NodeIf:
 		// TODO: check auto-generated types
-		if len(obj.(freesp.Node).InPorts()) > 0 {
-			if len(obj.(freesp.Node).OutPorts()) > 0 {
+		if len(obj.(freesp.NodeIf).InPorts()) > 0 {
+			if len(obj.(freesp.NodeIf).OutPorts()) > 0 {
 				e = eNode
 			} else {
 				// assume one input port
@@ -174,7 +174,7 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 			// assume one output port
 			e = eInputNode
 		}
-	case freesp.NodeType:
+	case freesp.NodeTypeIf:
 		e = eNodeType
 	case freesp.Port:
 		e = ePort
@@ -185,23 +185,23 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 		log.Fatalf("editdialog.go: getActiveElementType error: Connection is read-only\n")
 	case freesp.SignalType:
 		e = eSignalType
-	case freesp.Library:
+	case freesp.LibraryIf:
 		e = eLibrary
-		log.Fatalf("editdialog.go: getActiveElementType error: Library is read-only\n")
-	case freesp.Implementation:
+		log.Fatalf("editdialog.go: getActiveElementType error: LibraryIf is read-only\n")
+	case freesp.ImplementationIf:
 		e = eImplementation
-		if obj.(freesp.Implementation).ImplementationType() == freesp.NodeTypeGraph {
-			log.Fatalf("editdialog.go: getActiveElementType error: Implementation/graph is read-only\n")
+		if obj.(freesp.ImplementationIf).ImplementationType() == freesp.NodeTypeGraph {
+			log.Fatalf("editdialog.go: getActiveElementType error: ImplementationIf/graph is read-only\n")
 		}
-	case freesp.Arch:
+	case freesp.ArchIf:
 		e = eArch
-	case freesp.Process:
+	case freesp.ProcessIf:
 		e = eProcess
-	case freesp.IOType:
+	case freesp.IOTypeIf:
 		e = eIOType
-	case freesp.Channel:
+	case freesp.ChannelIf:
 		e = eChannel
-	case freesp.MappedElement:
+	case freesp.MappedElementIf:
 		e = eMapElement
 	default:
 		log.Fatalf("editdialog.go: getActiveElementType error: invalid active object type %T\n", obj)

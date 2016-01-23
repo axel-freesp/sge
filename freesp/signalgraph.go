@@ -7,33 +7,33 @@ import (
 	"log"
 )
 
-func SignalGraphNew(filename string, context Context) *signalGraph {
+func SignalGraphNew(filename string, context ContextIf) *signalGraph {
 	return &signalGraph{filename, SignalGraphTypeNew(context)}
 }
 
-func SignalGraphUsesNodeType(s SignalGraph, nt NodeType) bool {
+func SignalGraphUsesNodeType(s SignalGraphIf, nt NodeTypeIf) bool {
 	return SignalGraphTypeUsesNodeType(s.ItsType(), nt)
 }
 
-func SignalGraphUsesSignalType(s SignalGraph, st SignalType) bool {
+func SignalGraphUsesSignalType(s SignalGraphIf, st SignalType) bool {
 	return SignalGraphTypeUsesSignalType(s.ItsType(), st)
 }
 
 type signalGraph struct {
 	filename string
-	itsType  SignalGraphType
+	itsType  SignalGraphTypeIf
 }
 
 /*
- *  freesp.SignalGraph API
+ *  freesp.SignalGraphIf API
  */
-var _ SignalGraph = (*signalGraph)(nil)
+var _ SignalGraphIf = (*signalGraph)(nil)
 
 func (s *signalGraph) Filename() string {
 	return s.filename
 }
 
-func (s *signalGraph) ItsType() SignalGraphType {
+func (s *signalGraph) ItsType() SignalGraphTypeIf {
 	return s.itsType
 }
 
@@ -41,22 +41,22 @@ func (s *signalGraph) GraphObject() interfaces.GraphObject {
 	return s.itsType.(*signalGraphType)
 }
 
-func (s *signalGraph) Read(data []byte) error {
+func (s *signalGraph) Read(data []byte) (cnt int, err error) {
 	g := backend.XmlSignalGraphNew()
-	err := g.Read(data)
+	cnt, err = g.Read(data)
 	if err != nil {
-		return newSignalGraphError(fmt.Sprintf("signalGraph.Read: %v", err))
+		err = fmt.Errorf("signalGraph.Read error: %v", err)
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
 		func(_ string, _ interfaces.PortDirection) *portType { return nil })
-	return err
+	return
 }
 
 func (s *signalGraph) ReadFile(filepath string) error {
 	g := backend.XmlSignalGraphNew()
 	err := g.ReadFile(filepath)
 	if err != nil {
-		return newSignalGraphError(fmt.Sprintf("signalGraph.ReadFile: %v", err))
+		return fmt.Errorf("signalGraph.ReadFile error: %v", err)
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
 		func(_ string, _ interfaces.PortDirection) *portType { return nil })
@@ -78,7 +78,7 @@ func (s *signalGraph) SetFilename(filename string) {
 	s.filename = filename
 }
 
-func (s *signalGraph) Remove(tree Tree) {
+func (s *signalGraph) RemoveFromTree(tree Tree) {
 	gt := s.ItsType()
 	tree.Remove(tree.Cursor(s))
 	for len(gt.Nodes()) > 0 {
@@ -95,7 +95,7 @@ var _ TreeElement = (*signalGraph)(nil)
 func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
 	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t, mayAddObject)
 	if err != nil {
-		log.Fatal("Library.AddToTree error: AddEntry failed: %s", err)
+		log.Fatal("LibraryIf.AddToTree error: AddEntry failed: %s", err)
 	}
 	t.ItsType().AddToTree(tree, cursor)
 }
@@ -106,20 +106,4 @@ func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (n
 
 func (t *signalGraph) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	return t.ItsType().RemoveObject(tree, cursor)
-}
-
-/*
- *  freesp private functions
- */
-
-type signalGraphError struct {
-	reason string
-}
-
-func (e *signalGraphError) Error() string {
-	return fmt.Sprintf("signal graph error: %s", e.reason)
-}
-
-func newSignalGraphError(reason string) *signalGraphError {
-	return &signalGraphError{reason}
 }

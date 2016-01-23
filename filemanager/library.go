@@ -10,13 +10,13 @@ import (
 type fileManagerLib struct {
 	filenameFactory
 	context    FilemanagerContextIf
-	libraryMap map[string]freesp.Library
+	libraryMap map[string]freesp.LibraryIf
 }
 
 var _ freesp.FileManagerIf = (*fileManagerLib)(nil)
 
 func FileManagerLibNew(context FilemanagerContextIf) *fileManagerLib {
-	return &fileManagerLib{FilenameFactoryInit("alml"), context, make(map[string]freesp.Library)}
+	return &fileManagerLib{FilenameFactoryInit("alml"), context, make(map[string]freesp.LibraryIf)}
 }
 
 //
@@ -26,14 +26,14 @@ func FileManagerLibNew(context FilemanagerContextIf) *fileManagerLib {
 func (f *fileManagerLib) New() (lib freesp.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	lib = freesp.LibraryNew(filename, f.context)
-	f.libraryMap[filename] = lib.(freesp.Library)
+	f.libraryMap[filename] = lib.(freesp.LibraryIf)
 	var newId string
-	newId, err = f.context.FTS().AddLibraryFile(lib.(freesp.Library))
+	newId, err = f.context.FTS().AddToplevel(lib.(freesp.LibraryIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerLib.New: %s.\n", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 	return
 }
 
@@ -54,14 +54,14 @@ func (f *fileManagerLib) Access(name string) (lib freesp.ToplevelTreeElement, er
 		err = fmt.Errorf("fileManagerLib.Access: library file %s not found", name)
 		return
 	}
-	f.libraryMap[name] = lib.(freesp.Library)
+	f.libraryMap[name] = lib.(freesp.LibraryIf)
 	var newId string
-	newId, err = f.context.FTS().AddLibraryFile(lib.(freesp.Library))
+	newId, err = f.context.FTS().AddToplevel(lib.(freesp.LibraryIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerLib.Access: %s", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 	if err != nil {
 		err = fmt.Errorf("fileManagerLib.Access: %s", err)
 		return
@@ -89,8 +89,8 @@ func (f *fileManagerLib) Remove(name string) {
 		}
 	}
 	delete(f.libraryMap, name)
-	cursor := f.context.FTS().Cursor(lib)
-	f.context.FTS().RemoveToplevel(cursor.Path)
+	id, _ := f.context.FTS().GetToplevelId(lib)
+	f.context.FTS().RemoveToplevel(id)
 	log.Printf("fileManagerLib.Access: library %s successfully unloaded\n", name)
 }
 
@@ -105,8 +105,8 @@ func (f *fileManagerLib) Rename(oldName, newName string) (err error) {
 		err = fmt.Errorf("fileManagerLib.Rename error: cannot rename library %s to be %s: already exists\n", oldName, newName)
 		return
 	}
-	cursor := f.context.FTS().Cursor(lib)
-	f.context.FTS().SetValueById(cursor.Path, newName)
+	id, _ := f.context.FTS().GetToplevelId(lib)
+	f.context.FTS().SetValueById(id, newName)
 	delete(f.libraryMap, oldName)
 	lib.SetFilename(newName)
 	f.libraryMap[newName] = lib

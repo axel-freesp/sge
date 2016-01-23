@@ -12,23 +12,23 @@ type arch struct {
 	name      string
 	iotypes   ioTypeList
 	processes processList
-	platform  Platform
+	platform  PlatformIf
 	position  map[interfaces.PositionMode]image.Point
 	archPorts []interfaces.ArchPortObject
 }
 
-var _ Arch = (*arch)(nil)
+var _ ArchIf = (*arch)(nil)
 var _ interfaces.ArchObject = (*arch)(nil)
 
-func ArchNew(name string, platform Platform) *arch {
+func ArchNew(name string, platform PlatformIf) *arch {
 	return &arch{name, ioTypeListInit(), processListInit(), platform,
 		make(map[interfaces.PositionMode]image.Point), nil}
 }
 
-func createArchFromXml(xmla backend.XmlArch, platform Platform) (a *arch, err error) {
+func createArchFromXml(xmla backend.XmlArch, platform PlatformIf) (a *arch, err error) {
 	a = ArchNew(xmla.Name, platform)
 	for _, xmlt := range xmla.IOType {
-		var t IOType
+		var t IOTypeIf
 		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
 		if err != nil {
 			return
@@ -54,11 +54,11 @@ func createArchFromXml(xmla backend.XmlArch, platform Platform) (a *arch, err er
 	return
 }
 
-func (a *arch) Platform() Platform {
+func (a *arch) Platform() PlatformIf {
 	return a.platform
 }
 
-func (a *arch) IOTypes() []IOType {
+func (a *arch) IOTypes() []IOTypeIf {
 	return a.iotypes.IoTypes()
 }
 
@@ -66,7 +66,7 @@ func (a *arch) IOTypeObjects() []interfaces.IOTypeObject {
 	return a.iotypes.Exports()
 }
 
-func (a *arch) Processes() []Process {
+func (a *arch) Processes() []ProcessIf {
 	return a.processes.Processes()
 }
 
@@ -145,8 +145,8 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		return
 	}
 	switch obj.(type) {
-	case IOType:
-		t := obj.(IOType)
+	case IOTypeIf:
+		t := obj.(IOTypeIf)
 		_, ok := a.iotypes.Find(t.Name())
 		if ok {
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate ioType name %s (abort)\n", t.Name())
@@ -157,8 +157,8 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
 
-	case Process:
-		p := obj.(Process)
+	case ProcessIf:
+		p := obj.(ProcessIf)
 		_, ok := a.processes.Find(p.Name())
 		if ok {
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate process name %s (abort)\n", p.Name())
@@ -183,8 +183,8 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case IOType:
-		t := obj.(IOType)
+	case IOTypeIf:
+		t := obj.(IOTypeIf)
 		_, ok := a.iotypes.Find(t.Name())
 		if ok {
 			a.iotypes.Remove(t)
@@ -194,8 +194,8 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		prefix, index := tree.Remove(cursor)
 		removed = append(removed, IdWithObject{prefix, index, t})
 
-	case Process:
-		p := obj.(Process)
+	case ProcessIf:
+		p := obj.(ProcessIf)
 		if p.Arch() != a {
 			log.Printf("arch.RemoveObject error: process to be removed is no child of mine.")
 		}
@@ -254,7 +254,7 @@ func (a *arch) Identify(te TreeElement) bool {
 //
 
 type archList struct {
-	archs   []Arch
+	archs   []ArchIf
 	exports []interfaces.ArchObject
 }
 
@@ -267,7 +267,7 @@ func (l *archList) Append(a *arch) {
 	l.exports = append(l.exports, a)
 }
 
-func (l *archList) Remove(a Arch) {
+func (l *archList) Remove(a ArchIf) {
 	var i int
 	for i = range l.archs {
 		if a == l.archs[i] {
@@ -288,7 +288,7 @@ func (l *archList) Remove(a Arch) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *archList) Archs() []Arch {
+func (l *archList) Archs() []ArchIf {
 	return l.archs
 }
 
@@ -296,7 +296,7 @@ func (l *archList) Exports() []interfaces.ArchObject {
 	return l.exports
 }
 
-func (l *archList) Find(name string) (a Arch, ok bool) {
+func (l *archList) Find(name string) (a ArchIf, ok bool) {
 	for _, a = range l.archs {
 		if a.Name() == name {
 			ok = true

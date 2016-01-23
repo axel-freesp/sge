@@ -11,6 +11,8 @@ type GraphView interface {
 	Widget() *gtk.Widget
 	Sync()
 	Select(obj interfaces.GraphElement)
+	Expand(obj interfaces.GraphElement)
+	Collapse(obj interfaces.GraphElement)
 	IdentifyGraph(interfaces.GraphObject) bool
 	IdentifyPlatform(interfaces.PlatformObject) bool
 	IdentifyMapping(interfaces.MappingObject) bool

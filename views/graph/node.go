@@ -121,6 +121,11 @@ func (n Node) OutPortIndex(portName string) int {
 	return n.userObj.OutPortIndex(portName)
 }
 
+func (n *Node) Expand() {
+}
+
+func (n *Node) Collapse() {
+}
 
 //
 //		ContainerChild interface

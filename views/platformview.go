@@ -132,6 +132,12 @@ func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret g
 	return
 }
 
+func (v *platformView) Expand(obj interfaces.GraphElement) {
+}
+
+func (v *platformView) Collapse(obj interfaces.GraphElement) {
+}
+
 //
 //		ScaledScene interface
 //

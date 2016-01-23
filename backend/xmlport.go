@@ -30,11 +30,12 @@ func XmlOutPortNew(pName, pType string) *XmlOutPort {
 		XmlPort{pName, pType}}
 }
 
-func (p *XmlPort) Read(data []byte) (err error) {
+func (p *XmlPort) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, p)
 	if err != nil {
 		err = fmt.Errorf("XmlPort.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

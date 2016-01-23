@@ -11,11 +11,11 @@ type XmlPlatform struct {
 	Version    string    `xml:"version,attr"`
 	PlatformId string    `xml:"platform-id,attr"`
 	Arch       []XmlArch `xml:"arch"`
-	Shape      XmlShape  `xml:"hint"`
+	//Shape      XmlShape  `xml:"hint"`
 }
 
 func XmlPlatformNew() *XmlPlatform {
-	return &XmlPlatform{xml.Name{freespNamespace, "platform"}, "1.0", "", nil, XmlShape{}}
+	return &XmlPlatform{xml.Name{freespNamespace, "platform"}, "1.0", "", nil}
 }
 
 func (p *XmlPlatform) ReadFile(filepath string) (err error) {
@@ -25,7 +25,7 @@ func (p *XmlPlatform) ReadFile(filepath string) (err error) {
 		err = fmt.Errorf("XmlPlatform.ReadFile error: Failed to read file %s", filepath)
 		return
 	}
-	err = p.Read(data)
+	_, err = p.Read(data)
 	if err != nil {
 		err = fmt.Errorf("XmlPlatform.ReadFile error: %v", err)
 	}
@@ -49,11 +49,12 @@ func (p *XmlPlatform) WriteFile(filepath string) (err error) {
 	return
 }
 
-func (p *XmlPlatform) Read(data []byte) (err error) {
+func (p *XmlPlatform) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, p)
 	if err != nil {
 		err = fmt.Errorf("XmlPlatform.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

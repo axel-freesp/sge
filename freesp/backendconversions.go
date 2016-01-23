@@ -23,16 +23,16 @@ var stringFromMode = map[interfaces.PositionMode]string{
 func CreateXML(object interface{}) (buf []byte, err error) {
 	if object != nil {
 		switch object.(type) {
-		case SignalGraph:
-			s := object.(SignalGraph)
+		case SignalGraphIf:
+			s := object.(SignalGraphIf)
 			xmlsignalgraph := CreateXmlSignalGraph(s)
 			buf, err = xmlsignalgraph.Write()
-		case SignalGraphType:
-			s := object.(SignalGraphType)
+		case SignalGraphTypeIf:
+			s := object.(SignalGraphTypeIf)
 			xmlsignalgraph := CreateXmlSignalGraphType(s)
 			buf, err = xmlsignalgraph.Write()
-		case Node:
-			n := object.(Node)
+		case NodeIf:
+			n := object.(NodeIf)
 			if len(n.InPorts()) == 0 {
 				xmlnode := CreateXmlInputNode(n)
 				buf, err = xmlnode.Write()
@@ -43,8 +43,8 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlnode := CreateXmlProcessingNode(n)
 				buf, err = xmlnode.Write()
 			}
-		case NodeType:
-			t := object.(NodeType)
+		case NodeTypeIf:
+			t := object.(NodeTypeIf)
 			xmlnodetype := CreateXmlNodeType(t)
 			buf, err = xmlnodetype.Write()
 		case Port:
@@ -74,12 +74,12 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlsignaltype := CreateXmlSignalType(s)
 				buf, err = xmlsignaltype.Write()
 			}
-		case Library:
-			l := object.(Library)
+		case LibraryIf:
+			l := object.(LibraryIf)
 			xmllib := CreateXmlLibrary(l)
 			buf, err = xmllib.Write()
-		case Implementation:
-			impl := object.(Implementation)
+		case ImplementationIf:
+			impl := object.(ImplementationIf)
 			switch impl.ImplementationType() {
 			case NodeTypeElement:
 				// TODO
@@ -87,24 +87,24 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlImpl := CreateXmlSignalGraphType(impl.Graph())
 				buf, err = xmlImpl.Write()
 			}
-		case Platform:
-			p := object.(Platform)
+		case PlatformIf:
+			p := object.(PlatformIf)
 			xmlp := CreateXmlPlatform(p)
 			buf, err = xmlp.Write()
-		case Arch:
-			a := object.(Arch)
+		case ArchIf:
+			a := object.(ArchIf)
 			xmla := CreateXmlArch(a)
 			buf, err = xmla.Write()
-		case IOType:
-			t := object.(IOType)
+		case IOTypeIf:
+			t := object.(IOTypeIf)
 			xmlt := CreateXmlIOType(t)
 			buf, err = xmlt.Write()
-		case Process:
-			p := object.(Process)
+		case ProcessIf:
+			p := object.(ProcessIf)
 			xmlp := CreateXmlProcess(p)
 			buf, err = xmlp.Write()
-		case Channel:
-			ch := object.(Channel)
+		case ChannelIf:
+			ch := object.(ChannelIf)
 			if ch.Direction() == interfaces.InPort {
 				xmlc := CreateXmlInChannel(ch)
 				buf, err = xmlc.Write()
@@ -112,11 +112,11 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlc := CreateXmlOutChannel(ch)
 				buf, err = xmlc.Write()
 			}
-		case Mapping:
-			m := object.(Mapping)
+		case MappingIf:
+			m := object.(MappingIf)
 			xmlm := CreateXmlMapping(m)
 			buf, err = xmlm.Write()
-		case MappedElement:
+		case MappedElementIf:
 			m := object.(*mapelem)
 			var pname string
 			if m.process != nil {
@@ -152,7 +152,7 @@ func CreateXmlNamedOutPort(p PortType) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
 }
 
-func CreateXmlInputNode(n Node) *backend.XmlInputNode {
+func CreateXmlInputNode(n NodeIf) *backend.XmlInputNode {
 	tName := n.ItsType().TypeName()
 	if strings.HasPrefix(tName, "autoInputNodeType-") {
 		tName = ""
@@ -168,7 +168,7 @@ func CreateXmlInputNode(n Node) *backend.XmlInputNode {
 	return ret
 }
 
-func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
+func CreateXmlOutputNode(n NodeIf) *backend.XmlOutputNode {
 	tName := n.ItsType().TypeName()
 	if strings.HasPrefix(tName, "autoOutputNodeType-") {
 		tName = ""
@@ -184,7 +184,7 @@ func CreateXmlOutputNode(n Node) *backend.XmlOutputNode {
 	return ret
 }
 
-func CreateXmlProcessingNode(n Node) *backend.XmlProcessingNode {
+func CreateXmlProcessingNode(n NodeIf) *backend.XmlProcessingNode {
 	pos := n.Position()
 	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), pos.X, pos.Y)
 	if len(n.ItsType().DefinedAt()) == 0 {
@@ -198,7 +198,7 @@ func CreateXmlProcessingNode(n Node) *backend.XmlProcessingNode {
 	return ret
 }
 
-func CreateXmlNodeType(t NodeType) *backend.XmlNodeType {
+func CreateXmlNodeType(t NodeTypeIf) *backend.XmlNodeType {
 	ret := backend.XmlNodeTypeNew(t.TypeName())
 	for _, p := range t.InPorts() {
 		ret.InPort = append(ret.InPort, *CreateXmlNamedInPort(p))
@@ -212,7 +212,7 @@ func CreateXmlNodeType(t NodeType) *backend.XmlNodeType {
 	return ret
 }
 
-func CreateXmlImplementation(impl Implementation) *backend.XmlImplementation {
+func CreateXmlImplementation(impl ImplementationIf) *backend.XmlImplementation {
 	ret := backend.XmlImplementationNew(impl.ElementName())
 	if impl.ImplementationType() == NodeTypeGraph {
 		ret.SignalGraph = append(ret.SignalGraph, *CreateXmlSignalGraphType(impl.Graph()))
@@ -244,7 +244,7 @@ func CreateXmlSignalType(s SignalType) *backend.XmlSignalType {
 	return backend.XmlSignalTypeNew(s.TypeName(), scope, mode, s.CType(), s.ChannelId())
 }
 
-func CreateXmlLibrary(l Library) *backend.XmlLibrary {
+func CreateXmlLibrary(l LibraryIf) *backend.XmlLibrary {
 	ret := backend.XmlLibraryNew()
 	for _, t := range l.SignalTypes() {
 		ret.SignalTypes = append(ret.SignalTypes, *CreateXmlSignalType(t))
@@ -255,11 +255,11 @@ func CreateXmlLibrary(l Library) *backend.XmlLibrary {
 	return ret
 }
 
-func CreateXmlSignalGraph(g SignalGraph) *backend.XmlSignalGraph {
+func CreateXmlSignalGraph(g SignalGraphIf) *backend.XmlSignalGraph {
 	return CreateXmlSignalGraphType(g.ItsType())
 }
 
-func CreateXmlSignalGraphType(t SignalGraphType) *backend.XmlSignalGraph {
+func CreateXmlSignalGraphType(t SignalGraphTypeIf) *backend.XmlSignalGraph {
 	ret := backend.XmlSignalGraphNew()
 	for _, l := range t.Libraries() {
 		ret.Libraries = append(ret.Libraries, *CreateXmlLibraryRef(l))
@@ -284,11 +284,11 @@ func CreateXmlSignalGraphType(t SignalGraphType) *backend.XmlSignalGraph {
 	return ret
 }
 
-func CreateXmlLibraryRef(l Library) *backend.XmlLibraryRef {
+func CreateXmlLibraryRef(l LibraryIf) *backend.XmlLibraryRef {
 	return backend.XmlLibraryRefNew(l.Filename())
 }
 
-func CreateXmlPlatform(p Platform) *backend.XmlPlatform {
+func CreateXmlPlatform(p PlatformIf) *backend.XmlPlatform {
 	ret := backend.XmlPlatformNew()
 	ret.PlatformId = p.PlatformId()
 	for _, a := range p.Arch() {
@@ -297,7 +297,7 @@ func CreateXmlPlatform(p Platform) *backend.XmlPlatform {
 	return ret
 }
 
-func CreateXmlArch(a Arch) *backend.XmlArch {
+func CreateXmlArch(a ArchIf) *backend.XmlArch {
 	ret := backend.XmlArchNew(a.Name())
 	for _, t := range a.IOTypes() {
 		ret.IOType = append(ret.IOType, *CreateXmlIOType(t))
@@ -309,11 +309,11 @@ func CreateXmlArch(a Arch) *backend.XmlArch {
 	return ret
 }
 
-func CreateXmlIOType(t IOType) *backend.XmlIOType {
+func CreateXmlIOType(t IOTypeIf) *backend.XmlIOType {
 	return backend.XmlIOTypeNew(t.Name(), ioXmlModeMap[t.IOMode()])
 }
 
-func CreateXmlProcess(p Process) *backend.XmlProcess {
+func CreateXmlProcess(p ProcessIf) *backend.XmlProcess {
 	ret := backend.XmlProcessNew(p.Name())
 	for _, c := range p.InChannels() {
 		ret.InputChannels = append(ret.InputChannels, *CreateXmlInChannel(c))
@@ -325,7 +325,7 @@ func CreateXmlProcess(p Process) *backend.XmlProcess {
 	return ret
 }
 
-func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
+func CreateXmlInChannel(ch ChannelIf) *backend.XmlInChannel {
 	ret := backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
 	ret.Entry = CreateXmlModePosition(ch).Entry
 	c := ch.(*channel)
@@ -333,7 +333,7 @@ func CreateXmlInChannel(ch Channel) *backend.XmlInChannel {
 	return ret
 }
 
-func CreateXmlOutChannel(ch Channel) *backend.XmlOutChannel {
+func CreateXmlOutChannel(ch ChannelIf) *backend.XmlOutChannel {
 	ret := backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
 	ret.Entry = CreateXmlModePosition(ch).Entry
 	c := ch.(*channel)
@@ -349,7 +349,7 @@ func CreateXmlNodeMap(node, process string, pos image.Point) *backend.XmlNodeMap
 	return backend.XmlNodeMapNew(node, process, pos.X, pos.Y)
 }
 
-func CreateXmlMapping(m Mapping) (xmlm *backend.XmlMapping) {
+func CreateXmlMapping(m MappingIf) (xmlm *backend.XmlMapping) {
 	xmlm = backend.XmlMappingNew(m.Graph().Filename(), m.Platform().Filename())
 	g := m.Graph().ItsType()
 	for _, n := range g.InputNodes() {

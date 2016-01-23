@@ -104,7 +104,7 @@ func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case Library:
+	case LibraryIf:
 		prop = mayAddObject | mayEdit | mayRemove
 	case Port, PortType:
 		prop = 0

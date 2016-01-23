@@ -23,11 +23,12 @@ const (
 	IOModeSync  XmlIOMode = "sync"
 )
 
-func (t *XmlIOType) Read(data []byte) (err error) {
+func (t *XmlIOType) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, t)
 	if err != nil {
 		err = fmt.Errorf("XmlConnect.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

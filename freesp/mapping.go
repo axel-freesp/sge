@@ -9,27 +9,27 @@ import (
 )
 
 type mapping struct {
-	graph    SignalGraph
-	platform Platform
-	context  Context
+	graph    SignalGraphIf
+	platform PlatformIf
+	context  ContextIf
 	maps     map[string]*mapelem
 	filename string
 }
 
 // Ensure node and process are copies:
 type mapelem struct {
-	node     Node
-	process  Process
+	node     NodeIf
+	process  ProcessIf
 	position image.Point
-	mapping  Mapping
+	mapping  MappingIf
 }
 
-func mapelemNew(n Node, p Process, nodePos image.Point, mapping Mapping) (m *mapelem) {
+func mapelemNew(n NodeIf, p ProcessIf, nodePos image.Point, mapping MappingIf) (m *mapelem) {
 	m = &mapelem{n, p, nodePos, mapping}
 	return
 }
 
-var _ MappedElement = (*mapelem)(nil)
+var _ MappedElementIf = (*mapelem)(nil)
 
 func (m mapelem) Position() image.Point {
 	return m.position
@@ -74,26 +74,26 @@ func (m mapelem) ProcessObject() (p interfaces.ProcessObject, ok bool) {
 	return
 }
 
-func (m mapelem) Mapping() Mapping {
+func (m mapelem) Mapping() MappingIf {
 	return m.mapping
 }
 
-func (m mapelem) Node() Node {
+func (m mapelem) Node() NodeIf {
 	return m.node
 }
 
-func (m mapelem) Process() Process {
+func (m mapelem) Process() ProcessIf {
 	return m.process
 }
 
-func (m *mapelem) SetProcess(p Process) {
+func (m *mapelem) SetProcess(p ProcessIf) {
 	m.process = p
 }
 
 var _ interfaces.MappingObject = (*mapping)(nil)
-var _ Mapping = (*mapping)(nil)
+var _ MappingIf = (*mapping)(nil)
 
-func MappingNew(filename string, context Context) *mapping {
+func MappingNew(filename string, context ContextIf) *mapping {
 	return &mapping{nil, nil, context, make(map[string]*mapelem), filename}
 }
 
@@ -177,27 +177,27 @@ func (m *mapping) MappingObject() interfaces.MappingObject {
 	return m
 }
 
-func (m *mapping) AddMapping(n Node, p Process) {
+func (m *mapping) AddMapping(n NodeIf, p ProcessIf) {
 	m.maps[n.Name()] = mapelemNew(n, p, image.Point{}, m)
 }
 
-func (m *mapping) SetGraph(g SignalGraph) {
+func (m *mapping) SetGraph(g SignalGraphIf) {
 	m.graph = g
 }
 
-func (m *mapping) Graph() SignalGraph {
+func (m *mapping) Graph() SignalGraphIf {
 	return m.graph
 }
 
-func (m *mapping) SetPlatform(p Platform) {
+func (m *mapping) SetPlatform(p PlatformIf) {
 	m.platform = p
 }
 
-func (m *mapping) Platform() Platform {
+func (m *mapping) Platform() PlatformIf {
 	return m.platform
 }
 
-func (m *mapping) Mapped(n Node) (pr Process, ok bool) {
+func (m *mapping) Mapped(n NodeIf) (pr ProcessIf, ok bool) {
 	var melem *mapelem
 	melem, ok = m.maps[n.Name()]
 	if ok {
@@ -219,13 +219,15 @@ func (m *mapping) SetFilename(newFilename string) {
 	m.filename = newFilename
 }
 
-func (m *mapping) Read(data []byte) error {
+func (m *mapping) Read(data []byte) (cnt int, err error) {
 	xmlm := backend.XmlMappingNew(m.Graph().Filename(), m.Platform().Filename())
-	err := xmlm.Read(data)
+	cnt, err = xmlm.Read(data)
 	if err != nil {
-		return fmt.Errorf("mapping.Read: %v", err)
+		err = fmt.Errorf("mapping.Read: %v", err)
+		return
 	}
-	return m.createMappingFromXml(xmlm)
+	err = m.createMappingFromXml(xmlm)
+	return
 }
 
 func (m *mapping) ReadFile(filepath string) error {
@@ -248,7 +250,7 @@ func (m mapping) WriteFile(filepath string) error {
 	return xmlm.WriteFile(filepath)
 }
 
-func (m *mapping) Remove(tree Tree) {
+func (m *mapping) RemoveFromTree(tree Tree) {
 	tree.Remove(tree.Cursor(m))
 }
 
@@ -263,15 +265,15 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 		err = fmt.Errorf("mapping.CreateMappingFromXml: graph.ReadFile failed: %s\n", err)
 		return
 	}
-	m.graph = f.(SignalGraph)
+	m.graph = f.(SignalGraphIf)
 	f, err = m.context.PlatformMgr().Access(xmlm.Platform)
 	if err != nil {
 		err = fmt.Errorf("mapping.CreateMappingFromXml: platform.ReadFile failed: %s\n", err)
 		return
 	}
-	m.platform = f.(Platform)
-	var n Node
-	var p Process
+	m.platform = f.(PlatformIf)
+	var n NodeIf
+	var p ProcessIf
 	var ok bool
 	for _, x := range xmlm.IOMappings {
 		n, ok = m.graph.ItsType().NodeByName(x.Name)

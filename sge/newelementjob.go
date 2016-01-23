@@ -42,18 +42,18 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 	}
 	switch j.elemType {
 	case eNode, eInputNode, eOutputNode:
-		var context freesp.SignalGraphType
+		var context freesp.SignalGraphTypeIf
 		switch parentObject.(type) {
-		case freesp.Node:
-			context = parentObject.(freesp.Node).Context()
+		case freesp.NodeIf:
+			context = parentObject.(freesp.NodeIf).Context()
 			j.parentId = getParentId(j.parentId)
-		case freesp.SignalGraph:
-			context = parentObject.(freesp.SignalGraph).ItsType()
-		case freesp.SignalGraphType:
-			context = parentObject.(freesp.SignalGraphType)
-		case freesp.Implementation:
-			if parentObject.(freesp.Implementation).ImplementationType() == freesp.NodeTypeGraph {
-				context = parentObject.(freesp.Implementation).Graph()
+		case freesp.SignalGraphIf:
+			context = parentObject.(freesp.SignalGraphIf).ItsType()
+		case freesp.SignalGraphTypeIf:
+			context = parentObject.(freesp.SignalGraphTypeIf)
+		case freesp.ImplementationIf:
+			if parentObject.(freesp.ImplementationIf).ImplementationType() == freesp.NodeTypeGraph {
+				context = parentObject.(freesp.ImplementationIf).Graph()
 			} else {
 				log.Fatal("NewElementJob.CreateObject(eNode) error: parent implementation is no graph...")
 			}
@@ -78,21 +78,21 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 			fmt.Sscanf(coords[1], "%d", &y)
 			pos := image.Point{x, y}
 			//log.Printf("NewElementJob.CreateObject(eNode) setting position %s: %v\n", j.extra, pos)
-			ret.(freesp.Node).SetPosition(pos)
+			ret.(freesp.NodeIf).SetPosition(pos)
 		}
 
 	case eNodeType:
 		var context string
 		switch parentObject.(type) {
-		case freesp.NodeType:
-			context = parentObject.(freesp.NodeType).DefinedAt()
+		case freesp.NodeTypeIf:
+			context = parentObject.(freesp.NodeTypeIf).DefinedAt()
 			j.parentId = getParentId(j.parentId)
 		case freesp.SignalType:
 			j.parentId = getParentId(j.parentId)
 			parentObject, err = fts.GetObjectById(j.parentId)
-			context = parentObject.(freesp.Library).Filename()
-		case freesp.Library:
-			context = parentObject.(freesp.Library).Filename()
+			context = parentObject.(freesp.LibraryIf).Filename()
+		case freesp.LibraryIf:
+			context = parentObject.(freesp.LibraryIf).Filename()
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNodeType) error: referenced parentObject wrong type...")
 		}
@@ -101,10 +101,10 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 	case eConnection:
 		switch parentObject.(type) {
 		case freesp.Port:
-		case freesp.SignalGraphType:
+		case freesp.SignalGraphTypeIf:
 			fromTo := strings.Split(j.extra, "/")
-			var n freesp.Node
-			for _, n = range parentObject.(freesp.SignalGraphType).Nodes() {
+			var n freesp.NodeIf
+			for _, n = range parentObject.(freesp.SignalGraphTypeIf).Nodes() {
 				if n.Name() == fromTo[0] {
 					for _, parentObject = range n.OutPorts() {
 						if parentObject.(freesp.Port).Name() == fromTo[1] {
@@ -118,10 +118,10 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 				log.Fatalf("NewElementJob.CreateObject(eNodeType) error: no valid FROM port for edge job %v\n", j)
 			}
 			_ = parentObject.(freesp.Port)
-		case freesp.Implementation:
+		case freesp.ImplementationIf:
 			fromTo := strings.Split(j.extra, "/")
-			var n freesp.Node
-			for _, n = range parentObject.(freesp.Implementation).Graph().Nodes() {
+			var n freesp.NodeIf
+			for _, n = range parentObject.(freesp.ImplementationIf).Graph().Nodes() {
 				if n.Name() == fromTo[0] {
 					for _, parentObject = range n.OutPorts() {
 						if parentObject.(freesp.Port).Name() == fromTo[1] {
@@ -159,7 +159,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		switch parentObject.(type) {
 		case freesp.PortType:
 			j.parentId = getParentId(j.parentId)
-		case freesp.NodeType:
+		case freesp.NodeTypeIf:
 		default:
 			log.Fatal("NewElementJob.CreateObject(ePortType) error: referenced parentObject wrong type...")
 		}
@@ -174,9 +174,9 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		switch parentObject.(type) {
 		case freesp.SignalType:
 			j.parentId = getParentId(j.parentId)
-		case freesp.NodeType:
+		case freesp.NodeTypeIf:
 			j.parentId = getParentId(j.parentId)
-		case freesp.Library:
+		case freesp.LibraryIf:
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
@@ -193,9 +193,9 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 
 	case eImplementation:
 		switch parentObject.(type) {
-		case freesp.Implementation:
+		case freesp.ImplementationIf:
 			j.parentId = getParentId(j.parentId)
-		case freesp.NodeType:
+		case freesp.NodeTypeIf:
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
@@ -204,23 +204,23 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 
 	case eArch:
 		switch parentObject.(type) {
-		case freesp.Arch:
+		case freesp.ArchIf:
 			j.parentId = getParentId(j.parentId)
-			parentObject = parentObject.(freesp.Arch).Platform()
-		case freesp.Platform:
+			parentObject = parentObject.(freesp.ArchIf).Platform()
+		case freesp.PlatformIf:
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eArch) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret = freesp.ArchNew(j.input[iArchName], parentObject.(freesp.Platform))
+		ret = freesp.ArchNew(j.input[iArchName], parentObject.(freesp.PlatformIf))
 
 	case eIOType:
-		var p freesp.Platform
+		var p freesp.PlatformIf
 		switch parentObject.(type) {
-		case freesp.IOType:
+		case freesp.IOTypeIf:
 			j.parentId = getParentId(j.parentId)
-			p = parentObject.(freesp.IOType).Platform()
-		case freesp.Arch:
-			p = parentObject.(freesp.Arch).Platform()
+			p = parentObject.(freesp.IOTypeIf).Platform()
+		case freesp.ArchIf:
+			p = parentObject.(freesp.ArchIf).Platform()
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
@@ -228,26 +228,26 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 
 	case eProcess:
 		switch parentObject.(type) {
-		case freesp.Process:
+		case freesp.ProcessIf:
 			j.parentId = getParentId(j.parentId)
-			parentObject = parentObject.(freesp.Process).Arch()
-		case freesp.Arch:
+			parentObject = parentObject.(freesp.ProcessIf).Arch()
+		case freesp.ArchIf:
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eProcess) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret = freesp.ProcessNew(j.input[iProcessName], parentObject.(freesp.Arch))
+		ret = freesp.ProcessNew(j.input[iProcessName], parentObject.(freesp.ArchIf))
 
 	case eChannel:
 		switch parentObject.(type) {
-		case freesp.Channel:
+		case freesp.ChannelIf:
 			j.parentId = getParentId(j.parentId)
-			parentObject = parentObject.(freesp.Channel).Process()
-		case freesp.Process:
+			parentObject = parentObject.(freesp.ChannelIf).Process()
+		case freesp.ProcessIf:
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eChannel) error: referenced parentObject wrong type %T\n", parentObject)
 		}
 		processes := getOtherProcesses(fts, parentObject)
-		var p freesp.Process
+		var p freesp.ProcessIf
 		for _, p = range processes {
 			s := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
 			if s == j.input[iChannelLinkSelect] {
@@ -261,7 +261,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret freesp.Tre
 		if !ok {
 			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen ioType\n", j.input[iIOTypeSelect])
 		}
-		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.Process), j.input[iChannelLinkSelect])
+		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(freesp.ProcessIf), j.input[iChannelLinkSelect])
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)

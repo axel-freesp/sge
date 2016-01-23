@@ -11,13 +11,13 @@ import (
 type fileManagerPF struct {
 	filenameFactory
 	context     FilemanagerContextIf
-	platformMap map[string]freesp.Platform
+	platformMap map[string]freesp.PlatformIf
 }
 
 var _ freesp.FileManagerIf = (*fileManagerPF)(nil)
 
 func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
-	return &fileManagerPF{FilenameFactoryInit("spml"), context, make(map[string]freesp.Platform)}
+	return &fileManagerPF{FilenameFactoryInit("spml"), context, make(map[string]freesp.PlatformIf)}
 }
 
 //
@@ -27,16 +27,16 @@ func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
 func (f *fileManagerPF) New() (pl freesp.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	pl = freesp.PlatformNew(filename)
-	f.platformMap[filename] = pl.(freesp.Platform)
+	f.platformMap[filename] = pl.(freesp.PlatformIf)
 	var newId string
-	newId, err = f.context.FTS().AddPlatformFile(pl.(freesp.Platform))
+	newId, err = f.context.FTS().AddToplevel(pl.(freesp.PlatformIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.New: %s", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 	var pv views.GraphView
-	pv, err = views.PlatformViewNew(pl.(freesp.Platform).PlatformObject(), f.context)
+	pv, err = views.PlatformViewNew(pl.(freesp.PlatformIf).PlatformObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.New: %s", err)
 		return
@@ -63,21 +63,21 @@ func (f *fileManagerPF) Access(name string) (pl freesp.ToplevelTreeElement, err 
 		err = fmt.Errorf("fileManagerPF.Access: platform file %s not found", name)
 		return
 	}
-	pv, err := views.PlatformViewNew(pl.(freesp.Platform).PlatformObject(), f.context)
+	pv, err := views.PlatformViewNew(pl.(freesp.PlatformIf).PlatformObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: Could not create platform view.")
 		return
 	}
 	f.context.GVC().Add(pv, name)
 	log.Printf("fileManagerPF.Access: platform %s successfully loaded.\n", name)
-	f.platformMap[name] = pl.(freesp.Platform)
+	f.platformMap[name] = pl.(freesp.PlatformIf)
 	var newId string
-	newId, err = f.context.FTS().AddPlatformFile(pl.(freesp.Platform))
+	newId, err = f.context.FTS().AddToplevel(pl.(freesp.PlatformIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: %s", err)
 		return
 	}
-	f.context.FTV().SetCursorNewId(newId)
+	f.context.FTV().SelectId(newId)
 	return
 }
 
@@ -94,8 +94,8 @@ func (f *fileManagerPF) Remove(name string) {
 		}
 	}
 	delete(f.platformMap, name)
-	cursor := f.context.FTS().Cursor(pl)
-	f.context.FTS().RemoveToplevel(cursor.Path)
+	id, _ := f.context.FTS().GetToplevelId(pl)
+	f.context.FTS().RemoveToplevel(id)
 	f.context.GVC().RemovePlatformView(pl.PlatformObject())
 }
 
@@ -110,8 +110,8 @@ func (f *fileManagerPF) Rename(oldName, newName string) (err error) {
 		err = fmt.Errorf("fileManagerPF.Rename error: cannot rename platform %s to be %s: already exists\n", oldName, newName)
 		return
 	}
-	cursor := f.context.FTS().Cursor(pl)
-	f.context.FTS().SetValueById(cursor.Path, newName)
+	id, _ := f.context.FTS().GetToplevelId(pl)
+	f.context.FTS().SetValueById(id, newName)
 	f.context.GVC().Rename(oldName, newName)
 	delete(f.platformMap, oldName)
 	pl.SetFilename(newName)

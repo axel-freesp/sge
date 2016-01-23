@@ -10,23 +10,23 @@ import (
 
 type channel struct {
 	direction interfaces.PortDirection
-	iotype    IOType
-	link      Channel
-	process   Process
+	iotype    IOTypeIf
+	link      ChannelIf
+	process   ProcessIf
 	linkText  string
 	position  map[interfaces.PositionMode]image.Point
 	archPort  interfaces.ArchPortObject
 }
 
-var _ Channel = (*channel)(nil)
+var _ ChannelIf = (*channel)(nil)
 var _ interfaces.ChannelObject = (*channel)(nil)
 
-func ChannelNew(dir interfaces.PortDirection, iotype IOType, process Process, linkText string) *channel {
+func ChannelNew(dir interfaces.PortDirection, iotype IOTypeIf, process ProcessIf, linkText string) *channel {
 	return &channel{dir, iotype, nil, process, linkText, make(map[interfaces.PositionMode]image.Point), nil}
 }
 
-func createInChannelFromXml(xmlc backend.XmlInChannel, p Process) (ch *channel, err error) {
-	var iot IOType
+func createInChannelFromXml(xmlc backend.XmlInChannel, p ProcessIf) (ch *channel, err error) {
+	var iot IOTypeIf
 	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
 	if err != nil {
 		return
@@ -39,8 +39,8 @@ func createInChannelFromXml(xmlc backend.XmlInChannel, p Process) (ch *channel, 
 	return
 }
 
-func createOutChannelFromXml(xmlc backend.XmlOutChannel, p Process) (ch *channel, err error) {
-	var iot IOType
+func createOutChannelFromXml(xmlc backend.XmlOutChannel, p ProcessIf) (ch *channel, err error) {
+	var iot IOTypeIf
 	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
 	if err != nil {
 		return
@@ -79,7 +79,7 @@ func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
 	return
 }
 
-func channelGetIOTypeFromArch(a Arch, iotype string) (iot IOType, err error) {
+func channelGetIOTypeFromArch(a ArchIf, iotype string) (iot IOTypeIf, err error) {
 	var ok bool
 	for _, iot = range a.IOTypes() {
 		if iot.Name() == iotype {
@@ -110,15 +110,15 @@ func (c *channel) ArchPortObject() interfaces.ArchPortObject {
 	return c.archPort
 }
 
-func (c *channel) Process() Process {
+func (c *channel) Process() ProcessIf {
 	return c.process
 }
 
-func (c *channel) IOType() IOType {
+func (c *channel) IOType() IOTypeIf {
 	return c.iotype
 }
 
-func (c *channel) SetIOType(newIOType IOType) {
+func (c *channel) SetIOType(newIOType IOTypeIf) {
 	c.iotype = newIOType
 	// update link
 	if c.link != nil {
@@ -126,7 +126,7 @@ func (c *channel) SetIOType(newIOType IOType) {
 	}
 }
 
-func (c *channel) Link() Channel {
+func (c *channel) Link() ChannelIf {
 	return c.link
 }
 
@@ -167,7 +167,7 @@ func (c *channel) Name() string {
 	}
 }
 
-func channelMakeName(iotype IOType, link Process) string {
+func channelMakeName(iotype IOTypeIf, link ProcessIf) string {
 	return fmt.Sprintf("%s-%s/%s", iotype.Name(), link.Arch().Name(), link.Name())
 }
 
@@ -230,7 +230,7 @@ func (c *channel) Identify(te TreeElement) bool {
 //
 
 type channelList struct {
-	channels []Channel
+	channels []ChannelIf
 	exports  []interfaces.ChannelObject
 }
 
@@ -243,7 +243,7 @@ func (l *channelList) Append(ch *channel) {
 	l.exports = append(l.exports, ch)
 }
 
-func (l *channelList) Remove(ch Channel) {
+func (l *channelList) Remove(ch ChannelIf) {
 	var i int
 	for i = range l.channels {
 		if ch == l.channels[i] {
@@ -264,7 +264,7 @@ func (l *channelList) Remove(ch Channel) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *channelList) Channels() []Channel {
+func (l *channelList) Channels() []ChannelIf {
 	return l.channels
 }
 
@@ -272,7 +272,7 @@ func (l *channelList) Exports() []interfaces.ChannelObject {
 	return l.exports
 }
 
-func (l *channelList) Find(name string) (c Channel, ok bool) {
+func (l *channelList) Find(name string) (c ChannelIf, ok bool) {
 	for _, c = range l.channels {
 		if c.Name() == name {
 			ok = true

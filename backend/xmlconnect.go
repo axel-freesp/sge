@@ -17,11 +17,12 @@ func XmlConnectNew(from, to, fromPort, toPort string) *XmlConnect {
 	return &XmlConnect{xml.Name{freespNamespace, "connect"}, from, to, fromPort, toPort}
 }
 
-func (c *XmlConnect) Read(data []byte) (err error) {
+func (c *XmlConnect) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, c)
 	if err != nil {
 		err = fmt.Errorf("XmlConnect.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

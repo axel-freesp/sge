@@ -254,13 +254,13 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	return
 }
 
-func getOtherProcesses(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.Process) {
-	var thisProcess freesp.Process
+func getOtherProcesses(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.ProcessIf) {
+	var thisProcess freesp.ProcessIf
 	switch object.(type) {
-	case freesp.Channel:
-		thisProcess = object.(freesp.Channel).Process()
-	case freesp.Process:
-		thisProcess = object.(freesp.Process)
+	case freesp.ChannelIf:
+		thisProcess = object.(freesp.ChannelIf).Process()
+	case freesp.ProcessIf:
+		thisProcess = object.(freesp.ProcessIf)
 	default:
 		log.Fatalf("getOtherProcesses error: invalid type %T\n", object)
 	}
@@ -448,8 +448,8 @@ var inputHandling = map[inputElement]inputElementHandling{
 			var choices []string
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case freesp.Process:
-			case freesp.Channel:
+			case freesp.ProcessIf:
+			case freesp.ChannelIf:
 				object = fts.Object(fts.Parent(fts.Current()))
 			default:
 				return
@@ -515,11 +515,11 @@ var inputHandling = map[inputElement]inputElementHandling{
 		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
 			fts := dialog.fts
 			var choices []string
-			var melem freesp.MappedElement
+			var melem freesp.MappedElementIf
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case freesp.MappedElement:
-				melem = object.(freesp.MappedElement)
+			case freesp.MappedElementIf:
+				melem = object.(freesp.MappedElementIf)
 			default:
 				return
 			}

@@ -10,24 +10,24 @@ import (
 )
 
 type signalGraphType struct {
-	context                                  Context
-	libraries                                []Library
+	context                                  ContextIf
+	libraries                                []LibraryIf
 	nodes                                    nodeList
-	inputNodes, outputNodes, processingNodes []Node
+	inputNodes, outputNodes, processingNodes []NodeIf
 }
 
 /*
- *  freesp.SignalGraphType API
+ *  freesp.SignalGraphTypeIf API
  */
 
-var _ SignalGraphType = (*signalGraphType)(nil)
+var _ SignalGraphTypeIf = (*signalGraphType)(nil)
 var _ interfaces.GraphObject = (*signalGraphType)(nil)
 
-func SignalGraphTypeNew(context Context) *signalGraphType {
+func SignalGraphTypeNew(context ContextIf) *signalGraphType {
 	return &signalGraphType{context, nil, nodeListInit(), nil, nil, nil}
 }
 
-func SignalGraphTypeUsesNodeType(t SignalGraphType, nt NodeType) bool {
+func SignalGraphTypeUsesNodeType(t SignalGraphTypeIf, nt NodeTypeIf) bool {
 	for _, n := range t.Nodes() {
 		if n.ItsType().TypeName() == nt.TypeName() {
 			return true
@@ -43,7 +43,7 @@ func SignalGraphTypeUsesNodeType(t SignalGraphType, nt NodeType) bool {
 	return false
 }
 
-func SignalGraphTypeUsesSignalType(t SignalGraphType, st SignalType) bool {
+func SignalGraphTypeUsesSignalType(t SignalGraphTypeIf, st SignalType) bool {
 	for _, n := range t.Nodes() {
 		for _, p := range n.InPorts() {
 			if p.SignalType() == st {
@@ -66,7 +66,7 @@ func SignalGraphTypeUsesSignalType(t SignalGraphType, st SignalType) bool {
 	return false
 }
 
-func (t *signalGraphType) Nodes() []Node {
+func (t *signalGraphType) Nodes() []NodeIf {
 	return t.nodes.Nodes()
 }
 
@@ -74,7 +74,7 @@ func (t *signalGraphType) NodeObjects() []interfaces.NodeObject {
 	return t.nodes.Exports()
 }
 
-func (t *signalGraphType) NodeByName(name string) (n Node, ok bool) {
+func (t *signalGraphType) NodeByName(name string) (n NodeIf, ok bool) {
 	for _, n = range t.Nodes() {
 		if n.Name() == name {
 			ok = true
@@ -84,23 +84,23 @@ func (t *signalGraphType) NodeByName(name string) (n Node, ok bool) {
 	return
 }
 
-func (t *signalGraphType) Libraries() []Library {
+func (t *signalGraphType) Libraries() []LibraryIf {
 	return t.libraries
 }
 
-func (t *signalGraphType) InputNodes() []Node {
+func (t *signalGraphType) InputNodes() []NodeIf {
 	return t.inputNodes
 }
 
-func (t *signalGraphType) OutputNodes() []Node {
+func (t *signalGraphType) OutputNodes() []NodeIf {
 	return t.outputNodes
 }
 
-func (t *signalGraphType) ProcessingNodes() []Node {
+func (t *signalGraphType) ProcessingNodes() []NodeIf {
 	return t.processingNodes
 }
 
-func (t *signalGraphType) AddNode(n Node) error {
+func (t *signalGraphType) AddNode(n NodeIf) error {
 	nType := n.ItsType()
 	if !isAutoType(nType) {
 		libname := nType.DefinedAt()
@@ -118,7 +118,7 @@ func (t *signalGraphType) AddNode(n Node) error {
 	return t.addNode(n)
 }
 
-func (t *signalGraphType) RemoveNode(n Node) {
+func (t *signalGraphType) RemoveNode(n NodeIf) {
 	for _, p := range n.(*node).inPort.Ports() {
 		for _, c := range p.Connections() {
 			c.RemoveConnection(p)
@@ -131,7 +131,7 @@ func (t *signalGraphType) RemoveNode(n Node) {
 	n.ItsType().(*nodeType).removeInstance(n.(*node))
 }
 
-func (t *signalGraphType) Context() Context {
+func (t *signalGraphType) Context() ContextIf {
 	return t.context
 }
 
@@ -144,7 +144,7 @@ func (t *signalGraphType) containsLibRef(libname string) bool {
 	return false
 }
 
-func FindNode(list []Node, elem Node) (index int, ok bool) {
+func FindNode(list []NodeIf, elem NodeIf) (index int, ok bool) {
 	for index = 0; index < len(list); index++ {
 		if elem == list[index] {
 			break
@@ -154,7 +154,7 @@ func FindNode(list []Node, elem Node) (index int, ok bool) {
 	return
 }
 
-func RemNode(list *[]Node, elem Node) {
+func RemNode(list *[]NodeIf, elem NodeIf) {
 	index, ok := FindNode(*list, elem)
 	if !ok {
 		return
@@ -165,7 +165,7 @@ func RemNode(list *[]Node, elem Node) {
 	(*list) = (*list)[:len(*list)-1]
 }
 
-func (t *signalGraphType) addNode(n Node) error {
+func (t *signalGraphType) addNode(n NodeIf) error {
 	if len(n.InPorts()) > 0 {
 		if len(n.OutPorts()) > 0 {
 			t.processingNodes = append(t.processingNodes, n.(*node))
@@ -183,20 +183,20 @@ func (t *signalGraphType) addNode(n Node) error {
 	return nil
 }
 
-func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, context Context,
+func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, context ContextIf,
 	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (t *signalGraphType, err error) {
 	t = SignalGraphTypeNew(context)
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
 		if l == nil {
 			var f FileDataIf
-			var lib Library
+			var lib LibraryIf
 			f, err = t.context.LibraryMgr().Access(ref.Name)
 			if err != nil {
-				err = newSignalGraphError(fmt.Sprintf("signalGraph.Read: referenced library file %s not found", ref.Name))
+				err = fmt.Errorf("createSignalGraphTypeFromXml error: referenced library file %s not found", ref.Name)
 				return
 			}
-			lib = f.(Library)
+			lib = f.(LibraryIf)
 			l = lib.(*library)
 			libraries[ref.Name] = l
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
@@ -279,7 +279,7 @@ func createOutputNodeTypeName(name string) string {
 	return fmt.Sprintf("autoOutputNodeType-%s", name)
 }
 
-func isAutoType(nt NodeType) bool {
+func isAutoType(nt NodeTypeIf) bool {
 	if strings.HasPrefix(nt.TypeName(), "autoInputNodeType-") {
 		return true
 	}
@@ -408,7 +408,7 @@ func (g *signalGraphType) removeOutputNodeFromPortType(p PortType) {
 	}
 }
 
-func (g *signalGraphType) findInputNodeFromPortType(p PortType) Node {
+func (g *signalGraphType) findInputNodeFromPortType(p PortType) NodeIf {
 	for _, n := range g.InputNodes() {
 		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			return n
@@ -417,7 +417,7 @@ func (g *signalGraphType) findInputNodeFromPortType(p PortType) Node {
 	return nil
 }
 
-func (g *signalGraphType) findOutputNodeFromPortType(p PortType) Node {
+func (g *signalGraphType) findOutputNodeFromPortType(p PortType) NodeIf {
 	for _, n := range g.OutputNodes() {
 		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			return n
@@ -447,7 +447,7 @@ func (t *signalGraphType) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (t *signalGraphType) treeAddNewObject(tree Tree, cursor Cursor, n Node) (newCursor Cursor) {
+func (t *signalGraphType) treeAddNewObject(tree Tree, cursor Cursor, n NodeIf) (newCursor Cursor) {
 	newCursor = tree.Insert(cursor)
 	n.AddToTree(tree, newCursor)
 	return
@@ -455,9 +455,9 @@ func (t *signalGraphType) treeAddNewObject(tree Tree, cursor Cursor, n Node) (ne
 
 func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
-	case Node:
+	case NodeIf:
 		// TODO: Check if IO node and exists: copy position only and return
-		n := obj.(Node)
+		n := obj.(NodeIf)
 		err = t.AddNode(n)
 		if err != nil {
 			err = fmt.Errorf("signalGraphType.AddNewObject error: %s", err)
@@ -474,12 +474,12 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 
 		parent := tree.Object(cursor)
 		switch parent.(type) {
-		case SignalGraph:
-		case Implementation:
+		case SignalGraphIf:
+		case ImplementationIf:
 			// propagate new node to all instances of embracing type
 			pCursor := tree.Parent(cursor)
 			nt := tree.Object(pCursor)
-			for _, nn := range nt.(NodeType).Instances() {
+			for _, nn := range nt.(NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, parent)
 				tCursor.Position = cursor.Position
@@ -492,7 +492,7 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 
 	case Connection:
 		conn := obj.(Connection)
-		var n Node
+		var n NodeIf
 		var p Port
 		for _, n = range t.Nodes() {
 			if n.Name() == conn.From().Node().Name() {
@@ -514,8 +514,8 @@ func (t *signalGraphType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement
 func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case Node:
-		n := obj.(Node)
+	case NodeIf:
+		n := obj.(NodeIf)
 		// Remove all connections first
 		for _, p := range n.OutPorts() {
 			for _, c := range p.Connections() {
@@ -540,12 +540,12 @@ func (t *signalGraphType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWi
 		parentCursor := tree.Parent(cursor)
 		parent := tree.Object(parentCursor)
 		switch parent.(type) {
-		case SignalGraph:
-		case Implementation:
+		case SignalGraphIf:
+		case ImplementationIf:
 			// propagate new node to all instances of embracing type
 			pCursor := tree.Parent(parentCursor)
 			nt := tree.Object(pCursor)
-			for _, nn := range nt.(NodeType).Instances() {
+			for _, nn := range nt.(NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, parent)
 				tree.Remove(tree.CursorAt(tCursor, n))

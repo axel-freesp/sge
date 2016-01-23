@@ -101,9 +101,9 @@ func (v signalGraphView) IdentifyMapping(g interfaces.MappingObject) bool {
 	return false
 }
 
-/*
- *		Handle selection in treeview
- */
+//
+//		Handle selection in treeview
+//
 
 func (v *signalGraphView) Select(obj interfaces.GraphElement) {
 	switch obj.(type) {
@@ -176,9 +176,31 @@ func (v *signalGraphView) deselectConnects() {
 	}
 }
 
-/*
- *		ScaledScene interface
- */
+func (v *signalGraphView) Expand(obj interfaces.GraphElement) {
+	switch obj.(type) {
+	case interfaces.NodeObject:
+		n := v.findNode(obj.(interfaces.NodeObject).Name())
+		if n != nil {
+			n.Expand()
+		}
+	default:
+	}
+}
+
+func (v *signalGraphView) Collapse(obj interfaces.GraphElement) {
+	switch obj.(type) {
+	case interfaces.NodeObject:
+		n := v.findNode(obj.(interfaces.NodeObject).Name())
+		if n != nil {
+			n.Collapse()
+		}
+	default:
+	}
+}
+
+//
+//		ScaledScene interface
+//
 
 func (v *signalGraphView) Update() (width, height int) {
 	width = v.calcSceneWidth()
@@ -196,9 +218,9 @@ func (v *signalGraphView) calcSceneHeight() int {
 	return int(float64(v.bBox().Max.Y+50) * v.parent.Scale())
 }
 
-/*
- *		areaButtonCallback
- */
+//
+//		areaButtonCallback
+//
 
 func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, position image.Point) {
 	pos := v.parent.Position(position)
@@ -262,9 +284,9 @@ func (v *signalGraphView) handleConnectSelect(pos image.Point) {
 	}
 }
 
-/*
- *		areaMotionCallback
- */
+//
+//		areaMotionCallback
+//
 
 func (v *signalGraphView) MotionCallback(area DrawArea, position image.Point) {
 	pos := v.parent.Position(position)
@@ -305,9 +327,9 @@ func (v *signalGraphView) handleMouseover(pos image.Point) {
 	}
 }
 
-/*
- *		areaDrawCallback
- */
+//
+//		areaDrawCallback
+//
 
 func (v *signalGraphView) DrawCallback(area DrawArea, context *cairo.Context) {
 	context.Scale(v.parent.Scale(), v.parent.Scale())
@@ -339,9 +361,9 @@ func (v *signalGraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
 	}
 }
 
-/*
- *		Private functions
- */
+//
+//		Private functions
+//
 
 func (v *signalGraphView) findNode(name string) *graph.Node {
 	for _, d := range v.nodes {

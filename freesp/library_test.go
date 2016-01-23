@@ -20,7 +20,7 @@ func TestLibrary(t *testing.T) {
 
 	for i, c := range case1 {
 		Init()
-		var l Library = LibraryNew("test.alml", nil)
+		var l LibraryIf = LibraryNew("test.alml", nil)
 		buf := copyBuf(c.library)
 		err := l.Read(buf)
 		if err != nil {

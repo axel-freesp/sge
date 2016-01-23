@@ -50,7 +50,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 	state = j.objId
 	switch j.elemType {
 	case eNode:
-		n := obj.(freesp.Node)
+		n := obj.(freesp.NodeIf)
 		(*old)[iNodeName] = n.Name()
 		n.SetName((*detail)[iNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -61,7 +61,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eOutputNode:
-		n := obj.(freesp.Node)
+		n := obj.(freesp.NodeIf)
 		(*old)[iOutputNodeName] = n.Name()
 		n.SetName((*detail)[iOutputNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -69,7 +69,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eInputNode:
-		n := obj.(freesp.Node)
+		n := obj.(freesp.NodeIf)
 		(*old)[iInputNodeName] = n.Name()
 		n.SetName((*detail)[iInputNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -77,9 +77,9 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eNodeType:
-		nt := obj.(freesp.NodeType)
+		nt := obj.(freesp.NodeTypeIf)
 		if len(nt.Instances()) > 0 {
-			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeType %s has instances.\n", nt.TypeName())
+			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeTypeIf %s has instances.\n", nt.TypeName())
 			log.Printf("jobApplier.Apply(JobEdit): Editing is not implemented in this case.\n")
 			return
 		}
@@ -90,9 +90,9 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		pt := obj.(freesp.PortType)
 		ptCursor := fts.Cursor(pt)
 		ntCursor := fts.Parent(ptCursor)
-		nt := fts.Object(ntCursor).(freesp.NodeType)
+		nt := fts.Object(ntCursor).(freesp.NodeTypeIf)
 		if len(nt.Instances()) > 0 {
-			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeType %s has instances.\n", nt.TypeName())
+			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeTypeIf %s has instances.\n", nt.TypeName())
 			log.Printf("jobApplier.Apply(JobEdit): Editing is not implemented in this case.\n")
 			return
 		}
@@ -119,12 +119,12 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		(*old)[iSignalMode] = mode2string[st.Mode()]
 		st.SetMode(string2mode[(*detail)[iSignalMode]])
 	case eImplementation:
-		impl := obj.(freesp.Implementation)
+		impl := obj.(freesp.ImplementationIf)
 		(*old)[iImplName] = impl.ElementName()
 		impl.SetElemName((*detail)[iImplName])
 		fts.SetValueById(j.objId, (*detail)[iImplName])
 	case eArch:
-		a := obj.(freesp.Arch)
+		a := obj.(freesp.ArchIf)
 		(*old)[iArchName] = a.Name()
 		a.SetName((*detail)[iArchName])
 		for _, p := range a.Processes() {
@@ -141,7 +141,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		}
 		fts.SetValueById(j.objId, a.Name())
 	case eProcess:
-		p := obj.(freesp.Process)
+		p := obj.(freesp.ProcessIf)
 		(*old)[iProcessName] = p.Name()
 		p.SetName((*detail)[iProcessName])
 		for _, c := range p.InChannels() {
@@ -156,7 +156,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		}
 		fts.SetValueById(j.objId, p.Name())
 	case eIOType:
-		t := obj.(freesp.IOType)
+		t := obj.(freesp.IOTypeIf)
 		(*old)[iIOTypeName] = t.Name()
 		t.SetName((*detail)[iIOTypeName])
 		for _, a := range t.Platform().Arch() {
@@ -181,7 +181,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		t.SetIOMode(interfaces.IOMode((*detail)[iIOModeSelect]))
 		fts.SetValueById(j.objId, t.Name())
 	case eChannel:
-		c := obj.(freesp.Channel)
+		c := obj.(freesp.ChannelIf)
 		//(*old)[iChannelDirection] = direction2string[c.Direction()]
 		//c.SetDirection(string2direction[(*detail)[iChannelDirection]])
 		(*old)[iIOTypeSelect] = c.IOType().Name()
@@ -196,7 +196,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		id := fts.Cursor(link)
 		fts.SetValueById(id.Path, link.Name())
 	case eMapElement:
-		c := obj.(freesp.MappedElement)
+		c := obj.(freesp.MappedElementIf)
 		pr := c.Process()
 		if pr == nil {
 			(*old)[iProcessSelect] = "<unmapped>"

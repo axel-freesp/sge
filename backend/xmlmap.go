@@ -29,11 +29,12 @@ func XmlNodeMapNew(name, process string, x, y int) *XmlNodeMap {
 	return &XmlNodeMap{xml.Name{freespNamespace, "map-node"}, XmlMap{name, process, XmlHint{x, y}}}
 }
 
-func (m *XmlIOMap) Read(data []byte) (err error) {
+func (m *XmlIOMap) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, m)
 	if err != nil {
 		err = fmt.Errorf("XmlMap.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 
@@ -45,11 +46,12 @@ func (m *XmlIOMap) Write() (data []byte, err error) {
 	return
 }
 
-func (m *XmlNodeMap) Read(data []byte) (err error) {
+func (m *XmlNodeMap) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, m)
 	if err != nil {
 		err = fmt.Errorf("XmlMap.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

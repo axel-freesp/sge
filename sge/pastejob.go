@@ -43,35 +43,35 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 	var ok bool
 	var j *PasteJob
 	switch parent.(type) {
-	case freesp.SignalGraph:
-		j, ok = parseNode(text, context, parent.(freesp.SignalGraph).ItsType())
+	case freesp.SignalGraphIf:
+		j, ok = parseNode(text, context, parent.(freesp.SignalGraphIf).ItsType())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed Node\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.SignalGraphType:
-		j, ok = parseNode(text, context, parent.(freesp.SignalGraphType))
+	case freesp.SignalGraphTypeIf:
+		j, ok = parseNode(text, context, parent.(freesp.SignalGraphTypeIf))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed Node\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.Node:
-		j, ok = parseNode(text, getParentId(context), parent.(freesp.Node).Context())
+	case freesp.NodeIf:
+		j, ok = parseNode(text, getParentId(context), parent.(freesp.NodeIf).Context())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed Node\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.NodeType:
+	case freesp.NodeTypeIf:
 		j, ok = parseNodeType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeType\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed NodeTypeIf\n")
 			return
 		}
 
@@ -89,11 +89,11 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case freesp.Library:
+	case freesp.LibraryIf:
 		j, ok = parseNodeType(text, context)
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeType\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed NodeTypeIf\n")
 			return
 		}
 		j, ok = parseSignalType(text, context)
@@ -103,7 +103,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case freesp.Implementation:
+	case freesp.ImplementationIf:
 
 	default:
 		err = fmt.Errorf("NewElementJob.ParseText error: can't insert to context %T", parent)
@@ -114,9 +114,9 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 	return
 }
 
-func parseNode(text, context string, graph freesp.SignalGraphType) (job *PasteJob, ok bool) {
+func parseNode(text, context string, graph freesp.SignalGraphTypeIf) (job *PasteJob, ok bool) {
 	xmln := backend.XmlNode{}
-	xmlerr := xmln.Read([]byte(text))
+	_, xmlerr := xmln.Read([]byte(text))
 	if xmlerr != nil {
 		return
 	}
@@ -171,7 +171,7 @@ func parseNode(text, context string, graph freesp.SignalGraphType) (job *PasteJo
 
 func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 	xmlnt := backend.XmlNodeType{}
-	xmlerr := xmlnt.Read([]byte(text))
+	_, xmlerr := xmlnt.Read([]byte(text))
 	if xmlerr != nil {
 		return
 	}
@@ -312,7 +312,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 
 func parseSignalGraph(text, context string) (job *PasteJob, ok bool) {
 	xmlsg := backend.XmlSignalGraph{}
-	xmlerr := xmlsg.Read([]byte(text))
+	_, xmlerr := xmlsg.Read([]byte(text))
 	if xmlerr != nil {
 		return
 	}
@@ -381,7 +381,7 @@ func parseSignalType(text, context string) (job *PasteJob, ok bool) {
 		"":      "Asynchronous",
 	}
 	xmlst := backend.XmlSignalType{}
-	xmlerr := xmlst.Read([]byte(text))
+	_, xmlerr := xmlst.Read([]byte(text))
 	if xmlerr != nil {
 		return
 	}

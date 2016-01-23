@@ -17,11 +17,12 @@ func XmlProcessNew(name string) *XmlProcess {
 	return &XmlProcess{xml.Name{freespNamespace, "process"}, name, nil, nil, XmlModeHint{}}
 }
 
-func (p *XmlProcess) Read(data []byte) (err error) {
+func (p *XmlProcess) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, p)
 	if err != nil {
 		err = fmt.Errorf("XmlConnect.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

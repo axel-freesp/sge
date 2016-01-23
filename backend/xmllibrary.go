@@ -18,12 +18,13 @@ func XmlLibraryNew() *XmlLibrary {
 	return &XmlLibrary{xml.Name{freespNamespace, "library"}, "1.0", nil, nil, nil}
 }
 
-func (g *XmlLibrary) Read(data []byte) error {
-	err := xml.Unmarshal(data, g)
+func (g *XmlLibrary) Read(data []byte) (cnt int, err error) {
+	err = xml.Unmarshal(data, g)
 	if err != nil {
 		fmt.Printf("XmlLibrary.Read error: %v", err)
 	}
-	return err
+	cnt = len(data)
+	return
 }
 
 func (g *XmlLibrary) Write() (data []byte, err error) {
@@ -39,7 +40,7 @@ func (g *XmlLibrary) ReadFile(filepath string) error {
 	if err != nil {
 		return fmt.Errorf("XmlLibrary.ReadFile error: Failed to read file %s", filepath)
 	}
-	err = g.Read(data)
+	_, err = g.Read(data)
 	if err != nil {
 		return fmt.Errorf("XmlLibrary.ReadFile error: %v", err)
 	}

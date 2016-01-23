@@ -8,9 +8,9 @@ import (
 )
 
 type node struct {
-	context  SignalGraphType
+	context  SignalGraphTypeIf
 	name     string
-	nodetype NodeType
+	nodetype NodeTypeIf
 	inPort   portList
 	outPort  portList
 	portlink PortType
@@ -18,11 +18,11 @@ type node struct {
 }
 
 /*
- *  freesp.Node API
+ *  freesp.NodeIf API
  */
-var _ Node = (*node)(nil)
+var _ NodeIf = (*node)(nil)
 
-func NodeNew(name string, ntype NodeType, context SignalGraphType) (ret *node, err error) {
+func NodeNew(name string, ntype NodeTypeIf, context SignalGraphTypeIf) (ret *node, err error) {
 	for _, n := range context.Nodes() {
 		if n.Name() == name {
 			err = fmt.Errorf("NodeNew error: node '%s' already exists in context.", name)
@@ -44,7 +44,7 @@ func NodeNew(name string, ntype NodeType, context SignalGraphType) (ret *node, e
 	return
 }
 
-func InputNodeNew(name string, stypeName string, context SignalGraphType) (ret *node, err error) {
+func InputNodeNew(name string, stypeName string, context SignalGraphTypeIf) (ret *node, err error) {
 	st, ok := signalTypes[stypeName]
 	if !ok {
 		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
@@ -60,7 +60,7 @@ func InputNodeNew(name string, stypeName string, context SignalGraphType) (ret *
 	return NodeNew(name, nt, context)
 }
 
-func OutputNodeNew(name string, stypeName string, context SignalGraphType) (ret *node, err error) {
+func OutputNodeNew(name string, stypeName string, context SignalGraphTypeIf) (ret *node, err error) {
 	st, ok := signalTypes[stypeName]
 	if !ok {
 		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
@@ -76,7 +76,7 @@ func OutputNodeNew(name string, stypeName string, context SignalGraphType) (ret 
 	return NodeNew(name, nt, context)
 }
 
-func (n *node) ItsType() NodeType {
+func (n *node) ItsType() NodeTypeIf {
 	return n.nodetype
 }
 
@@ -96,7 +96,7 @@ func (n *node) GetOutPorts() []interfaces.PortObject {
 	return n.outPort.Exports()
 }
 
-func (n *node) Context() SignalGraphType {
+func (n *node) Context() SignalGraphTypeIf {
 	return n.context
 }
 
@@ -106,7 +106,7 @@ func (n *node) Context() SignalGraphType {
 var _ fmt.Stringer = (*node)(nil)
 
 func (n *node) String() (s string) {
-	s = fmt.Sprintf("Node(%s: %d inports, %d outports)",
+	s = fmt.Sprintf("NodeIf(%s: %d inports, %d outports)",
 		n.name, len(n.inPort.Ports()), len(n.outPort.Ports()))
 	return
 }
@@ -181,7 +181,7 @@ func (n *node) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		tree.Remove(cursor)
 
 	default:
-		log.Fatal("Node.RemoveObject error: invalid type %T", obj)
+		log.Fatal("NodeIf.RemoveObject error: invalid type %T", obj)
 	}
 	return
 }
@@ -201,7 +201,7 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 	switch {
 	case len(name) == 0:
 		if len(list) == 0 {
-			err = newSignalGraphError("no port found")
+			err = fmt.Errorf("portFromName: no port found (1)")
 			ret = nil
 			return
 		}
@@ -210,7 +210,7 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 			for _, l := range list {
 				listtext = fmt.Sprintf("%s(%v)\n", listtext, l)
 			}
-			err = newSignalGraphError(fmt.Sprintf("ambiguous port, list = %v", listtext))
+			err = fmt.Errorf("portFromName: ambiguous port, list = %v", listtext)
 			ret = nil
 			return
 		}
@@ -226,7 +226,7 @@ func portFromName(list []Port, name string) (ret Port, err error) {
 			}
 		}
 	}
-	err = newSignalGraphError("port not found")
+	err = fmt.Errorf("portFromName: no port found (2)")
 	ret = nil
 	return
 }
@@ -264,7 +264,7 @@ func isParentReadOnly(tree Tree, cursor Cursor) bool {
 	return tree.Property(parentId).IsReadOnly()
 }
 
-func IsProcessingNode(n Node) bool {
+func IsProcessingNode(n NodeIf) bool {
 	if len(n.InPorts()) == 0 {
 		return false
 	}
@@ -331,7 +331,7 @@ var _ interfaces.Porter = (*node)(nil)
  */
 
 type nodeList struct {
-	nodes   []Node
+	nodes   []NodeIf
 	exports []interfaces.NodeObject
 }
 
@@ -344,7 +344,7 @@ func (l *nodeList) Append(n *node) {
 	l.exports = append(l.exports, n)
 }
 
-func (l *nodeList) Remove(n Node) {
+func (l *nodeList) Remove(n NodeIf) {
 	var i int
 	for i = range l.nodes {
 		if n == l.nodes[i] {
@@ -353,9 +353,9 @@ func (l *nodeList) Remove(n Node) {
 	}
 	if i >= len(l.nodes) {
 		for _, v := range l.nodes {
-			log.Printf("nodeList.RemoveNode have Node %v\n", v)
+			log.Printf("nodeList.RemoveNode have NodeIf %v\n", v)
 		}
-		log.Fatalf("nodeList.RemoveNode error: Node %v not in this list\n", n)
+		log.Fatalf("nodeList.RemoveNode error: NodeIf %v not in this list\n", n)
 	}
 	for i++; i < len(l.nodes); i++ {
 		l.nodes[i-1] = l.nodes[i]
@@ -365,7 +365,7 @@ func (l *nodeList) Remove(n Node) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *nodeList) Nodes() []Node {
+func (l *nodeList) Nodes() []NodeIf {
 	return l.nodes
 }
 
@@ -373,9 +373,9 @@ func (l *nodeList) Exports() []interfaces.NodeObject {
 	return l.exports
 }
 
-func (l *nodeList) Find(node Node) (ok bool, index int) {
+func (l *nodeList) Find(node NodeIf) (ok bool, index int) {
 	ok = false
-	var n Node
+	var n NodeIf
 	for index, n = range l.nodes {
 		if n == node {
 			ok = true

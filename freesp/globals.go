@@ -22,7 +22,7 @@ func Init() {
 	registeredIOTypes = tool.StringListInit()
 }
 
-func RemoveRegisteredNodeType(nt NodeType) {
+func RemoveRegisteredNodeType(nt NodeTypeIf) {
 	name := nt.TypeName()
 	delete(nodeTypes, name)
 	_, ok := registeredNodeTypes.Find(name)
@@ -40,7 +40,7 @@ func RemoveRegisteredSignalType(st SignalType) {
 	}
 }
 
-func RemoveRegisteredIOType(iot IOType) {
+func RemoveRegisteredIOType(iot IOTypeIf) {
 	name := iot.Name()
 	delete(ioTypes, name)
 	_, ok := registeredIOTypes.Find(name)

@@ -23,8 +23,7 @@ type Context interface {
  * 	Graph user objects
  */
 
-type GraphElement interface {
-}
+type GraphElement interface{}
 
 type GraphObject interface {
 	NodeObjects() []NodeObject

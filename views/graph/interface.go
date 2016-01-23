@@ -13,6 +13,8 @@ type NodeIf interface {
 	interfaces.Porter
 	NamedBox
 	UserObj() interfaces.NodeObject
+	Expand()
+	Collapse()
 }
 
 type PortIf interface {

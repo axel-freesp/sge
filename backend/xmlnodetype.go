@@ -17,11 +17,12 @@ func XmlNodeTypeNew(name string) *XmlNodeType {
 	return &XmlNodeType{xml.Name{freespNamespace, "node-type"}, name, nil, nil, nil}
 }
 
-func (n *XmlNodeType) Read(data []byte) (err error) {
+func (n *XmlNodeType) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, n)
 	if err != nil {
 		err = fmt.Errorf("XmlNodeType.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

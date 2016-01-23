@@ -47,11 +47,12 @@ func (c *XmlInChannel) Write() (data []byte, err error) {
 	return
 }
 
-func (c *XmlOutChannel) Read(data []byte) (err error) {
+func (c *XmlOutChannel) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, c)
 	if err != nil {
 		err = fmt.Errorf("XmlConnect.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

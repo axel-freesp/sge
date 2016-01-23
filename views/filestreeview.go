@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -10,6 +11,8 @@ type FilesTreeView struct {
 	ScrolledView
 	view *gtk.TreeView
 }
+
+var _ freesp.TreeViewIf = (*FilesTreeView)(nil)
 
 func FilesTreeViewNew(model *models.FilesTreeStore, width, height int) (viewer *FilesTreeView, err error) {
 	v, err := ScrolledViewNew(width, height)
@@ -54,7 +57,7 @@ func (v *FilesTreeView) init(model *models.FilesTreeStore) error {
 	return nil
 }
 
-func (v *FilesTreeView) SetCursorNewId(newId string) (err error) {
+func (v *FilesTreeView) SelectId(newId string) (err error) {
 	path, err := gtk.TreePathNewFromString(newId)
 	if err != nil {
 		return

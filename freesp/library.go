@@ -10,18 +10,18 @@ type library struct {
 	filename    string
 	signalTypes signalTypeList
 	nodeTypes   nodeTypeList
-	context     Context
+	context     ContextIf
 }
 
-var _ Library = (*library)(nil)
+var _ LibraryIf = (*library)(nil)
 
-func LibraryNew(filename string, context Context) *library {
+func LibraryNew(filename string, context ContextIf) *library {
 	ret := &library{filename, signalTypeListInit(), nodeTypeListInit(), context}
 	libraries[filename] = ret
 	return ret
 }
 
-func LibraryUsesNodeType(l Library, nt NodeType) bool {
+func LibraryUsesNodeType(l LibraryIf, nt NodeTypeIf) bool {
 	for _, t := range l.NodeTypes() {
 		if t.TypeName() == nt.TypeName() {
 			return true
@@ -37,7 +37,7 @@ func LibraryUsesNodeType(l Library, nt NodeType) bool {
 	return false
 }
 
-func LibraryUsesSignalType(l Library, st SignalType) bool {
+func LibraryUsesSignalType(l LibraryIf, st SignalType) bool {
 	for _, t := range l.SignalTypes() {
 		if t.TypeName() == st.TypeName() {
 			return true
@@ -72,7 +72,7 @@ func (l library) SignalTypes() []SignalType {
 	return l.signalTypes.SignalTypes()
 }
 
-func (l library) NodeTypes() []NodeType {
+func (l library) NodeTypes() []NodeTypeIf {
 	return l.nodeTypes.NodeTypes()
 }
 
@@ -108,13 +108,15 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 	return nil
 }
 
-func (l *library) Read(data []byte) error {
+func (l *library) Read(data []byte) (cnt int, err error) {
 	xmllib := backend.XmlLibraryNew()
-	err := xmllib.Read(data)
+	cnt, err = xmllib.Read(data)
 	if err != nil {
-		return fmt.Errorf("library.Read: %v", err)
+		err = fmt.Errorf("library.Read: %v", err)
+		return
 	}
-	return l.createLibFromXml(xmllib)
+	err = l.createLibFromXml(xmllib)
+	return
 }
 
 func (l *library) ReadFile(filepath string) error {
@@ -137,12 +139,12 @@ func (l library) WriteFile(filepath string) error {
 	return xmllib.WriteFile(filepath)
 }
 
-func (l *library) Remove(tree Tree) {
+func (l *library) RemoveFromTree(tree Tree) {
 	tree.Remove(tree.Cursor(l))
 	delete(libraries, l.filename)
 }
 
-func (l *library) AddNodeType(t NodeType) error {
+func (l *library) AddNodeType(t NodeTypeIf) error {
 	nType, ok := nodeTypes[t.TypeName()]
 	if ok {
 		log.Printf(`library.AddNodeType: warning: adding existing node
@@ -163,7 +165,7 @@ func (l *library) AddNodeType(t NodeType) error {
 	return nil
 }
 
-func (l *library) RemoveNodeType(nt NodeType) {
+func (l *library) RemoveNodeType(nt NodeTypeIf) {
 	for _, n := range nt.(*nodeType).instances.Nodes() {
 		n.(*node).context.RemoveNode(n)
 	}
@@ -216,7 +218,7 @@ var _ TreeElement = (*library)(nil)
 func (l *library) AddToTree(tree Tree, cursor Cursor) {
 	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l, mayAddObject)
 	if err != nil {
-		log.Fatalf("Library.AddToTree error: AddEntry failed: %s\n", err)
+		log.Fatalf("LibraryIf.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	for _, t := range l.SignalTypes() {
 		child := tree.Append(cursor)
@@ -245,8 +247,8 @@ func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
 
-	case NodeType:
-		t := obj.(NodeType)
+	case NodeTypeIf:
+		t := obj.(NodeTypeIf)
 		err = l.AddNodeType(t)
 		if err != nil {
 			err = fmt.Errorf("library.AddNewObject error: AddNodeType failed: %s", err)
@@ -290,12 +292,12 @@ func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 		removed = append(removed, IdWithObject{prefix, index, obj})
 		l.RemoveSignalType(st)
 
-	case NodeType:
-		nt := tree.Object(cursor).(NodeType)
+	case NodeTypeIf:
+		nt := tree.Object(cursor).(NodeTypeIf)
 		log.Printf("library.RemoveObject: nt=%v\n", nt)
 		if len(nt.Instances()) > 0 {
 			log.Printf(`library.RemoveObject warning: The following nodes
-				are still instances of NodeType %s:\n`, nt.TypeName())
+				are still instances of NodeTypeIf %s:\n`, nt.TypeName())
 			for _, n := range nt.Instances() {
 				log.Printf("	%s\n", n.Name())
 			}

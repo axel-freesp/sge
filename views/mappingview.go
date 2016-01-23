@@ -258,6 +258,12 @@ func (v *mappingView) focusArchFromUserObject(obj interfaces.ArchObject) (ret gr
 	return
 }
 
+func (v *mappingView) Expand(obj interfaces.GraphElement) {
+}
+
+func (v *mappingView) Collapse(obj interfaces.GraphElement) {
+}
+
 //
 //		ScaledScene interface
 //

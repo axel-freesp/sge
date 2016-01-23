@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
-	"image"
 	"log"
 	"strings"
 )
@@ -13,14 +12,13 @@ type platform struct {
 	filename   string
 	platformId string
 	archlist   archList
-	shape      image.Point
 }
 
-var _ Platform = (*platform)(nil)
+var _ PlatformIf = (*platform)(nil)
 var _ interfaces.PlatformObject = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
-	return &platform{filename, "", archListInit(), image.Point{}}
+	return &platform{filename, "", archListInit()}
 }
 
 func (p *platform) PlatformId() string {
@@ -31,7 +29,7 @@ func (p *platform) SetPlatformId(newId string) {
 	p.platformId = newId
 }
 
-func (p *platform) Arch() []Arch {
+func (p *platform) Arch() []ArchIf {
 	return p.archlist.Archs()
 }
 
@@ -43,12 +41,12 @@ func (p *platform) PlatformObject() interfaces.PlatformObject {
 	return p
 }
 
-func (p *platform) ProcessByName(name string) (pr Process, ok bool) {
+func (p *platform) ProcessByName(name string) (pr ProcessIf, ok bool) {
 	parts := strings.Split(name, "/")
 	if len(parts) != 2 {
 		return
 	}
-	var a Arch
+	var a ArchIf
 	for _, a = range p.Arch() {
 		if a.Name() == parts[0] {
 			break
@@ -67,18 +65,6 @@ func (p *platform) ProcessByName(name string) (pr Process, ok bool) {
 }
 
 //
-//  Shaper API
-//
-
-func (p *platform) Shape() image.Point {
-	return p.shape
-}
-
-func (p *platform) SetShape(shape image.Point) {
-	p.shape = shape
-}
-
-//
 //  Filenamer API
 //
 
@@ -91,9 +77,9 @@ func (p *platform) SetFilename(newFilename string) {
 	// TODO
 }
 
-func (p *platform) Read(data []byte) (err error) {
+func (p *platform) Read(data []byte) (cnt int, err error) {
 	xmlp := backend.XmlPlatformNew()
-	err = xmlp.Read(data)
+	cnt, err = xmlp.Read(data)
 	if err != nil {
 		err = fmt.Errorf("platform.Read: %v", err)
 		return
@@ -134,9 +120,9 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					return
 				}
 				var ok bool
-				var aa Arch
-				var pp Process
-				var cc Channel
+				var aa ArchIf
+				var pp ProcessIf
+				var cc ChannelIf
 				aa, ok = p.archlist.Find(link[0])
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
@@ -162,9 +148,9 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					return
 				}
 				var ok bool
-				var aa Arch
-				var pp Process
-				var cc Channel
+				var aa ArchIf
+				var pp ProcessIf
+				var cc ChannelIf
 				aa, ok = p.archlist.Find(link[0])
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
@@ -185,7 +171,6 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 			}
 		}
 	}
-	p.shape = image.Point{xmlp.Shape.W, xmlp.Shape.H}
 	return
 }
 
@@ -201,7 +186,7 @@ func (p *platform) WriteFile(filepath string) (err error) {
 	return
 }
 
-func (p *platform) Remove(tree Tree) {
+func (p *platform) RemoveFromTree(tree Tree) {
 	tree.Remove(tree.Cursor(p))
 }
 
@@ -226,8 +211,8 @@ func (p *platform) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 		return
 	}
 	switch obj.(type) {
-	case Arch:
-		a := obj.(Arch)
+	case ArchIf:
+		a := obj.(ArchIf)
 		_, ok := p.archlist.Find(a.Name())
 		if ok {
 			err = fmt.Errorf("platform.AddNewObject warning: duplicate arch name %s (abort)\n", a.Name())
@@ -250,8 +235,8 @@ func (p *platform) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case Arch:
-		a := obj.(Arch)
+	case ArchIf:
+		a := obj.(ArchIf)
 		_, ok := p.archlist.Find(a.Name())
 		if ok {
 			p.archlist.Remove(a)

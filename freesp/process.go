@@ -13,17 +13,17 @@ type process struct {
 	name        string
 	inChannels  channelList
 	outChannels channelList
-	arch        Arch
+	arch        ArchIf
 	position    map[interfaces.PositionMode]image.Point
 }
 
-var _ Process = (*process)(nil)
+var _ ProcessIf = (*process)(nil)
 
-func ProcessNew(name string, arch Arch) *process {
+func ProcessNew(name string, arch ArchIf) *process {
 	return &process{name, channelListInit(), channelListInit(), arch, make(map[interfaces.PositionMode]image.Point)}
 }
 
-func createProcessFromXml(xmlp backend.XmlProcess, a Arch) (pr *process, err error) {
+func createProcessFromXml(xmlp backend.XmlProcess, a ArchIf) (pr *process, err error) {
 	pr = ProcessNew(xmlp.Name, a)
 	for _, xmlc := range xmlp.InputChannels {
 		var ch *channel
@@ -53,7 +53,7 @@ func createProcessFromXml(xmlp backend.XmlProcess, a Arch) (pr *process, err err
 	return
 }
 
-func (p process) Arch() Arch {
+func (p process) Arch() ArchIf {
 	return p.arch
 }
 
@@ -61,11 +61,11 @@ func (p process) ArchObject() interfaces.ArchObject {
 	return p.arch.(*arch)
 }
 
-func (p process) InChannels() []Channel {
+func (p process) InChannels() []ChannelIf {
 	return p.inChannels.Channels()
 }
 
-func (p process) OutChannels() []Channel {
+func (p process) OutChannels() []ChannelIf {
 	return p.outChannels.Channels()
 }
 
@@ -135,7 +135,7 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		return
 	}
 	switch obj.(type) {
-	case Channel:
+	case ChannelIf:
 		c := obj.(*channel)
 		c.process = p
 		cLinkText := c.linkText
@@ -150,7 +150,7 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 			err = fmt.Errorf("process.AddNewObject error: %v invalid link text %s: no such arch (abort)\n", p, c.linkText)
 			return
 		}
-		var pp Process
+		var pp ProcessIf
 		pp, ok = aa.(*arch).processes.Find(link[1])
 		if !ok {
 			err = fmt.Errorf("process.AddNewObject error: %v invalid link text %s: no such process (abort)\n", p, c.linkText)
@@ -224,8 +224,8 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case Channel:
-		c := obj.(Channel)
+	case ChannelIf:
+		c := obj.(ChannelIf)
 		cc := c.Link()
 		pp := cc.Process()
 		ppCursor := tree.Cursor(pp) // TODO. better search over platform...
@@ -257,7 +257,7 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
  */
 
 type processList struct {
-	processs []Process
+	processs []ProcessIf
 	exports  []interfaces.ProcessObject
 }
 
@@ -270,7 +270,7 @@ func (l *processList) Append(p *process) {
 	l.exports = append(l.exports, p)
 }
 
-func (l *processList) Remove(p Process) {
+func (l *processList) Remove(p ProcessIf) {
 	var i int
 	for i = range l.processs {
 		if p == l.processs[i] {
@@ -291,7 +291,7 @@ func (l *processList) Remove(p Process) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *processList) Processes() []Process {
+func (l *processList) Processes() []ProcessIf {
 	return l.processs
 }
 
@@ -299,7 +299,7 @@ func (l *processList) Exports() []interfaces.ProcessObject {
 	return l.exports
 }
 
-func (l *processList) Find(name string) (p Process, ok bool) {
+func (l *processList) Find(name string) (p ProcessIf, ok bool) {
 	for _, p = range l.processs {
 		if p.Name() == name {
 			ok = true

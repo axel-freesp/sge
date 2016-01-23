@@ -18,11 +18,12 @@ func XmlMappingNew(graph, platform string) *XmlMapping {
 	return &XmlMapping{xml.Name{freespNamespace, "mapping"}, graph, platform, nil, nil}
 }
 
-func (m *XmlMapping) Read(data []byte) (err error) {
+func (m *XmlMapping) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, m)
 	if err != nil {
 		err = fmt.Errorf("XmlMap.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 
@@ -39,7 +40,7 @@ func (m *XmlMapping) ReadFile(filepath string) error {
 	if err != nil {
 		return fmt.Errorf("XmlMapping.ReadFile error: Failed to read file %s", filepath)
 	}
-	err = m.Read(data)
+	_, err = m.Read(data)
 	if err != nil {
 		return fmt.Errorf("XmlMapping.ReadFile error: %v", err)
 	}

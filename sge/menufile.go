@@ -41,7 +41,7 @@ var allFileTypes = [4]FileType{
 
 var descriptionFileTypes = map[FileType]string{
 	FileTypeGraph: "Graph File (*.sml)",
-	FileTypeLib:   "Library File (*.alml)",
+	FileTypeLib:   "LibraryIf File (*.alml)",
 	FileTypePlat:  "Platform File (*.spml)",
 	FileTypeMap:   "Mapping File (*.mml)",
 }
@@ -52,13 +52,13 @@ func Suffix(obj freesp.ToplevelTreeElement) string {
 
 func fileType(obj freesp.ToplevelTreeElement) (ft FileType) {
 	switch obj.(type) {
-	case freesp.SignalGraph:
+	case freesp.SignalGraphIf:
 		ft = FileTypeGraph
-	case freesp.Library:
+	case freesp.LibraryIf:
 		ft = FileTypeLib
-	case freesp.Platform:
+	case freesp.PlatformIf:
 		ft = FileTypePlat
-	case freesp.Mapping:
+	case freesp.MappingIf:
 		ft = FileTypeMap
 	default:
 		log.Panicf("Suffix: invalid object type %T\n", obj)
@@ -208,13 +208,13 @@ func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
-	global.MappingMgr().SetGraphForNew(f.(freesp.SignalGraph))
+	global.MappingMgr().SetGraphForNew(f.(freesp.SignalGraphIf))
 	f, err = global.PlatformMgr().Access(dirMgr.FilenameToShow(pfname))
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
-	global.MappingMgr().SetPlatformForNew(f.(freesp.Platform))
+	global.MappingMgr().SetPlatformForNew(f.(freesp.PlatformIf))
 	_, err = global.MappingMgr().New()
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)

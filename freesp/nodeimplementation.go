@@ -9,12 +9,12 @@ import (
 type implementation struct {
 	implementationType ImplementationType
 	elementName        string
-	graph              SignalGraphType
+	graph              SignalGraphTypeIf
 }
 
-var _ Implementation = (*implementation)(nil)
+var _ ImplementationIf = (*implementation)(nil)
 
-func ImplementationNew(iName string, iType ImplementationType, context Context) *implementation {
+func ImplementationNew(iName string, iType ImplementationType, context ContextIf) *implementation {
 	ret := &implementation{iType, iName, nil}
 	if iType == NodeTypeGraph {
 		ret.graph = SignalGraphTypeNew(context)
@@ -34,7 +34,7 @@ func (n *implementation) SetElemName(newName string) {
 	n.elementName = newName
 }
 
-func (n *implementation) Graph() SignalGraphType {
+func (n *implementation) Graph() SignalGraphTypeIf {
 	return n.graph
 }
 
@@ -48,9 +48,9 @@ func (n *implementation) GraphObject() interfaces.GraphObject {
 
 func (n *implementation) String() string {
 	if n.implementationType == NodeTypeGraph {
-		return fmt.Sprintf("Implementation graph {\n%v\n}", n.graph)
+		return fmt.Sprintf("ImplementationIf graph {\n%v\n}", n.graph)
 	} else {
-		return fmt.Sprintf("Implementation module %s", n.elementName)
+		return fmt.Sprintf("ImplementationIf module %s", n.elementName)
 	}
 
 }
@@ -68,13 +68,13 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 	parentId := tree.Parent(tree.Parent(cursor))
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case Library:
+	case LibraryIf:
 		if impl.ImplementationType() == NodeTypeGraph {
 			prop = mayAddObject | mayRemove
 		} else {
 			prop = mayEdit | mayRemove | mayAddObject
 		}
-	case Node:
+	case NodeIf:
 		prop = 0
 	default:
 		log.Fatalf("implementation.AddToTree error: invalid parent type: %T\n", parent)
@@ -97,7 +97,7 @@ func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
 
 func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
 	switch obj.(type) {
-	case Node:
+	case NodeIf:
 		if impl.ImplementationType() == NodeTypeGraph {
 			return impl.Graph().AddNewObject(tree, cursor, obj)
 		} else {
@@ -124,7 +124,7 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case Node:
+	case NodeIf:
 		if impl.ImplementationType() == NodeTypeGraph {
 			log.Println("implementation.RemoveObject: delegate to signalGraphType\n")
 			return impl.Graph().RemoveObject(tree, cursor)
@@ -133,7 +133,7 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 		}
 		return
 
-		n := obj.(Node)
+		n := obj.(NodeIf)
 		if !IsProcessingNode(n) {
 			// Removed Input- and Output nodes are NOT stored (they are
 			// created automatically when adding the implementation graph).
@@ -172,18 +172,18 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
  */
 
 type implementationList struct {
-	implementations []Implementation
+	implementations []ImplementationIf
 }
 
 func implementationListInit() implementationList {
 	return implementationList{nil}
 }
 
-func (l *implementationList) Append(nt Implementation) {
+func (l *implementationList) Append(nt ImplementationIf) {
 	l.implementations = append(l.implementations, nt)
 }
 
-func (l *implementationList) Remove(nt Implementation) {
+func (l *implementationList) Remove(nt ImplementationIf) {
 	var i int
 	for i = range l.implementations {
 		if nt == l.implementations[i] {
@@ -192,9 +192,9 @@ func (l *implementationList) Remove(nt Implementation) {
 	}
 	if i >= len(l.implementations) {
 		for _, v := range l.implementations {
-			log.Printf("implementationList.RemoveImplementation have Implementation %v\n", v)
+			log.Printf("implementationList.RemoveImplementation have ImplementationIf %v\n", v)
 		}
-		log.Fatalf("implementationList.RemoveImplementation error: Implementation %v not in this list\n", nt)
+		log.Fatalf("implementationList.RemoveImplementation error: ImplementationIf %v not in this list\n", nt)
 	}
 	for i++; i < len(l.implementations); i++ {
 		l.implementations[i-1] = l.implementations[i]
@@ -202,6 +202,6 @@ func (l *implementationList) Remove(nt Implementation) {
 	l.implementations = l.implementations[:len(l.implementations)-1]
 }
 
-func (l *implementationList) Implementations() []Implementation {
+func (l *implementationList) Implementations() []ImplementationIf {
 	return l.implementations
 }

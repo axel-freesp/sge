@@ -17,11 +17,12 @@ func XmlArchNew(name string) *XmlArch {
 	return &XmlArch{xml.Name{freespNamespace, "arch"}, name, nil, nil, XmlModeHint{}}
 }
 
-func (a *XmlArch) Read(data []byte) (err error) {
+func (a *XmlArch) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, a)
 	if err != nil {
 		err = fmt.Errorf("XmlArch.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

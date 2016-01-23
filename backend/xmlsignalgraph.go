@@ -20,8 +20,10 @@ func XmlSignalGraphNew() *XmlSignalGraph {
 	return &XmlSignalGraph{xml.Name{freespNamespace, "signal-graph"}, "1.0", nil, nil, nil, nil, nil}
 }
 
-func (g *XmlSignalGraph) Read(data []byte) error {
-	return xml.Unmarshal(data, g)
+func (g *XmlSignalGraph) Read(data []byte) (cnt int, err error) {
+	err = xml.Unmarshal(data, g)
+	cnt = len(data)
+	return
 }
 
 func (g *XmlSignalGraph) Write() (data []byte, err error) {
@@ -37,7 +39,7 @@ func (g *XmlSignalGraph) ReadFile(filepath string) error {
 	if err != nil {
 		return fmt.Errorf("XmlSignalGraph.ReadFile error: Failed to read file %s", filepath)
 	}
-	err = g.Read(data)
+	_, err = g.Read(data)
 	if err != nil {
 		return fmt.Errorf("XmlSignalGraph.ReadFile error: %v", err)
 	}

@@ -18,12 +18,13 @@ func XmlSignalTypeNew(name, scope, mode, ctype, msgid string) *XmlSignalType {
 	return &XmlSignalType{xml.Name{freespNamespace, "signal-type"}, name, scope, mode, ctype, msgid}
 }
 
-func (t *XmlSignalType) Read(data []byte) error {
-	err := xml.Unmarshal(data, t)
+func (t *XmlSignalType) Read(data []byte) (cnt int, err error) {
+	err = xml.Unmarshal(data, t)
 	if err != nil {
 		fmt.Printf("XmlSignalType.Read error: %v", err)
 	}
-	return err
+	cnt = len(data)
+	return
 }
 
 func (t *XmlSignalType) Write() (data []byte, err error) {

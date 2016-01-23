@@ -11,13 +11,13 @@ type port struct {
 	itsType   PortType
 	connected portList
 	conn      []Connection
-	node      Node
+	node      NodeIf
 }
 
 var _ interfaces.PortObject = (*port)(nil)
 
 // TODO: Create namedPortType object first and hand it here?
-func newPort(pt PortType, n Node) *port {
+func newPort(pt PortType, n NodeIf) *port {
 	return &port{pt, portListInit(), nil, n}
 }
 
@@ -29,7 +29,7 @@ func newPort(pt PortType, n Node) *port {
  *  	ItsType() PortType
  *  	Direction() PortDirection
  *  	Connections() []Port
- *  	Node() Node
+ *  	NodeIf() NodeIf
  *      Connection(c *port) Connection
  *  	AddConnection(Port) error
  *  	RemoveConnection(c Port)
@@ -67,7 +67,7 @@ func (p *port) ConnectionObjects() []interfaces.PortObject {
 	return p.connected.Exports()
 }
 
-func (p *port) Node() Node {
+func (p *port) Node() NodeIf {
 	return p.node
 }
 
@@ -209,11 +209,11 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraph:
-		case Implementation:
+		case SignalGraphIf:
+		case ImplementationIf:
 			// propagate new edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
-			for _, nn := range nt.(NodeType).Instances() {
+			for _, nn := range nt.(NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, context)
 				pCursor := tree.CursorAt(tCursor, p)
@@ -269,11 +269,11 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		removed = p.treeRemoveObject(tree, cursor, conn, otherPort)
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraph:
-		case Implementation:
+		case SignalGraphIf:
+		case ImplementationIf:
 			// propagate removed edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
-			for _, nn := range nt.(NodeType).Instances() {
+			for _, nn := range nt.(NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, context)
 				pCursor := tree.CursorAt(tCursor, p)

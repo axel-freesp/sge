@@ -30,11 +30,12 @@ type XmlProcessingNode struct {
 	XmlNode
 }
 
-func (n *XmlNode) Read(data []byte) (err error) {
+func (n *XmlNode) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, n)
 	if err != nil {
 		err = fmt.Errorf("XmlNode.Read error: %v", err)
 	}
+	cnt = len(data)
 	return
 }
 

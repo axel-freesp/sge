@@ -4,7 +4,7 @@ import (
 	interfaces "github.com/axel-freesp/sge/interface"
 )
 
-type Context interface {
+type ContextIf interface {
 	SignalGraphMgr() FileManagerIf
 	LibraryMgr() FileManagerIf
 	PlatformMgr() FileManagerIf
@@ -20,64 +20,64 @@ type FileManagerIf interface {
 
 type FileManagerMappingIf interface {
 	FileManagerIf
-	SetGraphForNew(g SignalGraph)
-	SetPlatformForNew(p Platform)
+	SetGraphForNew(g SignalGraphIf)
+	SetPlatformForNew(p PlatformIf)
 }
 
 /*
  *  Behaviour Model
  */
 
-type SignalGraphType interface {
-	TreeElement
-	Libraries() []Library
-	Nodes() []Node
-	NodeByName(string) (Node, bool)
-	InputNodes() []Node
-	OutputNodes() []Node
-	ProcessingNodes() []Node
-	AddNode(Node) error
-	RemoveNode(n Node)
-	Context() Context
-}
-
-type SignalGraph interface {
+type SignalGraphIf interface {
 	ToplevelTreeElement
-	ItsType() SignalGraphType
+	ItsType() SignalGraphTypeIf
 	GraphObject() interfaces.GraphObject
 }
 
-type Library interface {
+type SignalGraphTypeIf interface {
+	TreeElement
+	Libraries() []LibraryIf
+	Nodes() []NodeIf
+	NodeByName(string) (NodeIf, bool)
+	InputNodes() []NodeIf
+	OutputNodes() []NodeIf
+	ProcessingNodes() []NodeIf
+	AddNode(NodeIf) error
+	RemoveNode(n NodeIf)
+	Context() ContextIf
+}
+
+type LibraryIf interface {
 	ToplevelTreeElement
 	SignalTypes() []SignalType
-	NodeTypes() []NodeType
-	AddNodeType(NodeType) error
-	RemoveNodeType(t NodeType)
+	NodeTypes() []NodeTypeIf
+	AddNodeType(NodeTypeIf) error
+	RemoveNodeType(t NodeTypeIf)
 	AddSignalType(SignalType) bool
 	RemoveSignalType(t SignalType)
 }
 
-type NodeType interface {
+type NodeTypeIf interface {
 	TreeElement
 	TypeName() string
 	SetTypeName(string)
 	DefinedAt() string
 	InPorts() []PortType
 	OutPorts() []PortType
-	Implementation() []Implementation
-	Instances() []Node
+	Implementation() []ImplementationIf
+	Instances() []NodeIf
 	AddNamedPortType(PortType)
 	RemoveNamedPortType(PortType)
-	AddImplementation(Implementation)
-	RemoveImplementation(Implementation)
+	AddImplementation(ImplementationIf)
+	RemoveImplementation(ImplementationIf)
 }
 
-type Implementation interface {
+type ImplementationIf interface {
 	TreeElement
 	ImplementationType() ImplementationType
 	ElementName() string
 	SetElemName(string)
-	Graph() SignalGraphType
+	Graph() SignalGraphTypeIf
 	GraphObject() interfaces.GraphObject
 }
 
@@ -88,15 +88,14 @@ const (
 	NodeTypeGraph   ImplementationType = 1
 )
 
-type Node interface {
-	TreeElement
-	interfaces.Namer
+type NodeIf interface {
+	NamedTreeElementIf
 	interfaces.Positioner
 	interfaces.Porter
-	ItsType() NodeType
+	ItsType() NodeTypeIf
 	InPorts() []Port
 	OutPorts() []Port
-	Context() SignalGraphType
+	Context() SignalGraphTypeIf
 }
 
 type Scope int
@@ -127,8 +126,7 @@ type SignalType interface {
 }
 
 type PortType interface {
-	TreeElement
-	interfaces.Namer
+	NamedTreeElementIf
 	interfaces.Directioner
 	SignalType() SignalType
 	SetSignalType(SignalType)
@@ -140,7 +138,7 @@ type Port interface {
 	Name() string
 	SignalType() SignalType
 	Connections() []Port
-	Node() Node
+	Node() NodeIf
 	Connection(Port) Connection
 	AddConnection(Connection) error
 	RemoveConnection(c Port)
@@ -161,7 +159,7 @@ func GetRegisteredSignalTypes() []string {
 	return registeredSignalTypes.Strings()
 }
 
-func GetNodeTypeByName(typeName string) (nType NodeType, ok bool) {
+func GetNodeTypeByName(typeName string) (nType NodeTypeIf, ok bool) {
 	nType, ok = nodeTypes[typeName]
 	return
 }
@@ -172,97 +170,79 @@ func GetSignalTypeByName(typeName string) (sType SignalType, ok bool) {
 }
 
 /*
- *  Platform Model
+ *  PlatformIf Model
  */
 
-type Platform interface {
+type PlatformIf interface {
 	ToplevelTreeElement
-	interfaces.Shaper
 	PlatformId() string
 	SetPlatformId(string)
-	ProcessByName(string) (Process, bool)
-	Arch() []Arch
+	ProcessByName(string) (ProcessIf, bool)
+	Arch() []ArchIf
 	PlatformObject() interfaces.PlatformObject
 }
 
-type Arch interface {
-	TreeElement
-	interfaces.Namer
+type ArchIf interface {
+	NamedTreeElementIf
 	interfaces.ModePositioner
-	Platform() Platform
-	IOTypes() []IOType
-	Processes() []Process
+	Platform() PlatformIf
+	IOTypes() []IOTypeIf
+	Processes() []ProcessIf
 }
 
-type IOType interface {
-	TreeElement
-	interfaces.Namer
+type IOTypeIf interface {
+	NamedTreeElementIf
 	interfaces.IOModer
-	Platform() Platform
+	Platform() PlatformIf
 }
 
-type Process interface {
-	TreeElement
-	interfaces.Namer
+type ProcessIf interface {
+	NamedTreeElementIf
 	interfaces.ModePositioner
-	Arch() Arch
-	InChannels() []Channel
-	OutChannels() []Channel
+	Arch() ArchIf
+	InChannels() []ChannelIf
+	OutChannels() []ChannelIf
 }
 
-type Channel interface {
-	TreeElement
-	interfaces.Namer
+type ChannelIf interface {
+	NamedTreeElementIf
 	interfaces.Directioner
 	interfaces.ModePositioner
-	Process() Process
-	IOType() IOType
-	SetIOType(IOType)
-	Link() Channel
+	Process() ProcessIf
+	IOType() IOTypeIf
+	SetIOType(IOTypeIf)
+	Link() ChannelIf
 }
 
-type Mapping interface {
+type MappingIf interface {
 	ToplevelTreeElement
 	MappingObject() interfaces.MappingObject
-	AddMapping(n Node, p Process)
-	SetGraph(SignalGraph)
-	Graph() SignalGraph
-	SetPlatform(Platform)
-	Platform() Platform
-	Mapped(Node) (Process, bool)
+	AddMapping(n NodeIf, p ProcessIf)
+	SetGraph(SignalGraphIf)
+	Graph() SignalGraphIf
+	SetPlatform(PlatformIf)
+	Platform() PlatformIf
+	Mapped(NodeIf) (ProcessIf, bool)
 }
 
-type MappedElement interface {
+type MappedElementIf interface {
 	TreeElement
-	Mapping() Mapping
-	Node() Node
-	Process() Process
-	SetProcess(Process)
+	Mapping() MappingIf
+	Node() NodeIf
+	Process() ProcessIf
+	SetProcess(ProcessIf)
 }
 
 func GetRegisteredIOTypes() []string {
 	return registeredIOTypes.Strings()
 }
 
-func GetIOTypeByName(name string) (ioType IOType, ok bool) {
+func GetIOTypeByName(name string) (ioType IOTypeIf, ok bool) {
 	ioType, ok = ioTypes[name]
 	return
 }
 
-type Filenamer interface {
-	Filename() string
-	SetFilename(string)
-}
-
-type Remover interface {
-	Remove(Tree)
-}
-
-type FileDataIf interface {
-	Filenamer
-	Remover
-	Read(data []byte) error
-	ReadFile(filepath string) error
-	Write() (data []byte, err error)
-	WriteFile(filepath string) error
+type NamedTreeElementIf interface {
+	TreeElement
+	interfaces.Namer
 }

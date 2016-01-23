@@ -37,23 +37,23 @@ func TestGraph(t *testing.T) {
 
 	for i, c := range case1 {
 		Init()
-		var l Library = LibraryNew("test.alml", nil)
+		var l LibraryIf = LibraryNew("test.alml", nil)
 		buf := copyBuf(c.library)
 		err := l.Read(buf)
 		if err != nil {
 			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
 			return
 		}
-		var sg SignalGraph = SignalGraphNew("test.sml", nil)
+		var sg SignalGraphIf = SignalGraphNew("test.sml", nil)
 		buf = copyBuf(c.graph)
 		err = sg.Read(buf)
 		if err != nil {
 			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
 			return
 		}
-		var st SignalGraphType = sg.ItsType()
+		var st SignalGraphTypeIf = sg.ItsType()
 		if len(st.Nodes()) != c.nodes {
-			t.Errorf("Testcase %d: Node count mismatch", i)
+			t.Errorf("Testcase %d: NodeIf count mismatch", i)
 			return
 		}
 	}

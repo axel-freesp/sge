@@ -39,7 +39,7 @@ type Element struct {
 type FilesTreeStore struct {
 	treestore        *gtk.TreeStore
 	lookup           map[string]Element
-	libs             map[string]freesp.Library
+	libs             map[string]freesp.LibraryIf
 	currentSelection *gtk.TreeIter
 }
 
@@ -57,7 +57,7 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		return
 	}
 	ret = &FilesTreeStore{ts, make(map[string]Element),
-		make(map[string]freesp.Library),
+		make(map[string]freesp.LibraryIf),
 		nil}
 	err = nil
 	return
@@ -143,30 +143,9 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret freesp.TreeElement, 
 	return
 }
 
-func (s *FilesTreeStore) AddSignalGraphFile(graph freesp.SignalGraph) (newId string, err error) {
+func (s *FilesTreeStore) AddToplevel(obj freesp.ToplevelTreeElement) (newId string, err error) {
 	cursor := s.Append(rootCursor)
-	graph.AddToTree(s, cursor)
-	newId = cursor.Path
-	return
-}
-
-func (s *FilesTreeStore) AddLibraryFile(lib freesp.Library) (newId string, err error) {
-	cursor := s.Append(rootCursor)
-	lib.AddToTree(s, cursor)
-	newId = cursor.Path
-	return
-}
-
-func (s *FilesTreeStore) AddPlatformFile(plat freesp.Platform) (newId string, err error) {
-	cursor := s.Append(rootCursor)
-	plat.AddToTree(s, cursor)
-	newId = cursor.Path
-	return
-}
-
-func (s *FilesTreeStore) AddMappingFile(m freesp.Mapping) (newId string, err error) {
-	cursor := s.Append(rootCursor)
-	m.AddToTree(s, cursor)
+	obj.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
@@ -182,7 +161,7 @@ func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj free
 	return
 }
 
-// Root elements cannot be deleted. They need to be removed (e.g file->close)
+// Root elements cannot be deleted. They need to be removed with RemoveToplevel
 func (tree *FilesTreeStore) DeleteObject(id string) (deleted []freesp.IdWithObject, err error) {
 	li := strings.LastIndex(id, ":")
 	if li < 0 {
@@ -213,7 +192,24 @@ func (tree *FilesTreeStore) RemoveToplevel(id string) (deleted []freesp.IdWithOb
 	if err != nil {
 		return
 	}
-	obj.(freesp.Remover).Remove(tree)
+	obj.(freesp.ToplevelTreeElement).RemoveFromTree(tree)
+	return
+}
+
+func (tree *FilesTreeStore) GetToplevelId(obj freesp.ToplevelTreeElement) (id string, err error) {
+	var o Element
+	ok := false
+	for i := 0; !ok; i++ {
+		path := fmt.Sprintf("%d", i)
+		o, ok = tree.lookup[path]
+		if !ok {
+			break
+		} else if o.elem == obj {
+			id = path
+			return
+		}
+	}
+	err = fmt.Errorf("FilesTreeStore.GetToplevelId error: obj not found\n")
 	return
 }
 

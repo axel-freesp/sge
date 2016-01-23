@@ -22,13 +22,13 @@ var ioXmlModeMap = map[interfaces.IOMode]backend.XmlIOMode{
 type iotype struct {
 	name     string
 	mode     interfaces.IOMode
-	platform Platform
+	platform PlatformIf
 }
 
-var _ IOType = (*iotype)(nil)
+var _ IOTypeIf = (*iotype)(nil)
 var _ interfaces.IOTypeObject = (*iotype)(nil)
 
-func IOTypeNew(name string, mode interfaces.IOMode, platform Platform) (t *iotype, err error) {
+func IOTypeNew(name string, mode interfaces.IOMode, platform PlatformIf) (t *iotype, err error) {
 	newT := &iotype{name, mode, platform}
 	ioType := ioTypes[name]
 	if ioType != nil {
@@ -54,7 +54,7 @@ func (t *iotype) SetIOMode(newMode interfaces.IOMode) {
 	t.mode = newMode
 }
 
-func (t *iotype) Platform() Platform {
+func (t *iotype) Platform() PlatformIf {
 	return t.platform
 }
 
@@ -112,7 +112,7 @@ func (t *iotype) Identify(te TreeElement) bool {
 //
 
 type ioTypeList struct {
-	ioTypes []IOType
+	ioTypes []IOTypeIf
 	exports []interfaces.IOTypeObject
 }
 
@@ -125,7 +125,7 @@ func (l *ioTypeList) Append(st *iotype) {
 	l.exports = append(l.exports, st)
 }
 
-func (l *ioTypeList) Remove(st IOType) {
+func (l *ioTypeList) Remove(st IOTypeIf) {
 	var i int
 	for i = range l.ioTypes {
 		if st == l.ioTypes[i] {
@@ -146,7 +146,7 @@ func (l *ioTypeList) Remove(st IOType) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *ioTypeList) IoTypes() []IOType {
+func (l *ioTypeList) IoTypes() []IOTypeIf {
 	return l.ioTypes
 }
 
@@ -154,7 +154,7 @@ func (l *ioTypeList) Exports() []interfaces.IOTypeObject {
 	return l.exports
 }
 
-func (l *ioTypeList) Find(name string) (t IOType, ok bool) {
+func (l *ioTypeList) Find(name string) (t IOTypeIf, ok bool) {
 	for _, t = range l.ioTypes {
 		if t.Name() == name {
 			ok = true

@@ -3,26 +3,29 @@ package freesp
 import (
 	"fmt"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
 type implementation struct {
-	implementationType ImplementationType
+	implementationType bh.ImplementationType
 	elementName        string
-	graph              SignalGraphTypeIf
+	graph              bh.SignalGraphTypeIf
 }
 
-var _ ImplementationIf = (*implementation)(nil)
+var _ bh.ImplementationIf = (*implementation)(nil)
 
-func ImplementationNew(iName string, iType ImplementationType, context ContextIf) *implementation {
+func ImplementationNew(iName string, iType bh.ImplementationType, context mod.ModelContextIf) *implementation {
 	ret := &implementation{iType, iName, nil}
-	if iType == NodeTypeGraph {
+	if iType == bh.NodeTypeGraph {
 		ret.graph = SignalGraphTypeNew(context)
 	}
 	return ret
 }
 
-func (n *implementation) ImplementationType() ImplementationType {
+func (n *implementation) ImplementationType() bh.ImplementationType {
 	return n.implementationType
 }
 
@@ -34,7 +37,7 @@ func (n *implementation) SetElemName(newName string) {
 	n.elementName = newName
 }
 
-func (n *implementation) Graph() SignalGraphTypeIf {
+func (n *implementation) Graph() bh.SignalGraphTypeIf {
 	return n.graph
 }
 
@@ -47,65 +50,65 @@ func (n *implementation) GraphObject() interfaces.GraphObject {
  */
 
 func (n *implementation) String() string {
-	if n.implementationType == NodeTypeGraph {
-		return fmt.Sprintf("ImplementationIf graph {\n%v\n}", n.graph)
+	if n.implementationType == bh.NodeTypeGraph {
+		return fmt.Sprintf("bh.ImplementationIf graph {\n%v\n}", n.graph)
 	} else {
-		return fmt.Sprintf("ImplementationIf module %s", n.elementName)
+		return fmt.Sprintf("bh.ImplementationIf module %s", n.elementName)
 	}
 
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-var _ TreeElement = (*implementation)(nil)
+var _ tr.TreeElement = (*implementation)(nil)
 
-func (impl *implementation) AddToTree(tree Tree, cursor Cursor) {
-	var image Symbol
+func (impl *implementation) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	var image tr.Symbol
 	var text string
 	var prop property
 	parentId := tree.Parent(tree.Parent(cursor))
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case LibraryIf:
-		if impl.ImplementationType() == NodeTypeGraph {
-			prop = mayAddObject | mayRemove
+	case bh.LibraryIf:
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			prop = MayAddObject | MayRemove
 		} else {
-			prop = mayEdit | mayRemove | mayAddObject
+			prop = MayEdit | MayRemove | MayAddObject
 		}
-	case NodeIf:
+	case bh.NodeIf:
 		prop = 0
 	default:
 		log.Fatalf("implementation.AddToTree error: invalid parent type: %T\n", parent)
 	}
-	if impl.ImplementationType() == NodeTypeGraph {
-		image = SymbolImplGraph
+	if impl.ImplementationType() == bh.NodeTypeGraph {
+		image = tr.SymbolImplGraph
 		text = "Graph"
 	} else {
-		image = SymbolImplElement
+		image = tr.SymbolImplElement
 		text = impl.ElementName()
 	}
 	err := tree.AddEntry(cursor, image, text, impl, prop)
 	if err != nil {
 		log.Fatalf("implementation.AddToTree error: AddEntry failed: %s\n", err)
 	}
-	if impl.ImplementationType() == NodeTypeGraph {
+	if impl.ImplementationType() == bh.NodeTypeGraph {
 		impl.Graph().AddToTree(tree, cursor)
 	}
 }
 
-func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (impl *implementation) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
-	case NodeIf:
-		if impl.ImplementationType() == NodeTypeGraph {
+	case bh.NodeIf:
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			return impl.Graph().AddNewObject(tree, cursor, obj)
 		} else {
 			log.Fatalf("implementation.AddNewObject error: cannot add node to elementary implementation.\n")
 		}
 
-	case Connection:
-		if impl.ImplementationType() == NodeTypeGraph {
+	case bh.Connection:
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			return impl.Graph().AddNewObject(tree, cursor, obj)
 		} else {
 			log.Fatalf("implementation.AddNewObject error: cannot add connection to elementary implementation.\n")
@@ -117,15 +120,15 @@ func (impl *implementation) AddNewObject(tree Tree, cursor Cursor, obj TreeEleme
 	return
 }
 
-func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (impl *implementation) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if impl != tree.Object(parent) {
 		log.Fatal("implementation.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case NodeIf:
-		if impl.ImplementationType() == NodeTypeGraph {
+	case bh.NodeIf:
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			log.Println("implementation.RemoveObject: delegate to signalGraphType\n")
 			return impl.Graph().RemoveObject(tree, cursor)
 		} else {
@@ -133,7 +136,7 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 		}
 		return
 
-		n := obj.(NodeIf)
+		n := obj.(bh.NodeIf)
 		if !IsProcessingNode(n) {
 			// Removed Input- and Output nodes are NOT stored (they are
 			// created automatically when adding the implementation graph).
@@ -146,18 +149,18 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
 			pCursor := tree.CursorAt(cursor, p)
 			for index, c := range p.Connections() {
 				conn := p.Connection(c)
-				removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+				removed = append(removed, tr.IdWithObject{pCursor.Path, index, conn})
 			}
 		}
 		for _, p := range n.InPorts() {
 			pCursor := tree.CursorAt(cursor, p)
 			for index, c := range p.Connections() {
 				conn := p.Connection(c)
-				removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+				removed = append(removed, tr.IdWithObject{pCursor.Path, index, conn})
 			}
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, obj})
+		removed = append(removed, tr.IdWithObject{prefix, index, obj})
 		impl.Graph().RemoveNode(n)
 
 	default:
@@ -172,18 +175,18 @@ func (impl *implementation) RemoveObject(tree Tree, cursor Cursor) (removed []Id
  */
 
 type implementationList struct {
-	implementations []ImplementationIf
+	implementations []bh.ImplementationIf
 }
 
 func implementationListInit() implementationList {
 	return implementationList{nil}
 }
 
-func (l *implementationList) Append(nt ImplementationIf) {
+func (l *implementationList) Append(nt bh.ImplementationIf) {
 	l.implementations = append(l.implementations, nt)
 }
 
-func (l *implementationList) Remove(nt ImplementationIf) {
+func (l *implementationList) Remove(nt bh.ImplementationIf) {
 	var i int
 	for i = range l.implementations {
 		if nt == l.implementations[i] {
@@ -192,9 +195,9 @@ func (l *implementationList) Remove(nt ImplementationIf) {
 	}
 	if i >= len(l.implementations) {
 		for _, v := range l.implementations {
-			log.Printf("implementationList.RemoveImplementation have ImplementationIf %v\n", v)
+			log.Printf("implementationList.RemoveImplementation have bh.ImplementationIf %v\n", v)
 		}
-		log.Fatalf("implementationList.RemoveImplementation error: ImplementationIf %v not in this list\n", nt)
+		log.Fatalf("implementationList.RemoveImplementation error: bh.ImplementationIf %v not in this list\n", nt)
 	}
 	for i++; i < len(l.implementations); i++ {
 		l.implementations[i-1] = l.implementations[i]
@@ -202,6 +205,6 @@ func (l *implementationList) Remove(nt ImplementationIf) {
 	l.implementations = l.implementations[:len(l.implementations)-1]
 }
 
-func (l *implementationList) Implementations() []ImplementationIf {
+func (l *implementationList) Implementations() []bh.ImplementationIf {
 	return l.implementations
 }

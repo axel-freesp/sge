@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 	"strings"
@@ -13,17 +15,17 @@ type process struct {
 	name        string
 	inChannels  channelList
 	outChannels channelList
-	arch        ArchIf
+	arch        pf.ArchIf
 	position    map[interfaces.PositionMode]image.Point
 }
 
-var _ ProcessIf = (*process)(nil)
+var _ pf.ProcessIf = (*process)(nil)
 
-func ProcessNew(name string, arch ArchIf) *process {
+func ProcessNew(name string, arch pf.ArchIf) *process {
 	return &process{name, channelListInit(), channelListInit(), arch, make(map[interfaces.PositionMode]image.Point)}
 }
 
-func createProcessFromXml(xmlp backend.XmlProcess, a ArchIf) (pr *process, err error) {
+func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, err error) {
 	pr = ProcessNew(xmlp.Name, a)
 	for _, xmlc := range xmlp.InputChannels {
 		var ch *channel
@@ -42,7 +44,7 @@ func createProcessFromXml(xmlp backend.XmlProcess, a ArchIf) (pr *process, err e
 		pr.outChannels.Append(ch)
 	}
 	for _, xmlh := range xmlp.Entry {
-		mode, ok := modeFromString[xmlh.Mode]
+		mode, ok := ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("createProcessFromXml Warning: hint mode %s not defined\n",
 				xmlh.Mode)
@@ -53,7 +55,7 @@ func createProcessFromXml(xmlp backend.XmlProcess, a ArchIf) (pr *process, err e
 	return
 }
 
-func (p process) Arch() ArchIf {
+func (p process) Arch() pf.ArchIf {
 	return p.arch
 }
 
@@ -61,11 +63,11 @@ func (p process) ArchObject() interfaces.ArchObject {
 	return p.arch.(*arch)
 }
 
-func (p process) InChannels() []ChannelIf {
+func (p process) InChannels() []pf.ChannelIf {
 	return p.inChannels.Channels()
 }
 
-func (p process) OutChannels() []ChannelIf {
+func (p process) OutChannels() []pf.ChannelIf {
 	return p.outChannels.Channels()
 }
 
@@ -111,11 +113,11 @@ func (p *process) String() string {
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-func (p *process) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolProcess, p.Name(), p, mayAddObject|mayEdit|mayRemove)
+func (p *process) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	err := tree.AddEntry(cursor, tr.SymbolProcess, p.Name(), p, MayAddObject|MayEdit|MayRemove)
 	if err != nil {
 		log.Fatalf("process.AddToTree error: AddEntry failed: %s\n", err)
 	}
@@ -129,13 +131,13 @@ func (p *process) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (p *process) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("process.AddNewObject error: %v nil object", p)
 		return
 	}
 	switch obj.(type) {
-	case ChannelIf:
+	case pf.ChannelIf:
 		c := obj.(*channel)
 		c.process = p
 		cLinkText := c.linkText
@@ -150,7 +152,7 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 			err = fmt.Errorf("process.AddNewObject error: %v invalid link text %s: no such arch (abort)\n", p, c.linkText)
 			return
 		}
-		var pp ProcessIf
+		var pp pf.ProcessIf
 		pp, ok = aa.(*arch).processes.Find(link[1])
 		if !ok {
 			err = fmt.Errorf("process.AddNewObject error: %v invalid link text %s: no such process (abort)\n", p, c.linkText)
@@ -165,12 +167,12 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 			ll = &pp.(*process).outChannels
 			dd = interfaces.OutPort
 			cPos = len(l.Channels())
-			ccPos = AppendCursor
+			ccPos = tr.AppendCursor
 		} else {
 			l = &p.outChannels
 			ll = &pp.(*process).inChannels
 			dd = interfaces.InPort
-			cPos = AppendCursor
+			cPos = tr.AppendCursor
 			ccPos = len(ll.Channels())
 		}
 		cName := channelMakeName(c.iotype, pp)
@@ -195,12 +197,12 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		l.Append(c)
 		ll.Append(cc)
 		ppCursor := tree.Cursor(pp)
-		if ppCursor.Position == AppendCursor {
+		if ppCursor.Position == tr.AppendCursor {
 			ppCursor.Position = ccPos
 		}
 		newCursor = tree.Insert(ppCursor)
 		cc.AddToTree(tree, newCursor)
-		if cursor.Position == AppendCursor {
+		if cursor.Position == tr.AppendCursor {
 			cursor.Position = cPos
 		}
 		newCursor = tree.Insert(cursor)
@@ -217,15 +219,15 @@ func (p *process) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 	return
 }
 
-func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (p *process) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if p != tree.Object(parent) {
 		log.Fatal("process.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case ChannelIf:
-		c := obj.(ChannelIf)
+	case pf.ChannelIf:
+		c := obj.(pf.ChannelIf)
 		cc := c.Link()
 		pp := cc.Process()
 		ppCursor := tree.Cursor(pp) // TODO. better search over platform...
@@ -243,7 +245,7 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 		ll.Remove(cc)
 		tree.Remove(ccCursor)
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, c})
+		removed = append(removed, tr.IdWithObject{prefix, index, c})
 
 	default:
 		log.Fatalf("Port.RemoveObject error: invalid type %T: %v\n", obj, obj)
@@ -257,7 +259,7 @@ func (p *process) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
  */
 
 type processList struct {
-	processs []ProcessIf
+	processs []pf.ProcessIf
 	exports  []interfaces.ProcessObject
 }
 
@@ -270,7 +272,7 @@ func (l *processList) Append(p *process) {
 	l.exports = append(l.exports, p)
 }
 
-func (l *processList) Remove(p ProcessIf) {
+func (l *processList) Remove(p pf.ProcessIf) {
 	var i int
 	for i = range l.processs {
 		if p == l.processs[i] {
@@ -291,7 +293,7 @@ func (l *processList) Remove(p ProcessIf) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *processList) Processes() []ProcessIf {
+func (l *processList) Processes() []pf.ProcessIf {
 	return l.processs
 }
 
@@ -299,7 +301,7 @@ func (l *processList) Exports() []interfaces.ProcessObject {
 	return l.exports
 }
 
-func (l *processList) Find(name string) (p ProcessIf, ok bool) {
+func (l *processList) Find(name string) (p pf.ProcessIf, ok bool) {
 	for _, p = range l.processs {
 		if p.Name() == name {
 			ok = true

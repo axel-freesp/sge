@@ -1,4 +1,9 @@
-package freesp
+package tree
+
+import (
+	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/interface/filedata"
+)
 
 type TreeViewIf interface {
 	SelectId(id string) error
@@ -11,7 +16,7 @@ type TreeMgrIf interface {
 	GetToplevelId(ToplevelTreeElement) (id string, err error)
 }
 
-type Tree interface {
+type TreeIf interface {
 	Current() Cursor
 	Append(c Cursor) Cursor
 	Insert(c Cursor) Cursor
@@ -24,16 +29,20 @@ type Tree interface {
 	Property(c Cursor) Property
 }
 
+type NamedTreeElementIf interface {
+	TreeElement
+	interfaces.Namer
+}
 type TreeElement interface {
-	AddToTree(tree Tree, cursor Cursor)
-	AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
-	RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject)
+	AddToTree(tree TreeIf, cursor Cursor)
+	AddNewObject(tree TreeIf, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
+	RemoveObject(tree TreeIf, cursor Cursor) (removed []IdWithObject)
 }
 
 type ToplevelTreeElement interface {
 	TreeElement
-	FileDataIf
-	RemoveFromTree(Tree)
+	filedata.FileDataIf
+	RemoveFromTree(TreeIf)
 }
 
 type Cursor struct {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
@@ -22,13 +24,13 @@ var ioXmlModeMap = map[interfaces.IOMode]backend.XmlIOMode{
 type iotype struct {
 	name     string
 	mode     interfaces.IOMode
-	platform PlatformIf
+	platform pf.PlatformIf
 }
 
-var _ IOTypeIf = (*iotype)(nil)
+var _ pf.IOTypeIf = (*iotype)(nil)
 var _ interfaces.IOTypeObject = (*iotype)(nil)
 
-func IOTypeNew(name string, mode interfaces.IOMode, platform PlatformIf) (t *iotype, err error) {
+func IOTypeNew(name string, mode interfaces.IOMode, platform pf.PlatformIf) (t *iotype, err error) {
 	newT := &iotype{name, mode, platform}
 	ioType := ioTypes[name]
 	if ioType != nil {
@@ -54,7 +56,7 @@ func (t *iotype) SetIOMode(newMode interfaces.IOMode) {
 	t.mode = newMode
 }
 
-func (t *iotype) Platform() PlatformIf {
+func (t *iotype) Platform() pf.PlatformIf {
 	return t.platform
 }
 
@@ -82,24 +84,24 @@ func (t *iotype) SetName(newName string) {
 //  TreeElement API
 //
 
-func (t *iotype) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolIOType, t.Name(), t, mayEdit|mayAddObject|mayRemove)
+func (t *iotype) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	err := tree.AddEntry(cursor, tr.SymbolIOType, t.Name(), t, MayEdit|MayAddObject|MayRemove)
 	if err != nil {
 		log.Fatalf("iotype.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 
-func (t *iotype) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (t *iotype) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	log.Fatalf("iotype.AddNewObject error: nothing to add\n")
 	return
 }
 
-func (t *iotype) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *iotype) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	log.Fatalf("iotype.RemoveObject error: nothing to remove\n")
 	return
 }
 
-func (t *iotype) Identify(te TreeElement) bool {
+func (t *iotype) Identify(te tr.TreeElement) bool {
 	switch te.(type) {
 	case *iotype:
 		return te.(*iotype).Name() == t.Name()
@@ -112,7 +114,7 @@ func (t *iotype) Identify(te TreeElement) bool {
 //
 
 type ioTypeList struct {
-	ioTypes []IOTypeIf
+	ioTypes []pf.IOTypeIf
 	exports []interfaces.IOTypeObject
 }
 
@@ -125,7 +127,7 @@ func (l *ioTypeList) Append(st *iotype) {
 	l.exports = append(l.exports, st)
 }
 
-func (l *ioTypeList) Remove(st IOTypeIf) {
+func (l *ioTypeList) Remove(st pf.IOTypeIf) {
 	var i int
 	for i = range l.ioTypes {
 		if st == l.ioTypes[i] {
@@ -146,7 +148,7 @@ func (l *ioTypeList) Remove(st IOTypeIf) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *ioTypeList) IoTypes() []IOTypeIf {
+func (l *ioTypeList) IoTypes() []pf.IOTypeIf {
 	return l.ioTypes
 }
 
@@ -154,7 +156,7 @@ func (l *ioTypeList) Exports() []interfaces.IOTypeObject {
 	return l.exports
 }
 
-func (l *ioTypeList) Find(name string) (t IOTypeIf, ok bool) {
+func (l *ioTypeList) Find(name string) (t pf.IOTypeIf, ok bool) {
 	for _, t = range l.ioTypes {
 		if t.Name() == name {
 			ok = true

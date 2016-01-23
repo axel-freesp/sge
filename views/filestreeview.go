@@ -2,7 +2,7 @@ package views
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -12,7 +12,7 @@ type FilesTreeView struct {
 	view *gtk.TreeView
 }
 
-var _ freesp.TreeViewIf = (*FilesTreeView)(nil)
+var _ tr.TreeViewIf = (*FilesTreeView)(nil)
 
 func FilesTreeViewNew(model *models.FilesTreeStore, width, height int) (viewer *FilesTreeView, err error) {
 	v, err := ScrolledViewNew(width, height)

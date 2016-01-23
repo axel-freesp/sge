@@ -4,29 +4,31 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 )
 
 type channel struct {
 	direction interfaces.PortDirection
-	iotype    IOTypeIf
-	link      ChannelIf
-	process   ProcessIf
+	iotype    pf.IOTypeIf
+	link      pf.ChannelIf
+	process   pf.ProcessIf
 	linkText  string
 	position  map[interfaces.PositionMode]image.Point
 	archPort  interfaces.ArchPortObject
 }
 
-var _ ChannelIf = (*channel)(nil)
+var _ pf.ChannelIf = (*channel)(nil)
 var _ interfaces.ChannelObject = (*channel)(nil)
 
-func ChannelNew(dir interfaces.PortDirection, iotype IOTypeIf, process ProcessIf, linkText string) *channel {
+func ChannelNew(dir interfaces.PortDirection, iotype pf.IOTypeIf, process pf.ProcessIf, linkText string) *channel {
 	return &channel{dir, iotype, nil, process, linkText, make(map[interfaces.PositionMode]image.Point), nil}
 }
 
-func createInChannelFromXml(xmlc backend.XmlInChannel, p ProcessIf) (ch *channel, err error) {
-	var iot IOTypeIf
+func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *channel, err error) {
+	var iot pf.IOTypeIf
 	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
 	if err != nil {
 		return
@@ -39,8 +41,8 @@ func createInChannelFromXml(xmlc backend.XmlInChannel, p ProcessIf) (ch *channel
 	return
 }
 
-func createOutChannelFromXml(xmlc backend.XmlOutChannel, p ProcessIf) (ch *channel, err error) {
-	var iot IOTypeIf
+func createOutChannelFromXml(xmlc backend.XmlOutChannel, p pf.ProcessIf) (ch *channel, err error) {
+	var iot pf.IOTypeIf
 	iot, err = channelGetIOTypeFromArch(p.Arch(), xmlc.IOType)
 	if err != nil {
 		return
@@ -55,7 +57,7 @@ func createOutChannelFromXml(xmlc backend.XmlOutChannel, p ProcessIf) (ch *chann
 
 func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
 	for _, xmlh := range xmlc.Entry {
-		mode, ok := modeFromString[xmlh.Mode]
+		mode, ok := ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("createInChannelFromXml warning: hint mode %s not defined\n",
 				xmlh.Mode)
@@ -68,7 +70,7 @@ func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
 
 func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
 	for _, xmlh := range xmlc.ArchPortHints.Entry {
-		mode, ok := modeFromString[xmlh.Mode]
+		mode, ok := ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("archPortPositionsFromXml warning: hint mode %s not defined\n",
 				xmlh.Mode)
@@ -79,7 +81,7 @@ func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
 	return
 }
 
-func channelGetIOTypeFromArch(a ArchIf, iotype string) (iot IOTypeIf, err error) {
+func channelGetIOTypeFromArch(a pf.ArchIf, iotype string) (iot pf.IOTypeIf, err error) {
 	var ok bool
 	for _, iot = range a.IOTypes() {
 		if iot.Name() == iotype {
@@ -110,15 +112,15 @@ func (c *channel) ArchPortObject() interfaces.ArchPortObject {
 	return c.archPort
 }
 
-func (c *channel) Process() ProcessIf {
+func (c *channel) Process() pf.ProcessIf {
 	return c.process
 }
 
-func (c *channel) IOType() IOTypeIf {
+func (c *channel) IOType() pf.IOTypeIf {
 	return c.iotype
 }
 
-func (c *channel) SetIOType(newIOType IOTypeIf) {
+func (c *channel) SetIOType(newIOType pf.IOTypeIf) {
 	c.iotype = newIOType
 	// update link
 	if c.link != nil {
@@ -126,7 +128,7 @@ func (c *channel) SetIOType(newIOType IOTypeIf) {
 	}
 }
 
-func (c *channel) Link() ChannelIf {
+func (c *channel) Link() pf.ChannelIf {
 	return c.link
 }
 
@@ -167,7 +169,7 @@ func (c *channel) Name() string {
 	}
 }
 
-func channelMakeName(iotype IOTypeIf, link ProcessIf) string {
+func channelMakeName(iotype pf.IOTypeIf, link pf.ProcessIf) string {
 	return fmt.Sprintf("%s-%s/%s", iotype.Name(), link.Arch().Name(), link.Name())
 }
 
@@ -191,33 +193,33 @@ func (c *channel) String() string {
 }
 
 //
-//  TreeElement API
+//  tr.TreeElement API
 //
 
-func (c *channel) AddToTree(tree Tree, cursor Cursor) {
-	var symbol Symbol
+func (c *channel) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	var symbol tr.Symbol
 	if c.Direction() == interfaces.InPort {
-		symbol = SymbolInChannel
+		symbol = tr.SymbolInChannel
 	} else {
-		symbol = SymbolOutChannel
+		symbol = tr.SymbolOutChannel
 	}
-	err := tree.AddEntry(cursor, symbol, c.Name(), c, mayEdit|mayAddObject|mayRemove)
+	err := tree.AddEntry(cursor, symbol, c.Name(), c, MayEdit|MayAddObject|MayRemove)
 	if err != nil {
 		log.Fatalf("channel.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 
-func (c *channel) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (c *channel) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	log.Fatalf("channel.AddNewObject error: nothing to add\n")
 	return
 }
 
-func (c *channel) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (c *channel) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	log.Fatalf("channel.RemoveObject error: nothing to remove\n")
 	return
 }
 
-func (c *channel) Identify(te TreeElement) bool {
+func (c *channel) Identify(te tr.TreeElement) bool {
 	switch te.(type) {
 	case *channel:
 		return te.(*channel).Name() == c.Name()
@@ -230,7 +232,7 @@ func (c *channel) Identify(te TreeElement) bool {
 //
 
 type channelList struct {
-	channels []ChannelIf
+	channels []pf.ChannelIf
 	exports  []interfaces.ChannelObject
 }
 
@@ -243,7 +245,7 @@ func (l *channelList) Append(ch *channel) {
 	l.exports = append(l.exports, ch)
 }
 
-func (l *channelList) Remove(ch ChannelIf) {
+func (l *channelList) Remove(ch pf.ChannelIf) {
 	var i int
 	for i = range l.channels {
 		if ch == l.channels[i] {
@@ -264,7 +266,7 @@ func (l *channelList) Remove(ch ChannelIf) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *channelList) Channels() []ChannelIf {
+func (l *channelList) Channels() []pf.ChannelIf {
 	return l.channels
 }
 
@@ -272,7 +274,7 @@ func (l *channelList) Exports() []interfaces.ChannelObject {
 	return l.exports
 }
 
-func (l *channelList) Find(name string) (c ChannelIf, ok bool) {
+func (l *channelList) Find(name string) (c pf.ChannelIf, ok bool) {
 	for _, c = range l.channels {
 		if c.Name() == name {
 			ok = true

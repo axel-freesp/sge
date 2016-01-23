@@ -11,7 +11,7 @@ type GoAppWindow struct {
 	layout_box     *gtk.Box   // child of window, holds paned and menu
 	paned_box      *gtk.Paned // holds navigation and views
 	navigation_box *gtk.Box
-	graphViews     views.GraphViewCollection
+	graphViews     views.GraphViewCollectionIf
 }
 
 func (w *GoAppWindow) Window() *gtk.Window {

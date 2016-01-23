@@ -18,7 +18,7 @@ type GraphView interface {
 	IdentifyMapping(interfaces.MappingObject) bool
 }
 
-type GraphViewCollection interface {
+type GraphViewCollectionIf interface {
 	Add(gv GraphView, title string)
 	RemoveGraphView(g interfaces.GraphObject)
 	RemovePlatformView(p interfaces.PlatformObject)
@@ -39,7 +39,7 @@ type graphViewCollection struct {
 	stack     *gtk.Stack
 }
 
-var _ GraphViewCollection = (*graphViewCollection)(nil)
+var _ GraphViewCollectionIf = (*graphViewCollection)(nil)
 
 func GraphViewCollectionNew(width, height int) (gvc *graphViewCollection, err error) {
 	gvc = &graphViewCollection{}

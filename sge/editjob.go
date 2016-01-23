@@ -6,6 +6,10 @@ import (
 	//"strings"
 	"github.com/axel-freesp/sge/freesp"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 )
 
@@ -45,12 +49,12 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 	} else {
 		old, detail = &j.detail, &j.old
 	}
-	var obj freesp.TreeElement
+	var obj tr.TreeElement
 	obj, err = fts.GetObjectById(j.objId)
 	state = j.objId
 	switch j.elemType {
 	case eNode:
-		n := obj.(freesp.NodeIf)
+		n := obj.(bh.NodeIf)
 		(*old)[iNodeName] = n.Name()
 		n.SetName((*detail)[iNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -61,7 +65,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eOutputNode:
-		n := obj.(freesp.NodeIf)
+		n := obj.(bh.NodeIf)
 		(*old)[iOutputNodeName] = n.Name()
 		n.SetName((*detail)[iOutputNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -69,7 +73,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eInputNode:
-		n := obj.(freesp.NodeIf)
+		n := obj.(bh.NodeIf)
 		(*old)[iInputNodeName] = n.Name()
 		n.SetName((*detail)[iInputNodeName])
 		fts.SetValueById(j.objId, n.Name())
@@ -77,7 +81,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			updateConnections(p, fts)
 		}
 	case eNodeType:
-		nt := obj.(freesp.NodeTypeIf)
+		nt := obj.(bh.NodeTypeIf)
 		if len(nt.Instances()) > 0 {
 			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeTypeIf %s has instances.\n", nt.TypeName())
 			log.Printf("jobApplier.Apply(JobEdit): Editing is not implemented in this case.\n")
@@ -87,10 +91,10 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		nt.SetTypeName((*detail)[iTypeName])
 		fts.SetValueById(j.objId, nt.TypeName())
 	case ePortType:
-		pt := obj.(freesp.PortType)
+		pt := obj.(bh.PortType)
 		ptCursor := fts.Cursor(pt)
 		ntCursor := fts.Parent(ptCursor)
-		nt := fts.Object(ntCursor).(freesp.NodeTypeIf)
+		nt := fts.Object(ntCursor).(bh.NodeTypeIf)
 		if len(nt.Instances()) > 0 {
 			log.Printf("jobApplier.Apply(JobEdit): WARNING: NodeTypeIf %s has instances.\n", nt.TypeName())
 			log.Printf("jobApplier.Apply(JobEdit): Editing is not implemented in this case.\n")
@@ -106,7 +110,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 				string2direction[(*detail)[iDirection]]))
 		state = ptCursor.Path
 	case eSignalType:
-		st := obj.(freesp.SignalType)
+		st := obj.(bh.SignalType)
 		if (*detail)[iSignalTypeName] != st.TypeName() {
 			log.Printf("jobApplier.Apply(JobEdit): Renaming SignalType is not implemented.\n")
 		}
@@ -119,12 +123,12 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		(*old)[iSignalMode] = mode2string[st.Mode()]
 		st.SetMode(string2mode[(*detail)[iSignalMode]])
 	case eImplementation:
-		impl := obj.(freesp.ImplementationIf)
+		impl := obj.(bh.ImplementationIf)
 		(*old)[iImplName] = impl.ElementName()
 		impl.SetElemName((*detail)[iImplName])
 		fts.SetValueById(j.objId, (*detail)[iImplName])
 	case eArch:
-		a := obj.(freesp.ArchIf)
+		a := obj.(pf.ArchIf)
 		(*old)[iArchName] = a.Name()
 		a.SetName((*detail)[iArchName])
 		for _, p := range a.Processes() {
@@ -141,7 +145,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		}
 		fts.SetValueById(j.objId, a.Name())
 	case eProcess:
-		p := obj.(freesp.ProcessIf)
+		p := obj.(pf.ProcessIf)
 		(*old)[iProcessName] = p.Name()
 		p.SetName((*detail)[iProcessName])
 		for _, c := range p.InChannels() {
@@ -156,7 +160,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		}
 		fts.SetValueById(j.objId, p.Name())
 	case eIOType:
-		t := obj.(freesp.IOTypeIf)
+		t := obj.(pf.IOTypeIf)
 		(*old)[iIOTypeName] = t.Name()
 		t.SetName((*detail)[iIOTypeName])
 		for _, a := range t.Platform().Arch() {
@@ -181,7 +185,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		t.SetIOMode(interfaces.IOMode((*detail)[iIOModeSelect]))
 		fts.SetValueById(j.objId, t.Name())
 	case eChannel:
-		c := obj.(freesp.ChannelIf)
+		c := obj.(pf.ChannelIf)
 		//(*old)[iChannelDirection] = direction2string[c.Direction()]
 		//c.SetDirection(string2direction[(*detail)[iChannelDirection]])
 		(*old)[iIOTypeSelect] = c.IOType().Name()
@@ -196,7 +200,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		id := fts.Cursor(link)
 		fts.SetValueById(id.Path, link.Name())
 	case eMapElement:
-		c := obj.(freesp.MappedElementIf)
+		c := obj.(mp.MappedElementIf)
 		pr := c.Process()
 		if pr == nil {
 			(*old)[iProcessSelect] = "<unmapped>"
@@ -220,7 +224,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 	return
 }
 
-func updateConnections(p freesp.Port, fts *models.FilesTreeStore) {
+func updateConnections(p bh.Port, fts *models.FilesTreeStore) {
 	nodeCursor := fts.Cursor(p.Node())
 	portCursor := fts.CursorAt(nodeCursor, p)
 	for _, c := range p.Connections() {

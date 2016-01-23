@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/interface/tree"
 )
 
 type DeleteObjectJob struct {
-	deletedObjects []freesp.IdWithObject
+	deletedObjects []tree.IdWithObject
 	id             string
 }
 

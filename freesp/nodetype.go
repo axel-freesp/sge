@@ -3,6 +3,9 @@ package freesp
 import (
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
@@ -14,14 +17,14 @@ type nodeType struct {
 	instances         nodeList
 }
 
-var _ NodeTypeIf = (*nodeType)(nil)
+var _ bh.NodeTypeIf = (*nodeType)(nil)
 
 func NodeTypeNew(name, definedAt string) *nodeType {
 	return &nodeType{name, definedAt, portTypeListInit(),
 		portTypeListInit(), implementationListInit(), nodeListInit()}
 }
 
-func (t *nodeType) AddNamedPortType(p PortType) {
+func (t *nodeType) AddNamedPortType(p bh.PortType) {
 	if p.Direction() == interfaces.InPort {
 		t.inPorts.Append(p)
 	} else {
@@ -35,7 +38,7 @@ func (t *nodeType) AddNamedPortType(p PortType) {
 		}
 	}
 	for _, impl := range t.implementation.Implementations() {
-		if impl.ImplementationType() == NodeTypeGraph {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			if p.Direction() == interfaces.InPort {
 				impl.Graph().(*signalGraphType).addInputNodeFromPortType(p)
 			} else {
@@ -45,9 +48,9 @@ func (t *nodeType) AddNamedPortType(p PortType) {
 	}
 }
 
-func (t *nodeType) RemoveNamedPortType(p PortType) {
+func (t *nodeType) RemoveNamedPortType(p bh.PortType) {
 	for _, impl := range t.implementation.Implementations() {
-		if impl.ImplementationType() == NodeTypeGraph {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			if p.Direction() == interfaces.InPort {
 				impl.Graph().(*signalGraphType).removeInputNodeFromPortType(p)
 			} else {
@@ -67,7 +70,7 @@ func (t *nodeType) RemoveNamedPortType(p PortType) {
 	list.Remove(p)
 }
 
-func (t *nodeType) Instances() []NodeIf {
+func (t *nodeType) Instances() []bh.NodeIf {
 	return t.instances.Nodes()
 }
 
@@ -79,8 +82,8 @@ func (t *nodeType) removeInstance(n *node) {
 	t.instances.Remove(n)
 }
 
-func (t *nodeType) RemoveImplementation(imp ImplementationIf) {
-	if imp.ImplementationType() == NodeTypeGraph {
+func (t *nodeType) RemoveImplementation(imp bh.ImplementationIf) {
+	if imp.ImplementationType() == bh.NodeTypeGraph {
 		gt := imp.Graph()
 		for len(gt.Nodes()) > 0 {
 			gt.RemoveNode(gt.Nodes()[0].(*node))
@@ -89,8 +92,8 @@ func (t *nodeType) RemoveImplementation(imp ImplementationIf) {
 	t.implementation.Remove(imp)
 }
 
-func (t *nodeType) AddImplementation(imp ImplementationIf) {
-	if imp.ImplementationType() == NodeTypeGraph {
+func (t *nodeType) AddImplementation(imp bh.ImplementationIf) {
+	if imp.ImplementationType() == bh.NodeTypeGraph {
 		if imp.Graph() == nil {
 			log.Fatal("nodeType.AddImplementation: missing graph")
 		}
@@ -117,15 +120,15 @@ func (t *nodeType) DefinedAt() string {
 	return t.definedAt
 }
 
-func (t *nodeType) InPorts() []PortType {
+func (t *nodeType) InPorts() []bh.PortType {
 	return t.inPorts.PortTypes()
 }
 
-func (t *nodeType) OutPorts() []PortType {
+func (t *nodeType) OutPorts() []bh.PortType {
 	return t.outPorts.PortTypes()
 }
 
-func (t *nodeType) Implementation() []ImplementationIf {
+func (t *nodeType) Implementation() []bh.ImplementationIf {
 	return t.implementation.Implementations()
 }
 
@@ -150,11 +153,11 @@ func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 }
 
 // TODO: These are possibly redundant..
-func (t *nodeType) addInPort(name string, pType SignalType) {
+func (t *nodeType) addInPort(name string, pType bh.SignalType) {
 	t.inPorts.Append(PortTypeNew(name, pType.TypeName(), interfaces.InPort))
 }
 
-func (t *nodeType) addOutPort(name string, pType SignalType) {
+func (t *nodeType) addOutPort(name string, pType bh.SignalType) {
 	t.outPorts.Append(PortTypeNew(name, pType.TypeName(), interfaces.OutPort))
 }
 
@@ -174,7 +177,7 @@ func (t *nodeType) doResolvePort(name string, dir interfaces.PortDirection) *por
 	return nil
 }
 
-func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context ContextIf) *nodeType {
+func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context mod.ModelContextIf) *nodeType {
 	nt := NodeTypeNew(n.TypeName, filename)
 	for _, p := range n.InPort {
 		pType, ok := signalTypes[p.PType]
@@ -191,16 +194,16 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context Conte
 		nt.addOutPort(p.PName, pType)
 	}
 	for _, i := range n.Implementation {
-		var iType ImplementationType
+		var iType bh.ImplementationType
 		if len(i.SignalGraph) == 1 {
-			iType = NodeTypeGraph
+			iType = bh.NodeTypeGraph
 		} else {
-			iType = NodeTypeElement
+			iType = bh.NodeTypeElement
 		}
 		impl := ImplementationNew(i.Name, iType, context)
 		nt.implementation.Append(impl)
 		switch iType {
-		case NodeTypeElement:
+		case bh.NodeTypeElement:
 			impl.elementName = i.Name
 		default:
 			var err error
@@ -217,24 +220,24 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context Conte
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-var _ TreeElement = (*nodeType)(nil)
+var _ tr.TreeElement = (*nodeType)(nil)
 
-func (t *nodeType) AddToTree(tree Tree, cursor Cursor) {
+func (t *nodeType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop property
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case LibraryIf:
-		prop = mayAddObject | mayEdit | mayRemove
-	case NodeIf:
+	case bh.LibraryIf:
+		prop = MayAddObject | MayEdit | MayRemove
+	case bh.NodeIf:
 		prop = 0
 	default:
 		log.Fatalf("nodeType.AddToTree error: invalid parent type %T\n", parent)
 	}
-	err := tree.AddEntry(cursor, SymbolNodeType, t.TypeName(), t, prop)
+	err := tree.AddEntry(cursor, tr.SymbolNodeType, t.TypeName(), t, prop)
 	if err != nil {
 		log.Fatalf("nodeType.AddToTree error: AddEntry failed: %s\n", err)
 	}
@@ -252,38 +255,38 @@ func (t *nodeType) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *nodeType) treeNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor) {
 	switch obj.(type) {
-	case ImplementationIf:
+	case bh.ImplementationIf:
 		cursor.Position = len(t.Implementation()) - 1
 		newCursor = tree.Insert(cursor)
-		obj.(ImplementationIf).AddToTree(tree, newCursor)
+		obj.(bh.ImplementationIf).AddToTree(tree, newCursor)
 
-	case PortType:
-		pt := obj.(PortType)
+	case bh.PortType:
+		pt := obj.(bh.PortType)
 		newCursor = tree.Insert(cursor)
 		pt.AddToTree(tree, newCursor)
 		for _, impl := range t.Implementation() {
-			if impl.ImplementationType() == NodeTypeGraph {
-				// NodeIf linked to outer port
+			if impl.ImplementationType() == bh.NodeTypeGraph {
+				// bh.NodeIf linked to outer port
 				g := impl.Graph().(*signalGraphType)
-				var n NodeIf
+				var n bh.NodeIf
 				index := -len(t.Implementation())
 				if pt.Direction() == interfaces.InPort {
 					n = g.findInputNodeFromPortType(pt)
-					if cursor.Position == AppendCursor {
+					if cursor.Position == tr.AppendCursor {
 						index += len(g.InputNodes())
 					}
 				} else {
 					n = g.findOutputNodeFromPortType(pt)
-					if cursor.Position == AppendCursor {
+					if cursor.Position == tr.AppendCursor {
 						index += len(g.InputNodes()) + len(g.OutputNodes())
 					}
 				}
 				if n == nil {
 					log.Fatalf("nodeType.AddNewObject error: invalid implementation...\n")
 				}
-				if cursor.Position != AppendCursor {
+				if cursor.Position != tr.AppendCursor {
 					index += cursor.Position
 				}
 				gCursor := tree.CursorAt(cursor, impl)
@@ -298,10 +301,10 @@ func (t *nodeType) treeNewObject(tree Tree, cursor Cursor, obj TreeElement) (new
 	return
 }
 
-func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor) {
+func (t *nodeType) treeInstObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor) {
 	switch obj.(type) {
-	case ImplementationIf:
-		impl := obj.(ImplementationIf)
+	case bh.ImplementationIf:
+		impl := obj.(bh.ImplementationIf)
 		// update all instance nodes in the tree with new implementation
 		for _, n := range t.Instances() {
 			nCursor := tree.Cursor(n)
@@ -311,11 +314,11 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 			impl.AddToTree(tree, newICursor)
 		}
 
-	case PortType:
-		pt := obj.(PortType)
+	case bh.PortType:
+		pt := obj.(bh.PortType)
 		// update all instance nodes in the tree with new port
 		for _, n := range t.Instances() {
-			var p Port
+			var p bh.Port
 			var ok bool
 			if pt.Direction() == interfaces.InPort {
 				p, ok, _ = n.(*node).inPort.Find(n.Name(), pt.Name())
@@ -345,14 +348,14 @@ func (t *nodeType) treeInstObject(tree Tree, cursor Cursor, obj TreeElement) (ne
 	return
 }
 
-func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (t *nodeType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
-	case ImplementationIf:
-		t.AddImplementation(obj.(ImplementationIf))
+	case bh.ImplementationIf:
+		t.AddImplementation(obj.(bh.ImplementationIf))
 		cursor.Position = len(t.Implementation()) - 1
 
-	case PortType:
-		pt := obj.(PortType)
+	case bh.PortType:
+		pt := obj.(bh.PortType)
 		t.AddNamedPortType(pt) // adds ports of all instances, linked io-nodes in graph implementation
 		// Adjust offset to insert:
 		if pt.Direction() == interfaces.InPort {
@@ -370,16 +373,16 @@ func (t *nodeType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 	return
 }
 
-func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *nodeType) treeRemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parentId := tree.Parent(cursor)
 	if t != tree.Object(parentId) {
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case ImplementationIf:
-		impl := obj.(ImplementationIf)
-		if impl.ImplementationType() == NodeTypeGraph {
+	case bh.ImplementationIf:
+		impl := obj.(bh.ImplementationIf)
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			// TODO: This is redundant with implementation.go
 			// Simply remove all nodes? Do not traverse a modifying list...
 			// Removed Input- and Output nodes are NOT stored (they are
@@ -391,7 +394,7 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 					pCursor := tree.CursorAt(nCursor, p)
 					for index, c := range p.Connections() {
 						conn := p.Connection(c)
-						removed = append(removed, IdWithObject{pCursor.Path, index, conn})
+						removed = append(removed, tr.IdWithObject{pCursor.Path, index, conn})
 					}
 				}
 			}
@@ -400,17 +403,17 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 				nCursor := tree.Cursor(n)
 				gCursor := tree.Parent(nCursor)
 				nIndex := gCursor.Position
-				removed = append(removed, IdWithObject{nCursor.Path, nIndex, n})
+				removed = append(removed, tr.IdWithObject{nCursor.Path, nIndex, n})
 			}
 		}
 
-	case PortType:
-		nt := obj.(PortType)
+	case bh.PortType:
+		nt := obj.(bh.PortType)
 		for _, impl := range t.Implementation() {
-			if impl.ImplementationType() == NodeTypeGraph {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
 				// Remove and store all edges connected to the nodes linked to the outer ports
 				g := impl.Graph().(*signalGraphType)
-				var n NodeIf
+				var n bh.NodeIf
 				if nt.Direction() == interfaces.InPort {
 					n = g.findInputNodeFromPortType(nt)
 				} else {
@@ -424,14 +427,14 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
 						conn := p.Connection(c)
-						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
+						removed = append(removed, tr.IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
 				for _, p := range n.OutPorts() {
 					pCursor := tree.CursorAt(nCursor, p)
 					for _, c := range p.Connections() {
 						conn := p.Connection(c)
-						removed = append(removed, IdWithObject{pCursor.Path, -1, conn})
+						removed = append(removed, tr.IdWithObject{pCursor.Path, -1, conn})
 					}
 				}
 				// Remove (but dont store) the nodes linked to the outer ports:
@@ -446,14 +449,14 @@ func (t *nodeType) treeRemoveObject(tree Tree, cursor Cursor) (removed []IdWithO
 }
 
 // Remove object mirrored in all instance node type
-func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *nodeType) treeRemoveInstObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parentId := tree.Parent(cursor)
 	if t != tree.Object(parentId) {
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case ImplementationIf:
+	case bh.ImplementationIf:
 		for _, n := range t.Instances() {
 			nCursor := tree.Cursor(n)
 			tCursor := tree.CursorAt(nCursor, t)
@@ -462,11 +465,11 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 			tree.Remove(iCursor)
 		}
 
-	case PortType:
-		nt := obj.(PortType)
+	case bh.PortType:
+		nt := obj.(bh.PortType)
 		for _, n := range t.Instances() {
-			var p Port
-			var list []Port
+			var p bh.Port
+			var list []bh.Port
 			nCursor := tree.Cursor(n)
 			if nt.Direction() == interfaces.InPort {
 				list = n.InPorts()
@@ -481,7 +484,7 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 			_ = p.(*port)
 			pCursor := tree.CursorAt(nCursor, p)
 			prefix, index := tree.Remove(pCursor)
-			removed = append(removed, IdWithObject{prefix, index, p})
+			removed = append(removed, tr.IdWithObject{prefix, index, p})
 			tCursor := tree.CursorAt(nCursor, obj)
 			del := t.treeRemoveObject(tree, tCursor)
 			for _, d := range del {
@@ -496,7 +499,7 @@ func (t *nodeType) treeRemoveInstObject(tree Tree, cursor Cursor) (removed []IdW
 	return
 }
 
-func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *nodeType) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parentId := tree.Parent(cursor)
 	if t != tree.Object(parentId) {
 		log.Fatal("nodeType.RemoveObject error: not removing child of mine.")
@@ -511,16 +514,16 @@ func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 		removed = append(removed, d)
 	}
 	prefix, index := tree.Remove(cursor)
-	removed = append(removed, IdWithObject{prefix, index, obj})
+	removed = append(removed, tr.IdWithObject{prefix, index, obj})
 
 	switch obj.(type) {
-	case ImplementationIf:
-		impl := obj.(ImplementationIf)
+	case bh.ImplementationIf:
+		impl := obj.(bh.ImplementationIf)
 		// Remove obj in freesp model
 		t.RemoveImplementation(impl)
 
-	case PortType:
-		nt := obj.(PortType)
+	case bh.PortType:
+		nt := obj.(bh.PortType)
 		t.RemoveNamedPortType(nt)
 
 	default:
@@ -535,18 +538,18 @@ func (t *nodeType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
  */
 
 type nodeTypeList struct {
-	nodeTypes []NodeTypeIf
+	nodeTypes []bh.NodeTypeIf
 }
 
 func nodeTypeListInit() nodeTypeList {
 	return nodeTypeList{nil}
 }
 
-func (l *nodeTypeList) Append(nt NodeTypeIf) {
+func (l *nodeTypeList) Append(nt bh.NodeTypeIf) {
 	l.nodeTypes = append(l.nodeTypes, nt)
 }
 
-func (l *nodeTypeList) Remove(nt NodeTypeIf) {
+func (l *nodeTypeList) Remove(nt bh.NodeTypeIf) {
 	var i int
 	for i = range l.nodeTypes {
 		if nt == l.nodeTypes[i] {
@@ -555,9 +558,9 @@ func (l *nodeTypeList) Remove(nt NodeTypeIf) {
 	}
 	if i >= len(l.nodeTypes) {
 		for _, v := range l.nodeTypes {
-			log.Printf("nodeTypeList.RemoveNodeType have NodeTypeIf %v\n", v)
+			log.Printf("nodeTypeList.RemoveNodeType have bh.NodeTypeIf %v\n", v)
 		}
-		log.Fatalf("nodeTypeList.RemoveNodeType error: NodeTypeIf %v not in this list\n", nt)
+		log.Fatalf("nodeTypeList.RemoveNodeType error: bh.NodeTypeIf %v not in this list\n", nt)
 	}
 	for i++; i < len(l.nodeTypes); i++ {
 		l.nodeTypes[i-1] = l.nodeTypes[i]
@@ -565,6 +568,6 @@ func (l *nodeTypeList) Remove(nt NodeTypeIf) {
 	l.nodeTypes = l.nodeTypes[:len(l.nodeTypes)-1]
 }
 
-func (l *nodeTypeList) NodeTypes() []NodeTypeIf {
+func (l *nodeTypeList) NodeTypes() []bh.NodeTypeIf {
 	return l.nodeTypes
 }

@@ -3,6 +3,9 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
@@ -10,24 +13,24 @@ type library struct {
 	filename    string
 	signalTypes signalTypeList
 	nodeTypes   nodeTypeList
-	context     ContextIf
+	context     mod.ModelContextIf
 }
 
-var _ LibraryIf = (*library)(nil)
+var _ bh.LibraryIf = (*library)(nil)
 
-func LibraryNew(filename string, context ContextIf) *library {
+func LibraryNew(filename string, context mod.ModelContextIf) *library {
 	ret := &library{filename, signalTypeListInit(), nodeTypeListInit(), context}
 	libraries[filename] = ret
 	return ret
 }
 
-func LibraryUsesNodeType(l LibraryIf, nt NodeTypeIf) bool {
+func LibraryUsesNodeType(l bh.LibraryIf, nt bh.NodeTypeIf) bool {
 	for _, t := range l.NodeTypes() {
 		if t.TypeName() == nt.TypeName() {
 			return true
 		}
 		for _, impl := range t.Implementation() {
-			if impl.ImplementationType() == NodeTypeGraph {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
 				if SignalGraphTypeUsesNodeType(impl.Graph(), nt) {
 					return true
 				}
@@ -37,7 +40,7 @@ func LibraryUsesNodeType(l LibraryIf, nt NodeTypeIf) bool {
 	return false
 }
 
-func LibraryUsesSignalType(l LibraryIf, st SignalType) bool {
+func LibraryUsesSignalType(l bh.LibraryIf, st bh.SignalType) bool {
 	for _, t := range l.SignalTypes() {
 		if t.TypeName() == st.TypeName() {
 			return true
@@ -45,7 +48,7 @@ func LibraryUsesSignalType(l LibraryIf, st SignalType) bool {
 	}
 	for _, t := range l.NodeTypes() {
 		for _, impl := range t.Implementation() {
-			if impl.ImplementationType() == NodeTypeGraph {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
 				if SignalGraphTypeUsesSignalType(impl.Graph(), st) {
 					return true
 				}
@@ -68,29 +71,29 @@ func (l *library) SetFilename(filename string) {
 	libraries[filename] = l
 }
 
-func (l library) SignalTypes() []SignalType {
+func (l library) SignalTypes() []bh.SignalType {
 	return l.signalTypes.SignalTypes()
 }
 
-func (l library) NodeTypes() []NodeTypeIf {
+func (l library) NodeTypes() []bh.NodeTypeIf {
 	return l.nodeTypes.NodeTypes()
 }
 
 func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 	for _, st := range xmlLib.SignalTypes {
-		var scope Scope
-		var mode Mode
+		var scope bh.Scope
+		var mode bh.Mode
 		switch st.Scope {
 		case "local":
-			scope = Local
+			scope = bh.Local
 		default:
-			scope = Global
+			scope = bh.Global
 		}
 		switch st.Mode {
 		case "sync":
-			mode = Synchronous
+			mode = bh.Synchronous
 		default:
-			mode = Asynchronous
+			mode = bh.Asynchronous
 		}
 		sType, err := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
 		if err != nil {
@@ -139,12 +142,12 @@ func (l library) WriteFile(filepath string) error {
 	return xmllib.WriteFile(filepath)
 }
 
-func (l *library) RemoveFromTree(tree Tree) {
+func (l *library) RemoveFromTree(tree tr.TreeIf) {
 	tree.Remove(tree.Cursor(l))
 	delete(libraries, l.filename)
 }
 
-func (l *library) AddNodeType(t NodeTypeIf) error {
+func (l *library) AddNodeType(t bh.NodeTypeIf) error {
 	nType, ok := nodeTypes[t.TypeName()]
 	if ok {
 		log.Printf(`library.AddNodeType: warning: adding existing node
@@ -165,7 +168,7 @@ func (l *library) AddNodeType(t NodeTypeIf) error {
 	return nil
 }
 
-func (l *library) RemoveNodeType(nt NodeTypeIf) {
+func (l *library) RemoveNodeType(nt bh.NodeTypeIf) {
 	for _, n := range nt.(*nodeType).instances.Nodes() {
 		n.(*node).context.RemoveNode(n)
 	}
@@ -174,7 +177,7 @@ func (l *library) RemoveNodeType(nt NodeTypeIf) {
 	l.nodeTypes.Remove(nt)
 }
 
-func (l *library) AddSignalType(s SignalType) (ok bool) {
+func (l *library) AddSignalType(s bh.SignalType) (ok bool) {
 	for _, st := range l.signalTypes.SignalTypes() {
 		if st.TypeName() == s.TypeName() {
 			log.Printf(`library.AddSignalType: warning: adding
@@ -187,20 +190,20 @@ func (l *library) AddSignalType(s SignalType) (ok bool) {
 	return
 }
 
-func (l *library) RemoveSignalType(st SignalType) {
+func (l *library) RemoveSignalType(st bh.SignalType) {
 	for _, ntName := range registeredNodeTypes.Strings() {
 		nt := nodeTypes[ntName]
 		for _, p := range nt.InPorts() {
 			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
-					SignalType %v is still in use\n`, st)
+					bh.SignalType %v is still in use\n`, st)
 				return
 			}
 		}
 		for _, p := range nt.OutPorts() {
 			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
-					SignalType %v is still in use\n`, st)
+					bh.SignalType %v is still in use\n`, st)
 				return
 			}
 		}
@@ -209,16 +212,16 @@ func (l *library) RemoveSignalType(st SignalType) {
 	l.signalTypes.Remove(st)
 }
 
-var _ TreeElement = (*library)(nil)
+var _ tr.TreeElement = (*library)(nil)
 
 //
-//		TreeElement interface
+//		tr.TreeElement interface
 //
 
-func (l *library) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolLibrary, l.Filename(), l, mayAddObject)
+func (l *library) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	err := tree.AddEntry(cursor, tr.SymbolLibrary, l.Filename(), l, MayAddObject)
 	if err != nil {
-		log.Fatalf("LibraryIf.AddToTree error: AddEntry failed: %s\n", err)
+		log.Fatalf("bh.LibraryIf.AddToTree error: AddEntry failed: %s\n", err)
 	}
 	for _, t := range l.SignalTypes() {
 		child := tree.Append(cursor)
@@ -230,14 +233,14 @@ func (l *library) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (l *library) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("library.AddNewObject error: nil object")
 		return
 	}
 	switch obj.(type) {
-	case SignalType:
-		t := obj.(SignalType)
+	case bh.SignalType:
+		t := obj.(bh.SignalType)
 		ok := l.AddSignalType(t)
 		if !ok {
 			err = fmt.Errorf("library.AddNewObject warning: duplicate")
@@ -247,8 +250,8 @@ func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
 
-	case NodeTypeIf:
-		t := obj.(NodeTypeIf)
+	case bh.NodeTypeIf:
+		t := obj.(bh.NodeTypeIf)
 		err = l.AddNodeType(t)
 		if err != nil {
 			err = fmt.Errorf("library.AddNewObject error: AddNodeType failed: %s", err)
@@ -263,48 +266,48 @@ func (l *library) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCu
 	return
 }
 
-func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (l *library) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if l != tree.Object(parent) {
 		log.Fatal("library.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case SignalType:
-		st := tree.Object(cursor).(SignalType)
+	case bh.SignalType:
+		st := tree.Object(cursor).(bh.SignalType)
 		for _, nt := range l.NodeTypes() {
 			for _, p := range nt.InPorts() {
 				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
-						SignalType %v is still in use\n`, st)
+						bh.SignalType %v is still in use\n`, st)
 					return
 				}
 			}
 			for _, p := range nt.OutPorts() {
 				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
-						SignalType %v is still in use\n`, st)
+						bh.SignalType %v is still in use\n`, st)
 					return
 				}
 			}
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, obj})
+		removed = append(removed, tr.IdWithObject{prefix, index, obj})
 		l.RemoveSignalType(st)
 
-	case NodeTypeIf:
-		nt := tree.Object(cursor).(NodeTypeIf)
+	case bh.NodeTypeIf:
+		nt := tree.Object(cursor).(bh.NodeTypeIf)
 		log.Printf("library.RemoveObject: nt=%v\n", nt)
 		if len(nt.Instances()) > 0 {
 			log.Printf(`library.RemoveObject warning: The following nodes
-				are still instances of NodeTypeIf %s:\n`, nt.TypeName())
+				are still instances of bh.NodeTypeIf %s:\n`, nt.TypeName())
 			for _, n := range nt.Instances() {
 				log.Printf("	%s\n", n.Name())
 			}
 			return
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, obj})
+		removed = append(removed, tr.IdWithObject{prefix, index, obj})
 		l.RemoveNodeType(nt)
 
 	default:
@@ -313,7 +316,7 @@ func (l *library) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject
 	return
 }
 
-func (l *library) Identify(te TreeElement) bool {
+func (l *library) Identify(te tr.TreeElement) bool {
 	switch te.(type) {
 	case *library:
 		return te.(*library).Filename() == l.Filename()

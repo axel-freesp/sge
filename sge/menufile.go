@@ -3,7 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	fd "github.com/axel-freesp/sge/interface/filedata"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	mod "github.com/axel-freesp/sge/interface/model"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
@@ -46,19 +51,19 @@ var descriptionFileTypes = map[FileType]string{
 	FileTypeMap:   "Mapping File (*.mml)",
 }
 
-func Suffix(obj freesp.ToplevelTreeElement) string {
+func Suffix(obj tr.ToplevelTreeElement) string {
 	return string(fileType(obj))
 }
 
-func fileType(obj freesp.ToplevelTreeElement) (ft FileType) {
+func fileType(obj tr.ToplevelTreeElement) (ft FileType) {
 	switch obj.(type) {
-	case freesp.SignalGraphIf:
+	case bh.SignalGraphIf:
 		ft = FileTypeGraph
-	case freesp.LibraryIf:
+	case bh.LibraryIf:
 		ft = FileTypeLib
-	case freesp.PlatformIf:
+	case pf.PlatformIf:
 		ft = FileTypePlat
-	case freesp.MappingIf:
+	case mp.MappingIf:
 		ft = FileTypeMap
 	default:
 		log.Panicf("Suffix: invalid object type %T\n", obj)
@@ -66,7 +71,7 @@ func fileType(obj freesp.ToplevelTreeElement) (ft FileType) {
 	return
 }
 
-func Description(obj freesp.ToplevelTreeElement) string {
+func Description(obj tr.ToplevelTreeElement) string {
 	return descriptionFileTypes[fileType(obj)]
 }
 
@@ -201,20 +206,20 @@ func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	if !ok {
 		return
 	}
-	var f freesp.ToplevelTreeElement
+	var f tr.ToplevelTreeElement
 	var err error
 	f, err = global.SignalGraphMgr().Access(dirMgr.FilenameToShow(sgname))
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
-	global.MappingMgr().SetGraphForNew(f.(freesp.SignalGraphIf))
+	global.MappingMgr().SetGraphForNew(f.(bh.SignalGraphIf))
 	f, err = global.PlatformMgr().Access(dirMgr.FilenameToShow(pfname))
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
-	global.MappingMgr().SetPlatformForNew(f.(freesp.PlatformIf))
+	global.MappingMgr().SetPlatformForNew(f.(pf.PlatformIf))
 	_, err = global.MappingMgr().New()
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
@@ -222,7 +227,7 @@ func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 }
 
-func getFileMgr(ft FileType) (fileMgr freesp.FileManagerIf, err error) {
+func getFileMgr(ft FileType) (fileMgr mod.FileManagerIf, err error) {
 	switch ft {
 	case FileTypeGraph:
 		fileMgr = global.SignalGraphMgr()
@@ -246,8 +251,8 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	filename = dirMgr.FilenameToShow(filename)
 	var err error
-	var obj freesp.ToplevelTreeElement
-	var fileMgr freesp.FileManagerIf
+	var obj tr.ToplevelTreeElement
+	var fileMgr mod.FileManagerIf
 	fileMgr, err = getFileMgr(FileType(tool.Suffix(filename)))
 	obj, err = fileMgr.Access(filename)
 	if err != nil {
@@ -321,7 +326,7 @@ func fileClose(menu *GoAppMenu, fts *models.FilesTreeStore, ftv *views.FilesTree
 	if err != nil {
 		return
 	}
-	global.FileMgr(obj).Remove(obj.(freesp.Filenamer).Filename())
+	global.FileMgr(obj).Remove(obj.(fd.Filenamer).Filename())
 	jl.Reset()
 	MenuEditPost(menu, fts, jl)
 }
@@ -378,7 +383,7 @@ func runFileDialog(fTypes []FileType, toSave bool, announce string) (filename st
 	return
 }
 
-func doSave(fts *models.FilesTreeStore, filename string, obj freesp.ToplevelTreeElement) (err error) {
+func doSave(fts *models.FilesTreeStore, filename string, obj tr.ToplevelTreeElement) (err error) {
 	err = obj.WriteFile(filename)
 	return
 }
@@ -422,11 +427,11 @@ func setCurrentTopValue(fts *models.FilesTreeStore, value string) {
 	fts.SetValueById(id0, value)
 }
 
-func getCurrentTopObject(fts *models.FilesTreeStore) freesp.ToplevelTreeElement {
+func getCurrentTopObject(fts *models.FilesTreeStore) tr.ToplevelTreeElement {
 	id0 := getToplevelId(fts)
 	obj, err := fts.GetObjectById(id0)
 	if err != nil {
 		log.Fatal("fileSave error: fts.GetObjectByPath failed:", err)
 	}
-	return obj.(freesp.ToplevelTreeElement)
+	return obj.(tr.ToplevelTreeElement)
 }

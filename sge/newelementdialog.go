@@ -2,7 +2,8 @@ package main
 
 import (
 	//"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -62,33 +63,33 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		return []elementType{}
 	}
 	switch object.(type) {
-	case freesp.SignalGraphIf, freesp.SignalGraphTypeIf:
+	case bh.SignalGraphIf, bh.SignalGraphTypeIf:
 		activeElem = eSignalGraph
-	case freesp.NodeIf:
+	case bh.NodeIf:
 		activeElem = eNode
-	case freesp.NodeTypeIf:
+	case bh.NodeTypeIf:
 		activeElem = eNodeType
-	case freesp.Port:
+	case bh.Port:
 		activeElem = ePort
-	case freesp.PortType:
+	case bh.PortType:
 		activeElem = ePortType
-	case freesp.Connection:
+	case bh.Connection:
 		activeElem = eConnection
-	case freesp.SignalType:
+	case bh.SignalType:
 		activeElem = eSignalType
-	case freesp.LibraryIf:
+	case bh.LibraryIf:
 		activeElem = eLibrary
-	case freesp.ImplementationIf:
+	case bh.ImplementationIf:
 		activeElem = eImplementation
-	case freesp.PlatformIf:
+	case pf.PlatformIf:
 		activeElem = ePlatform
-	case freesp.ArchIf:
+	case pf.ArchIf:
 		activeElem = eArch
-	case freesp.IOTypeIf:
+	case pf.IOTypeIf:
 		activeElem = eIOType
-	case freesp.ProcessIf:
+	case pf.ProcessIf:
 		activeElem = eProcess
-	case freesp.ChannelIf:
+	case pf.ChannelIf:
 		activeElem = eChannel
 	default:
 		return []elementType{}

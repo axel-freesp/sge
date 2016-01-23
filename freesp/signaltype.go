@@ -2,6 +2,8 @@ package freesp
 
 import (
 	"fmt"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
@@ -9,17 +11,17 @@ import (
 
 type signalType struct {
 	name, ctype, msgid string
-	scope              Scope
-	mode               Mode
+	scope              bh.Scope
+	mode               bh.Mode
 }
 
 /*
- *  freesp.SignalType API
+ *  freesp.bh.SignalType API
  */
 
-var _ SignalType = (*signalType)(nil)
+var _ bh.SignalType = (*signalType)(nil)
 
-func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) (t *signalType, err error) {
+func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode) (t *signalType, err error) {
 	newT := &signalType{name, ctype, msgid, scope, mode}
 	sType := signalTypes[name]
 	if sType != nil {
@@ -39,7 +41,7 @@ func SignalTypeNew(name, ctype, msgid string, scope Scope, mode Mode) (t *signal
 	return
 }
 
-func SignalTypeDestroy(t SignalType) {
+func SignalTypeDestroy(t bh.SignalType) {
 	registeredSignalTypes.Remove(t.TypeName())
 	delete(signalTypes, t.TypeName())
 }
@@ -69,19 +71,19 @@ func (t *signalType) SetChannelId(newChannelId string) {
 	t.msgid = newChannelId
 }
 
-func (t *signalType) Scope() Scope {
+func (t *signalType) Scope() bh.Scope {
 	return t.scope
 }
 
-func (t *signalType) SetScope(newScope Scope) {
+func (t *signalType) SetScope(newScope bh.Scope) {
 	t.scope = newScope
 }
 
-func (t *signalType) Mode() Mode {
+func (t *signalType) Mode() bh.Mode {
 	return t.mode
 }
 
-func (t *signalType) SetMode(newMode Mode) {
+func (t *signalType) SetMode(newMode bh.Mode) {
 	t.mode = newMode
 }
 
@@ -90,39 +92,39 @@ func (t *signalType) SetMode(newMode Mode) {
  */
 
 func (t *signalType) String() string {
-	return fmt.Sprintf("SignalType(%s, %s, %s, %v, %v)", t.name, t.ctype, t.msgid, t.scope, t.mode)
+	return fmt.Sprintf("bh.SignalType(%s, %s, %s, %v, %v)", t.name, t.ctype, t.msgid, t.scope, t.mode)
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-var _ TreeElement = (*signalType)(nil)
+var _ tr.TreeElement = (*signalType)(nil)
 
-func (t *signalType) AddToTree(tree Tree, cursor Cursor) {
+func (t *signalType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop property
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
-	case LibraryIf:
-		prop = mayAddObject | mayEdit | mayRemove
-	case Port, PortType:
+	case bh.LibraryIf:
+		prop = MayAddObject | MayEdit | MayRemove
+	case bh.Port, bh.PortType:
 		prop = 0
 	default:
 		log.Fatalf("signalType.AddToTree error: invalid parent type %T\n", parent)
 	}
-	err := tree.AddEntry(cursor, SymbolSignalType, t.TypeName(), t, prop)
+	err := tree.AddEntry(cursor, tr.SymbolSignalType, t.TypeName(), t, prop)
 	if err != nil {
 		log.Fatalf("signalType.AddToTree error: AddEntry failed: %s\n", err)
 	}
 }
 
-func (t *signalType) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (t *signalType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	log.Fatal("signalType.AddNewObject - nothing to add.")
 	return
 }
 
-func (t *signalType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *signalType) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	log.Fatal("signalType.AddNewObject - nothing to remove.")
 	return
 }
@@ -133,18 +135,18 @@ func (t *signalType) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObj
  */
 
 type signalTypeList struct {
-	signalTypes []SignalType
+	signalTypes []bh.SignalType
 }
 
 func signalTypeListInit() signalTypeList {
 	return signalTypeList{nil}
 }
 
-func (l *signalTypeList) Append(st SignalType) {
+func (l *signalTypeList) Append(st bh.SignalType) {
 	l.signalTypes = append(l.signalTypes, st)
 }
 
-func (l *signalTypeList) Remove(st SignalType) {
+func (l *signalTypeList) Remove(st bh.SignalType) {
 	var i int
 	for i = range l.signalTypes {
 		if st == l.signalTypes[i] {
@@ -153,9 +155,9 @@ func (l *signalTypeList) Remove(st SignalType) {
 	}
 	if i >= len(l.signalTypes) {
 		for _, v := range l.signalTypes {
-			log.Printf("signalTypeList.RemoveNodeType have SignalType %v\n", v)
+			log.Printf("signalTypeList.RemoveNodeType have bh.SignalType %v\n", v)
 		}
-		log.Fatalf("signalTypeList.RemoveNodeType error: SignalType %v not in this list\n", st)
+		log.Fatalf("signalTypeList.RemoveNodeType error: bh.SignalType %v not in this list\n", st)
 	}
 	for i++; i < len(l.signalTypes); i++ {
 		l.signalTypes[i-1] = l.signalTypes[i]
@@ -163,6 +165,6 @@ func (l *signalTypeList) Remove(st SignalType) {
 	l.signalTypes = l.signalTypes[:len(l.signalTypes)-1]
 }
 
-func (l *signalTypeList) SignalTypes() []SignalType {
+func (l *signalTypeList) SignalTypes() []bh.SignalType {
 	return l.signalTypes
 }

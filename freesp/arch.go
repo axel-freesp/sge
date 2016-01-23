@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 )
@@ -12,23 +14,23 @@ type arch struct {
 	name      string
 	iotypes   ioTypeList
 	processes processList
-	platform  PlatformIf
+	platform  pf.PlatformIf
 	position  map[interfaces.PositionMode]image.Point
 	archPorts []interfaces.ArchPortObject
 }
 
-var _ ArchIf = (*arch)(nil)
+var _ pf.ArchIf = (*arch)(nil)
 var _ interfaces.ArchObject = (*arch)(nil)
 
-func ArchNew(name string, platform PlatformIf) *arch {
+func ArchNew(name string, platform pf.PlatformIf) *arch {
 	return &arch{name, ioTypeListInit(), processListInit(), platform,
 		make(map[interfaces.PositionMode]image.Point), nil}
 }
 
-func createArchFromXml(xmla backend.XmlArch, platform PlatformIf) (a *arch, err error) {
+func createArchFromXml(xmla backend.XmlArch, platform pf.PlatformIf) (a *arch, err error) {
 	a = ArchNew(xmla.Name, platform)
 	for _, xmlt := range xmla.IOType {
-		var t IOTypeIf
+		var t pf.IOTypeIf
 		t, err = IOTypeNew(xmlt.Name, ioModeMap[xmlt.Mode], a.platform)
 		if err != nil {
 			return
@@ -44,7 +46,7 @@ func createArchFromXml(xmla backend.XmlArch, platform PlatformIf) (a *arch, err 
 		a.processes.Append(pr)
 	}
 	for _, xmlh := range xmla.Entry {
-		mode, ok := modeFromString[xmlh.Mode]
+		mode, ok := ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
 			continue
@@ -54,11 +56,11 @@ func createArchFromXml(xmla backend.XmlArch, platform PlatformIf) (a *arch, err 
 	return
 }
 
-func (a *arch) Platform() PlatformIf {
+func (a *arch) Platform() pf.PlatformIf {
 	return a.platform
 }
 
-func (a *arch) IOTypes() []IOTypeIf {
+func (a *arch) IOTypes() []pf.IOTypeIf {
 	return a.iotypes.IoTypes()
 }
 
@@ -66,7 +68,7 @@ func (a *arch) IOTypeObjects() []interfaces.IOTypeObject {
 	return a.iotypes.Exports()
 }
 
-func (a *arch) Processes() []ProcessIf {
+func (a *arch) Processes() []pf.ProcessIf {
 	return a.processes.Processes()
 }
 
@@ -120,12 +122,12 @@ func (a *arch) String() string {
 }
 
 //
-//  TreeElement API
+//  tr.TreeElement API
 //
 
-func (a *arch) AddToTree(tree Tree, cursor Cursor) {
+func (a *arch) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	//log.Printf("arch.AddToTree: %s\n", a.Name())
-	err := tree.AddEntry(cursor, SymbolArch, a.Name(), a, mayAddObject|mayEdit|mayRemove)
+	err := tree.AddEntry(cursor, tr.SymbolArch, a.Name(), a, MayAddObject|MayEdit|MayRemove)
 	if err != nil {
 		log.Fatalf("arch.AddToTree error: AddEntry failed: %s", err)
 	}
@@ -139,14 +141,14 @@ func (a *arch) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (a *arch) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("arch.AddNewObject error: nil object")
 		return
 	}
 	switch obj.(type) {
-	case IOTypeIf:
-		t := obj.(IOTypeIf)
+	case pf.IOTypeIf:
+		t := obj.(pf.IOTypeIf)
 		_, ok := a.iotypes.Find(t.Name())
 		if ok {
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate ioType name %s (abort)\n", t.Name())
@@ -157,8 +159,8 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 		newCursor = tree.Insert(cursor)
 		t.AddToTree(tree, newCursor)
 
-	case ProcessIf:
-		p := obj.(ProcessIf)
+	case pf.ProcessIf:
+		p := obj.(pf.ProcessIf)
 		_, ok := a.processes.Find(p.Name())
 		if ok {
 			err = fmt.Errorf("arch.AddNewObject warning: duplicate process name %s (abort)\n", p.Name())
@@ -175,7 +177,7 @@ func (a *arch) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 	return
 }
 
-func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (a *arch) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if a != tree.Object(parent) {
 		log.Printf("arch.RemoveObject error: not removing child of mine.")
@@ -183,8 +185,8 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case IOTypeIf:
-		t := obj.(IOTypeIf)
+	case pf.IOTypeIf:
+		t := obj.(pf.IOTypeIf)
 		_, ok := a.iotypes.Find(t.Name())
 		if ok {
 			a.iotypes.Remove(t)
@@ -192,10 +194,10 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			log.Printf("arch.RemoveObject error: iotype to be removed not found.\n")
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, t})
+		removed = append(removed, tr.IdWithObject{prefix, index, t})
 
-	case ProcessIf:
-		p := obj.(ProcessIf)
+	case pf.ProcessIf:
+		p := obj.(pf.ProcessIf)
 		if p.Arch() != a {
 			log.Printf("arch.RemoveObject error: process to be removed is no child of mine.")
 		}
@@ -213,7 +215,7 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			//log.Printf("arch.RemoveObject: remove %v\n", cc)
 			pp.(*process).outChannels.Remove(cc)
 			prefix, index := tree.Remove(ccCursor)
-			removed = append(removed, IdWithObject{prefix, index, cc})
+			removed = append(removed, tr.IdWithObject{prefix, index, cc})
 		}
 		for _, c := range p.InChannels() {
 			p.(*process).inChannels.Remove(c)
@@ -226,13 +228,13 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 			//log.Printf("arch.RemoveObject: remove %v\n", cc)
 			pp.(*process).inChannels.Remove(cc)
 			prefix, index := tree.Remove(ccCursor)
-			removed = append(removed, IdWithObject{prefix, index, cc})
+			removed = append(removed, tr.IdWithObject{prefix, index, cc})
 		}
 		for _, c := range p.OutChannels() {
 			p.(*process).outChannels.Remove(c)
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, p})
+		removed = append(removed, tr.IdWithObject{prefix, index, p})
 		//log.Printf("arch.RemoveObject: successfully removed process %v\n", p)
 
 	default:
@@ -241,7 +243,7 @@ func (a *arch) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 	return
 }
 
-func (a *arch) Identify(te TreeElement) bool {
+func (a *arch) Identify(te tr.TreeElement) bool {
 	switch te.(type) {
 	case *arch:
 		return te.(*arch).Name() == a.Name()
@@ -254,7 +256,7 @@ func (a *arch) Identify(te TreeElement) bool {
 //
 
 type archList struct {
-	archs   []ArchIf
+	archs   []pf.ArchIf
 	exports []interfaces.ArchObject
 }
 
@@ -267,7 +269,7 @@ func (l *archList) Append(a *arch) {
 	l.exports = append(l.exports, a)
 }
 
-func (l *archList) Remove(a ArchIf) {
+func (l *archList) Remove(a pf.ArchIf) {
 	var i int
 	for i = range l.archs {
 		if a == l.archs[i] {
@@ -288,7 +290,7 @@ func (l *archList) Remove(a ArchIf) {
 	l.exports = l.exports[:len(l.exports)-1]
 }
 
-func (l *archList) Archs() []ArchIf {
+func (l *archList) Archs() []pf.ArchIf {
 	return l.archs
 }
 
@@ -296,7 +298,7 @@ func (l *archList) Exports() []interfaces.ArchObject {
 	return l.exports
 }
 
-func (l *archList) Find(name string) (a ArchIf, ok bool) {
+func (l *archList) Find(name string) (a pf.ArchIf, ok bool) {
 	for _, a = range l.archs {
 		if a.Name() == name {
 			ok = true

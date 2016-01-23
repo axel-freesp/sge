@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -93,14 +97,14 @@ var ioModeStrings = []string{
 	string(interfaces.IOModeSync),
 }
 
-var scope2string = map[freesp.Scope]string{
-	freesp.Local:  scopeStrings[freesp.Local],
-	freesp.Global: scopeStrings[freesp.Global],
+var scope2string = map[bh.Scope]string{
+	bh.Local:  scopeStrings[bh.Local],
+	bh.Global: scopeStrings[bh.Global],
 }
 
-var mode2string = map[freesp.Mode]string{
-	freesp.Synchronous:  modeStrings[freesp.Synchronous],
-	freesp.Asynchronous: modeStrings[freesp.Asynchronous],
+var mode2string = map[bh.Mode]string{
+	bh.Synchronous:  modeStrings[bh.Synchronous],
+	bh.Asynchronous: modeStrings[bh.Asynchronous],
 }
 
 var direction2string = map[interfaces.PortDirection]string{
@@ -108,19 +112,19 @@ var direction2string = map[interfaces.PortDirection]string{
 	interfaces.OutPort: directionStrings[1],
 }
 
-var implType2string = map[freesp.ImplementationType]string{
-	freesp.NodeTypeElement: implTypeStrings[freesp.NodeTypeElement],
-	freesp.NodeTypeGraph:   implTypeStrings[freesp.NodeTypeGraph],
+var implType2string = map[bh.ImplementationType]string{
+	bh.NodeTypeElement: implTypeStrings[bh.NodeTypeElement],
+	bh.NodeTypeGraph:   implTypeStrings[bh.NodeTypeGraph],
 }
 
-var string2scope = map[string]freesp.Scope{
-	"Local":  freesp.Local,
-	"Global": freesp.Global,
+var string2scope = map[string]bh.Scope{
+	"Local":  bh.Local,
+	"Global": bh.Global,
 }
 
-var string2mode = map[string]freesp.Mode{
-	"Isochronous":  freesp.Synchronous,
-	"Asynchronous": freesp.Asynchronous,
+var string2mode = map[string]bh.Mode{
+	"Isochronous":  bh.Synchronous,
+	"Asynchronous": bh.Asynchronous,
 }
 
 var string2direction = map[string]interfaces.PortDirection{
@@ -128,9 +132,9 @@ var string2direction = map[string]interfaces.PortDirection{
 	"OutPort": interfaces.OutPort,
 }
 
-var string2implType = map[string]freesp.ImplementationType{
-	implTypeStrings[freesp.NodeTypeElement]: freesp.NodeTypeElement,
-	implTypeStrings[freesp.NodeTypeGraph]:   freesp.NodeTypeGraph,
+var string2implType = map[string]bh.ImplementationType{
+	implTypeStrings[bh.NodeTypeElement]: bh.NodeTypeElement,
+	implTypeStrings[bh.NodeTypeGraph]:   bh.NodeTypeGraph,
 }
 
 type EditMenuDialog struct {
@@ -226,12 +230,12 @@ func (dialog *EditMenuDialog) CreateDialog(extra *gtk.Widget) (err error) {
 }
 
 // For connection only: lookup matching ports to connect.
-func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.Port) {
-	var thisPort freesp.Port
+func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []bh.Port) {
+	var thisPort bh.Port
 	switch object.(type) {
-	case freesp.Port:
-		thisPort = object.(freesp.Port)
-	case freesp.Connection:
+	case bh.Port:
+		thisPort = object.(bh.Port)
+	case bh.Connection:
 		log.Fatal("getMatchingPorts error: expecting Port, not Connection")
 	default:
 		log.Fatal("getMatchingPorts error: expecting Port")
@@ -239,7 +243,7 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	thisNode := thisPort.Node()
 	graph := thisNode.Context()
 	for _, n := range graph.Nodes() {
-		var ports []freesp.Port
+		var ports []bh.Port
 		if thisPort.Direction() == interfaces.InPort {
 			ports = n.OutPorts()
 		} else {
@@ -254,13 +258,13 @@ func getMatchingPorts(fts *models.FilesTreeStore, object freesp.TreeElement) (re
 	return
 }
 
-func getOtherProcesses(fts *models.FilesTreeStore, object freesp.TreeElement) (ret []freesp.ProcessIf) {
-	var thisProcess freesp.ProcessIf
+func getOtherProcesses(fts *models.FilesTreeStore, object tr.TreeElement) (ret []pf.ProcessIf) {
+	var thisProcess pf.ProcessIf
 	switch object.(type) {
-	case freesp.ChannelIf:
-		thisProcess = object.(freesp.ChannelIf).Process()
-	case freesp.ProcessIf:
-		thisProcess = object.(freesp.ProcessIf)
+	case pf.ChannelIf:
+		thisProcess = object.(pf.ChannelIf).Process()
+	case pf.ProcessIf:
+		thisProcess = object.(pf.ProcessIf)
 	default:
 		log.Fatalf("getOtherProcesses error: invalid type %T\n", object)
 	}
@@ -427,8 +431,8 @@ var inputHandling = map[inputElement]inputElementHandling{
 			var choices []string
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case freesp.Port:
-			case freesp.Connection:
+			case bh.Port:
+			case bh.Connection:
 				object = fts.Object(fts.Parent(fts.Current()))
 			default:
 				return
@@ -448,8 +452,8 @@ var inputHandling = map[inputElement]inputElementHandling{
 			var choices []string
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case freesp.ProcessIf:
-			case freesp.ChannelIf:
+			case pf.ProcessIf:
+			case pf.ChannelIf:
 				object = fts.Object(fts.Parent(fts.Current()))
 			default:
 				return
@@ -515,11 +519,11 @@ var inputHandling = map[inputElement]inputElementHandling{
 		func(dialog *EditMenuDialog) (obj *gtk.Widget, err error) {
 			fts := dialog.fts
 			var choices []string
-			var melem freesp.MappedElementIf
+			var melem mp.MappedElementIf
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case freesp.MappedElementIf:
-				melem = object.(freesp.MappedElementIf)
+			case mp.MappedElementIf:
+				melem = object.(mp.MappedElementIf)
 			default:
 				return
 			}

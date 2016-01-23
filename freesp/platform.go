@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 	"strings"
 )
@@ -14,7 +16,7 @@ type platform struct {
 	archlist   archList
 }
 
-var _ PlatformIf = (*platform)(nil)
+var _ pf.PlatformIf = (*platform)(nil)
 var _ interfaces.PlatformObject = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
@@ -29,7 +31,7 @@ func (p *platform) SetPlatformId(newId string) {
 	p.platformId = newId
 }
 
-func (p *platform) Arch() []ArchIf {
+func (p *platform) Arch() []pf.ArchIf {
 	return p.archlist.Archs()
 }
 
@@ -41,12 +43,12 @@ func (p *platform) PlatformObject() interfaces.PlatformObject {
 	return p
 }
 
-func (p *platform) ProcessByName(name string) (pr ProcessIf, ok bool) {
+func (p *platform) ProcessByName(name string) (pr pf.ProcessIf, ok bool) {
 	parts := strings.Split(name, "/")
 	if len(parts) != 2 {
 		return
 	}
-	var a ArchIf
+	var a pf.ArchIf
 	for _, a = range p.Arch() {
 		if a.Name() == parts[0] {
 			break
@@ -120,9 +122,9 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					return
 				}
 				var ok bool
-				var aa ArchIf
-				var pp ProcessIf
-				var cc ChannelIf
+				var aa pf.ArchIf
+				var pp pf.ProcessIf
+				var cc pf.ChannelIf
 				aa, ok = p.archlist.Find(link[0])
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
@@ -148,9 +150,9 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 					return
 				}
 				var ok bool
-				var aa ArchIf
-				var pp ProcessIf
-				var cc ChannelIf
+				var aa pf.ArchIf
+				var pp pf.ProcessIf
+				var cc pf.ChannelIf
 				aa, ok = p.archlist.Find(link[0])
 				if !ok {
 					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
@@ -186,16 +188,16 @@ func (p *platform) WriteFile(filepath string) (err error) {
 	return
 }
 
-func (p *platform) RemoveFromTree(tree Tree) {
+func (p *platform) RemoveFromTree(tree tr.TreeIf) {
 	tree.Remove(tree.Cursor(p))
 }
 
 //
-//  TreeElement API
+//  tr.TreeElement API
 //
 
-func (p *platform) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolPlatform, p.Filename(), p, mayAddObject)
+func (p *platform) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	err := tree.AddEntry(cursor, tr.SymbolPlatform, p.Filename(), p, MayAddObject)
 	if err != nil {
 		log.Fatalf("platform.AddToTree error: AddEntry failed: %s", err)
 	}
@@ -205,14 +207,14 @@ func (p *platform) AddToTree(tree Tree, cursor Cursor) {
 	}
 }
 
-func (p *platform) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (p *platform) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("platform.AddNewObject error: nil object")
 		return
 	}
 	switch obj.(type) {
-	case ArchIf:
-		a := obj.(ArchIf)
+	case pf.ArchIf:
+		a := obj.(pf.ArchIf)
 		_, ok := p.archlist.Find(a.Name())
 		if ok {
 			err = fmt.Errorf("platform.AddNewObject warning: duplicate arch name %s (abort)\n", a.Name())
@@ -228,15 +230,15 @@ func (p *platform) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newC
 	return
 }
 
-func (p *platform) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (p *platform) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if p != tree.Object(parent) {
 		log.Fatal("platform.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case ArchIf:
-		a := obj.(ArchIf)
+	case pf.ArchIf:
+		a := obj.(pf.ArchIf)
 		_, ok := p.archlist.Find(a.Name())
 		if ok {
 			p.archlist.Remove(a)
@@ -251,7 +253,7 @@ func (p *platform) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObjec
 			}
 		}
 		prefix, index := tree.Remove(cursor)
-		removed = append(removed, IdWithObject{prefix, index, a})
+		removed = append(removed, tr.IdWithObject{prefix, index, a})
 
 	default:
 		log.Fatalf("platform.RemoveObject error: invalid type %T\n", obj)

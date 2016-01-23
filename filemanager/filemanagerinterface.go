@@ -1,9 +1,11 @@
 package filemanager
 
 import (
-	"github.com/axel-freesp/sge/freesp"
 	interfaces "github.com/axel-freesp/sge/interface"
-	//"github.com/axel-freesp/sge/models"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	//pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/views"
 )
 
@@ -13,15 +15,15 @@ import (
 
 type FilemanagerContextIf interface {
 	interfaces.Context
-	freesp.ContextIf
+	mod.ModelContextIf
 	ShowAll()
-	FTS() freesp.TreeMgrIf
-	FTV() freesp.TreeViewIf
-	GVC() views.GraphViewCollection
-	CleanupNodeTypesFromNodes([]freesp.NodeIf)
-	CleanupSignalTypesFromNodes([]freesp.NodeIf)
-	NodeTypeIsInUse(freesp.NodeTypeIf) bool
-	CleanupNodeType(freesp.NodeTypeIf)
-	SignalTypeIsInUse(freesp.SignalType) bool
-	CleanupSignalType(freesp.SignalType)
+	FTS() tr.TreeMgrIf
+	FTV() tr.TreeViewIf
+	GVC() views.GraphViewCollectionIf
+	CleanupNodeTypesFromNodes([]bh.NodeIf)
+	CleanupSignalTypesFromNodes([]bh.NodeIf)
+	NodeTypeIsInUse(bh.NodeTypeIf) bool
+	CleanupNodeType(bh.NodeTypeIf)
+	SignalTypeIsInUse(bh.SignalType) bool
+	CleanupSignalType(bh.SignalType)
 }

@@ -5,6 +5,11 @@ import (
 	"github.com/axel-freesp/sge/filemanager"
 	"github.com/axel-freesp/sge/freesp"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	mod "github.com/axel-freesp/sge/interface/model"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
@@ -21,18 +26,18 @@ type Global struct {
 	jl                                      *jobList
 	fts                                     *models.FilesTreeStore
 	ftv                                     *views.FilesTreeView
-	graphviewMap                            map[freesp.ImplementationIf]views.GraphView
+	graphviewMap                            map[bh.ImplementationIf]views.GraphView
 	clp                                     *gtk.Clipboard
-	signalGraphMgr, libraryMgr, platformMgr freesp.FileManagerIf
-	mappingMgr                              freesp.FileManagerMappingIf
+	signalGraphMgr, libraryMgr, platformMgr mod.FileManagerIf
+	mappingMgr                              mod.FileManagerMappingIf
 }
 
 var _ interfaces.Context = (*Global)(nil)
-var _ freesp.ContextIf = (*Global)(nil)
+var _ mod.ModelContextIf = (*Global)(nil)
 var _ filemanager.FilemanagerContextIf = (*Global)(nil)
 
 func GlobalInit(g *Global) {
-	g.graphviewMap = make(map[freesp.ImplementationIf]views.GraphView)
+	g.graphviewMap = make(map[bh.ImplementationIf]views.GraphView)
 	g.signalGraphMgr = filemanager.FileManagerSGNew(g)
 	g.libraryMgr = filemanager.FileManagerLibNew(g)
 	g.platformMgr = filemanager.FileManagerPFNew(g)
@@ -43,31 +48,31 @@ func GlobalInit(g *Global) {
 //		freesp.Context interface
 //
 
-func (g *Global) SignalGraphMgr() freesp.FileManagerIf {
+func (g *Global) SignalGraphMgr() mod.FileManagerIf {
 	return g.signalGraphMgr
 }
 
-func (g *Global) LibraryMgr() freesp.FileManagerIf {
+func (g *Global) LibraryMgr() mod.FileManagerIf {
 	return g.libraryMgr
 }
 
-func (g *Global) PlatformMgr() freesp.FileManagerIf {
+func (g *Global) PlatformMgr() mod.FileManagerIf {
 	return g.platformMgr
 }
 
-func (g *Global) MappingMgr() freesp.FileManagerMappingIf {
+func (g *Global) MappingMgr() mod.FileManagerMappingIf {
 	return g.mappingMgr
 }
 
-func (g *Global) FileMgr(obj freesp.TreeElement) (mgr freesp.FileManagerIf) {
+func (g *Global) FileMgr(obj tr.TreeElement) (mgr mod.FileManagerIf) {
 	switch obj.(type) {
-	case freesp.SignalGraphIf:
+	case bh.SignalGraphIf:
 		mgr = global.SignalGraphMgr()
-	case freesp.LibraryIf:
+	case bh.LibraryIf:
 		mgr = global.LibraryMgr()
-	case freesp.PlatformIf:
+	case pf.PlatformIf:
 		mgr = global.PlatformMgr()
-	case freesp.MappingIf:
+	case mp.MappingIf:
 		mgr = global.MappingMgr()
 	default:
 		log.Panicf("Global.FileMgr error: wrong type '%T' (%v)\n", obj, obj)
@@ -79,15 +84,15 @@ func (g *Global) FileMgr(obj freesp.TreeElement) (mgr freesp.FileManagerIf) {
 //		filemanager.FilemanagerContextIf interface
 //
 
-func (g *Global) FTS() freesp.TreeMgrIf {
+func (g *Global) FTS() tr.TreeMgrIf {
 	return g.fts
 }
 
-func (g *Global) FTV() freesp.TreeViewIf {
+func (g *Global) FTV() tr.TreeViewIf {
 	return g.ftv
 }
 
-func (g *Global) GVC() views.GraphViewCollection {
+func (g *Global) GVC() views.GraphViewCollectionIf {
 	return g.win.graphViews
 }
 
@@ -95,7 +100,7 @@ func (g *Global) ShowAll() {
 	g.win.Window().ShowAll()
 }
 
-func (g *Global) CleanupNodeTypesFromNodes(nodes []freesp.NodeIf) {
+func (g *Global) CleanupNodeTypesFromNodes(nodes []bh.NodeIf) {
 	for _, n := range nodes {
 		nt := n.ItsType()
 		if !g.NodeTypeIsInUse(nt) {
@@ -104,7 +109,7 @@ func (g *Global) CleanupNodeTypesFromNodes(nodes []freesp.NodeIf) {
 	}
 }
 
-func (g *Global) CleanupSignalTypesFromNodes(nodes []freesp.NodeIf) {
+func (g *Global) CleanupSignalTypesFromNodes(nodes []bh.NodeIf) {
 	for _, n := range nodes {
 		for _, p := range n.InPorts() {
 			st := p.SignalType()
@@ -120,26 +125,26 @@ func (g *Global) CleanupSignalTypesFromNodes(nodes []freesp.NodeIf) {
 		}
 		nt := n.ItsType()
 		for _, impl := range nt.Implementation() {
-			if impl.ImplementationType() == freesp.NodeTypeGraph {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
 				g.CleanupSignalTypesFromNodes(impl.Graph().Nodes())
 			}
 		}
 	}
 }
 
-func (g *Global) NodeTypeIsInUse(nt freesp.NodeTypeIf) bool {
-	var te freesp.TreeElement
+func (g *Global) NodeTypeIsInUse(nt bh.NodeTypeIf) bool {
+	var te tr.TreeElement
 	var err error
 	for i := 0; err == nil; i++ {
 		id := fmt.Sprintf("%d", i)
 		te, err = g.fts.GetObjectById(id)
 		switch te.(type) {
-		case freesp.SignalGraphIf:
-			if freesp.SignalGraphUsesNodeType(te.(freesp.SignalGraphIf), nt) {
+		case bh.SignalGraphIf:
+			if freesp.SignalGraphUsesNodeType(te.(bh.SignalGraphIf), nt) {
 				return true
 			}
-		case freesp.LibraryIf:
-			if freesp.LibraryUsesNodeType(te.(freesp.LibraryIf), nt) {
+		case bh.LibraryIf:
+			if freesp.LibraryUsesNodeType(te.(bh.LibraryIf), nt) {
 				return true
 			}
 		}
@@ -147,28 +152,28 @@ func (g *Global) NodeTypeIsInUse(nt freesp.NodeTypeIf) bool {
 	return false
 }
 
-func (g *Global) CleanupNodeType(nt freesp.NodeTypeIf) {
+func (g *Global) CleanupNodeType(nt bh.NodeTypeIf) {
 	for _, impl := range nt.Implementation() {
-		if impl.ImplementationType() == freesp.NodeTypeGraph {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
 			g.CleanupNodeTypesFromNodes(impl.Graph().Nodes())
 		}
 	}
 	freesp.RemoveRegisteredNodeType(nt)
 }
 
-func (g *Global) SignalTypeIsInUse(st freesp.SignalType) bool {
-	var te freesp.TreeElement
+func (g *Global) SignalTypeIsInUse(st bh.SignalType) bool {
+	var te tr.TreeElement
 	var err error
 	for i := 0; err == nil; i++ {
 		id := fmt.Sprintf("%d", i)
 		te, err = g.fts.GetObjectById(id)
 		switch te.(type) {
-		case freesp.SignalGraphIf:
-			if freesp.SignalGraphUsesSignalType(te.(freesp.SignalGraphIf), st) {
+		case bh.SignalGraphIf:
+			if freesp.SignalGraphUsesSignalType(te.(bh.SignalGraphIf), st) {
 				return true
 			}
-		case freesp.LibraryIf:
-			if freesp.LibraryUsesSignalType(te.(freesp.LibraryIf), st) {
+		case bh.LibraryIf:
+			if freesp.LibraryUsesSignalType(te.(bh.LibraryIf), st) {
 				return true
 			}
 		}
@@ -176,7 +181,7 @@ func (g *Global) SignalTypeIsInUse(st freesp.SignalType) bool {
 	return false
 }
 
-func (g *Global) CleanupSignalType(st freesp.SignalType) {
+func (g *Global) CleanupSignalType(st bh.SignalType) {
 	freesp.RemoveRegisteredSignalType(st)
 }
 
@@ -185,7 +190,7 @@ func (g *Global) CleanupSignalType(st freesp.SignalType) {
 //
 
 func (g *Global) SelectNode(node interfaces.NodeObject) {
-	n := node.(freesp.NodeIf)
+	n := node.(bh.NodeIf)
 	cursor := g.fts.Cursor(n)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
@@ -197,7 +202,7 @@ func (g *Global) EditNode(node interfaces.NodeObject) {
 }
 
 func (g *Global) SelectPort(port interfaces.PortObject) {
-	p := port.(freesp.Port)
+	p := port.(bh.Port)
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
 	pCursor := g.fts.CursorAt(cursor, p)
@@ -207,7 +212,7 @@ func (g *Global) SelectPort(port interfaces.PortObject) {
 }
 
 func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
-	c := conn.(freesp.Connection)
+	c := conn.(bh.Connection)
 	p := c.From()
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
@@ -219,7 +224,7 @@ func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
 }
 
 func (g *Global) SelectArch(obj interfaces.ArchObject) {
-	a := obj.(freesp.ArchIf)
+	a := obj.(pf.ArchIf)
 	cursor := g.fts.Cursor(a)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
@@ -227,7 +232,7 @@ func (g *Global) SelectArch(obj interfaces.ArchObject) {
 }
 
 func (g *Global) SelectProcess(obj interfaces.ProcessObject) {
-	p := obj.(freesp.ProcessIf)
+	p := obj.(pf.ProcessIf)
 	a := p.Arch()
 	aCursor := g.fts.Cursor(a)
 	cursor := g.fts.CursorAt(aCursor, p)
@@ -237,7 +242,7 @@ func (g *Global) SelectProcess(obj interfaces.ProcessObject) {
 }
 
 func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
-	c := obj.(freesp.ChannelIf)
+	c := obj.(pf.ChannelIf)
 	pr := c.Process()
 	a := pr.Arch()
 	aCursor := g.fts.Cursor(a)
@@ -249,7 +254,7 @@ func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
 }
 
 func (g *Global) SelectMapElement(obj interfaces.MapElemObject) {
-	melem := obj.(freesp.MappedElementIf)
+	melem := obj.(mp.MappedElementIf)
 	cursor := g.fts.Cursor(melem)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	mod "github.com/axel-freesp/sge/interface/model"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -11,32 +14,32 @@ import (
 type fileManagerPF struct {
 	filenameFactory
 	context     FilemanagerContextIf
-	platformMap map[string]freesp.PlatformIf
+	platformMap map[string]pf.PlatformIf
 }
 
-var _ freesp.FileManagerIf = (*fileManagerPF)(nil)
+var _ mod.FileManagerIf = (*fileManagerPF)(nil)
 
 func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
-	return &fileManagerPF{FilenameFactoryInit("spml"), context, make(map[string]freesp.PlatformIf)}
+	return &fileManagerPF{FilenameFactoryInit("spml"), context, make(map[string]pf.PlatformIf)}
 }
 
 //
 //      FileManagerIf interface
 //
 
-func (f *fileManagerPF) New() (pl freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerPF) New() (pl tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	pl = freesp.PlatformNew(filename)
-	f.platformMap[filename] = pl.(freesp.PlatformIf)
+	f.platformMap[filename] = pl.(pf.PlatformIf)
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(pl.(freesp.PlatformIf))
+	newId, err = f.context.FTS().AddToplevel(pl.(pf.PlatformIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.New: %s", err)
 		return
 	}
 	f.context.FTV().SelectId(newId)
 	var pv views.GraphView
-	pv, err = views.PlatformViewNew(pl.(freesp.PlatformIf).PlatformObject(), f.context)
+	pv, err = views.PlatformViewNew(pl.(pf.PlatformIf).PlatformObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.New: %s", err)
 		return
@@ -46,7 +49,7 @@ func (f *fileManagerPF) New() (pl freesp.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerPF) Access(name string) (pl freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err error) {
 	var ok bool
 	pl, ok = f.platformMap[name]
 	if ok {
@@ -63,16 +66,16 @@ func (f *fileManagerPF) Access(name string) (pl freesp.ToplevelTreeElement, err 
 		err = fmt.Errorf("fileManagerPF.Access: platform file %s not found", name)
 		return
 	}
-	pv, err := views.PlatformViewNew(pl.(freesp.PlatformIf).PlatformObject(), f.context)
+	pv, err := views.PlatformViewNew(pl.(pf.PlatformIf).PlatformObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: Could not create platform view.")
 		return
 	}
 	f.context.GVC().Add(pv, name)
 	log.Printf("fileManagerPF.Access: platform %s successfully loaded.\n", name)
-	f.platformMap[name] = pl.(freesp.PlatformIf)
+	f.platformMap[name] = pl.(pf.PlatformIf)
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(pl.(freesp.PlatformIf))
+	newId, err = f.context.FTS().AddToplevel(pl.(pf.PlatformIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: %s", err)
 		return

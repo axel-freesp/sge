@@ -3,7 +3,12 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/mapping"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	mod "github.com/axel-freesp/sge/interface/model"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -11,66 +16,66 @@ import (
 type fileManagerMap struct {
 	filenameFactory
 	context        FilemanagerContextIf
-	mappingMap     map[string]freesp.MappingIf
-	graphForNew    freesp.SignalGraphIf
-	platformForNew freesp.PlatformIf
+	mappingMap     map[string]mp.MappingIf
+	graphForNew    bh.SignalGraphIf
+	platformForNew pf.PlatformIf
 	// TODO: Semaphore to lock against concurrent New() calls
 }
 
-var _ freesp.FileManagerMappingIf = (*fileManagerMap)(nil)
+var _ mod.FileManagerMappingIf = (*fileManagerMap)(nil)
 
 func FileManagerMapNew(context FilemanagerContextIf) *fileManagerMap {
-	return &fileManagerMap{FilenameFactoryInit("mml"), context, make(map[string]freesp.MappingIf), nil, nil}
+	return &fileManagerMap{FilenameFactoryInit("mml"), context, make(map[string]mp.MappingIf), nil, nil}
 }
 
-func (f *fileManagerMap) SetGraphForNew(g freesp.SignalGraphIf) {
-	f.graphForNew = g
+func (f *fileManagerMap) SetGraphForNew(g interface{}) {
+	f.graphForNew = g.(bh.SignalGraphIf)
 }
 
-func (f *fileManagerMap) SetPlatformForNew(p freesp.PlatformIf) {
-	f.platformForNew = p
+func (f *fileManagerMap) SetPlatformForNew(p interface{}) {
+	f.platformForNew = p.(pf.PlatformIf)
 }
 
 //
 //      FileManagerIf interface
 //
 
-func (f *fileManagerMap) New() (m freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerMap) New() (m tr.ToplevelTreeElement, err error) {
 	if f.graphForNew == nil || f.platformForNew == nil {
 		err = fmt.Errorf("fileManagerMap.New: not completely prepared.\n")
 		return
 	}
 	filename := f.NewFilename()
-	m = freesp.MappingNew(filename, f.context)
-	m.(freesp.MappingIf).SetGraph(f.graphForNew)
-	m.(freesp.MappingIf).SetPlatform(f.platformForNew)
+	m = mapping.MappingNew(filename, f.context)
+	m.(mp.MappingIf).SetGraph(f.graphForNew)
+	m.(mp.MappingIf).SetPlatform(f.platformForNew)
 	f.graphForNew = nil
 	f.platformForNew = nil
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(m.(freesp.MappingIf))
+	newId, err = f.context.FTS().AddToplevel(m.(mp.MappingIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerMap.New: %s", err)
 		return
 	}
 	f.context.FTV().SelectId(newId)
 	var mv views.GraphView
-	mv, err = views.MappingViewNew(m.(freesp.MappingIf).MappingObject(), f.context)
+	mv, err = views.MappingViewNew(m.(mp.MappingIf).MappingObject(), f.context)
 	if err != nil {
 		log.Fatal("fileNewMap: Could not create graph view.")
 	}
 	f.context.GVC().Add(mv, filename)
 	f.context.ShowAll()
-	f.mappingMap[filename] = m.(freesp.MappingIf)
+	f.mappingMap[filename] = m.(mp.MappingIf)
 	return
 }
 
-func (f *fileManagerMap) Access(name string) (m freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err error) {
 	var ok bool
 	m, ok = f.mappingMap[name]
 	if ok {
 		return
 	}
-	m = freesp.MappingNew(name, f.context)
+	m = mapping.MappingNew(name, f.context)
 	for _, try := range backend.XmlSearchPaths() {
 		log.Printf("fileManagerMap.Access: try path %s\n", try)
 		err = m.ReadFile(fmt.Sprintf("%s/%s", try, name))
@@ -86,21 +91,21 @@ func (f *fileManagerMap) Access(name string) (m freesp.ToplevelTreeElement, err 
 		return
 	}
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(m.(freesp.MappingIf))
+	newId, err = f.context.FTS().AddToplevel(m.(mp.MappingIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerMap.Access: %s", err)
 		return
 	}
 	f.context.FTV().SelectId(newId)
 	var mv views.GraphView
-	mv, err = views.MappingViewNew(m.(freesp.MappingIf).MappingObject(), f.context)
+	mv, err = views.MappingViewNew(m.(mp.MappingIf).MappingObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerMap.Access: Could not create platform view.")
 		return
 	}
 	f.context.GVC().Add(mv, name)
 	log.Println("fileManagerMap.Access: platform %s successfully loaded.", name)
-	f.mappingMap[name] = m.(freesp.MappingIf)
+	f.mappingMap[name] = m.(mp.MappingIf)
 	return
 }
 

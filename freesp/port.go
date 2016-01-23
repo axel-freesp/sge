@@ -3,41 +3,43 @@ package freesp
 import (
 	"fmt"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 	"unsafe"
 )
 
 type port struct {
-	itsType   PortType
+	itsType   bh.PortType
 	connected portList
-	conn      []Connection
-	node      NodeIf
+	conn      []bh.Connection
+	node      bh.NodeIf
 }
 
 var _ interfaces.PortObject = (*port)(nil)
 
 // TODO: Create namedPortType object first and hand it here?
-func newPort(pt PortType, n NodeIf) *port {
+func newPort(pt bh.PortType, n bh.NodeIf) *port {
 	return &port{pt, portListInit(), nil, n}
 }
 
 /*
- *  freesp.Port API
+ *  freesp.bh.Port API
  *
- *  type Port interface {
+ *  type bh.Port interface {
  *  	Name() string
- *  	ItsType() PortType
+ *  	ItsType() bh.PortType
  *  	Direction() PortDirection
- *  	Connections() []Port
- *  	NodeIf() NodeIf
- *      Connection(c *port) Connection
- *  	AddConnection(Port) error
- *  	RemoveConnection(c Port)
+ *  	Connections() []bh.Port
+ *  	bh.NodeIf() bh.NodeIf
+ *      bh.Connection(c *port) bh.Connection
+ *  	AddConnection(bh.Port) error
+ *  	RemoveConnection(c bh.Port)
  *  }
  *
- *  func PortConnect(port1, port2 Port) error
+ *  func PortConnect(port1, port2 bh.Port) error
  */
-var _ Port = (*port)(nil)
+var _ bh.Port = (*port)(nil)
 
 func (p *port) Name() string {
 	return p.itsType.Name()
@@ -47,7 +49,7 @@ func (p *port) SetName(newName string) {
 	log.Panicf("port.SetName: not allowed.\n")
 }
 
-func (p *port) SignalType() SignalType {
+func (p *port) SignalType() bh.SignalType {
 	return p.itsType.SignalType()
 }
 
@@ -59,7 +61,7 @@ func (p *port) SetDirection(interfaces.PortDirection) {
 	log.Panicf("port.SetDirection() is not allowed!\n")
 }
 
-func (p *port) Connections() []Port {
+func (p *port) Connections() []bh.Port {
 	return p.connected.Ports()
 }
 
@@ -67,7 +69,7 @@ func (p *port) ConnectionObjects() []interfaces.PortObject {
 	return p.connected.Exports()
 }
 
-func (p *port) Node() NodeIf {
+func (p *port) Node() bh.NodeIf {
 	return p.node
 }
 
@@ -75,14 +77,14 @@ func (p *port) NodeObject() interfaces.NodeObject {
 	return p.node
 }
 
-func (p *port) AddConnection(c Connection) error {
+func (p *port) AddConnection(c bh.Connection) error {
 	return portConnect(p, c.(*connection))
 }
 
-func (p *port) RemoveConnection(c Port) {
+func (p *port) RemoveConnection(c bh.Port) {
 	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
 	if !ok {
-		log.Fatalf("port.Connection error: port %v not in connected list of port %v\n", c, p)
+		log.Fatalf("port.bh.Connection error: port %v not in connected list of port %v\n", c, p)
 	}
 	p.connected.Remove(c)
 	for index++; index < len(p.conn); index++ {
@@ -91,17 +93,17 @@ func (p *port) RemoveConnection(c Port) {
 	p.conn = p.conn[:len(p.conn)-1]
 }
 
-func (p *port) Connection(c Port) Connection {
+func (p *port) Connection(c bh.Port) bh.Connection {
 	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
 	if !ok {
-		log.Fatalf("port.Connection error: port %v not in connected list of port %v\n", c, p)
+		log.Fatalf("port.bh.Connection error: port %v not in connected list of port %v\n", c, p)
 	}
 	return p.conn[index]
 }
 
-func portConnect(port1 Port, c *connection) error {
+func portConnect(port1 bh.Port, c *connection) error {
 	p1 := port1.(*port)
-	var port2 Port
+	var port2 bh.Port
 	var p2 *port
 	if c.from.(*port) == p1 {
 		port2 = c.to
@@ -138,24 +140,24 @@ func (p *port) String() (s string) {
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-var _ TreeElement = (*port)(nil)
+var _ tr.TreeElement = (*port)(nil)
 
-func (p *port) AddToTree(tree Tree, cursor Cursor) {
+func (p *port) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop property
 	parentId := tree.Parent(cursor)
 	if tree.Property(parentId).IsReadOnly() {
 		prop = 0
 	} else {
-		prop = mayAddObject
+		prop = MayAddObject
 	}
-	var kind Symbol
+	var kind tr.Symbol
 	if p.Direction() == interfaces.InPort {
-		kind = SymbolInputPort
+		kind = tr.SymbolInputPort
 	} else {
-		kind = SymbolOutputPort
+		kind = tr.SymbolOutputPort
 	}
 	err := tree.AddEntry(cursor, kind, p.Name(), p, prop)
 	if err != nil {
@@ -171,7 +173,7 @@ func (p *port) AddToTree(tree Tree, cursor Cursor) {
 	return
 }
 
-func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, otherPort Port) (newCursor Cursor) {
+func (p *port) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connection, otherPort bh.Port) (newCursor tr.Cursor) {
 	newCursor = tree.Insert(cursor)
 	conn.AddToTree(tree, newCursor)
 	contextCursor := tree.Parent(tree.Parent(cursor))
@@ -181,11 +183,11 @@ func (p *port) treeAddNewObject(tree Tree, cursor Cursor, conn Connection, other
 	return
 }
 
-func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (p *port) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
-	case Connection:
-		conn := obj.(Connection)
-		var thisPort, otherPort Port
+	case bh.Connection:
+		conn := obj.(bh.Connection)
+		var thisPort, otherPort bh.Port
 		if p.Direction() == interfaces.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
@@ -209,11 +211,11 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraphIf:
-		case ImplementationIf:
+		case bh.SignalGraphIf:
+		case bh.ImplementationIf:
 			// propagate new edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
-			for _, nn := range nt.(NodeTypeIf).Instances() {
+			for _, nn := range nt.(bh.NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, context)
 				pCursor := tree.CursorAt(tCursor, p)
@@ -232,26 +234,26 @@ func (p *port) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCurso
 	return
 }
 
-func (p *port) treeRemoveObject(tree Tree, cursor Cursor, conn Connection, otherPort Port) (removed []IdWithObject) {
+func (p *port) treeRemoveObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connection, otherPort bh.Port) (removed []tr.IdWithObject) {
 	contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
 	pCursor := tree.CursorAt(contextCursor, otherPort)
 	otherCursor := tree.CursorAt(pCursor, conn)
 	prefix, index := tree.Remove(cursor)
-	removed = append(removed, IdWithObject{prefix, index, conn})
+	removed = append(removed, tr.IdWithObject{prefix, index, conn})
 	tree.Remove(otherCursor)
 	return
 }
 
-func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (p *port) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	parent := tree.Parent(cursor)
 	if p != tree.Object(parent) {
 		log.Fatal("port.RemoveObject error: not removing child of mine.")
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case Connection:
-		conn := obj.(Connection)
-		var thisPort, otherPort Port
+	case bh.Connection:
+		conn := obj.(bh.Connection)
+		var thisPort, otherPort bh.Port
 		if p.Direction() == interfaces.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
@@ -269,11 +271,11 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		removed = p.treeRemoveObject(tree, cursor, conn, otherPort)
 		context := tree.Object(contextCursor)
 		switch context.(type) {
-		case SignalGraphIf:
-		case ImplementationIf:
+		case bh.SignalGraphIf:
+		case bh.ImplementationIf:
 			// propagate removed edge to all instances of embracing type
 			nt := tree.Object(tree.Parent(contextCursor))
-			for _, nn := range nt.(NodeTypeIf).Instances() {
+			for _, nn := range nt.(bh.NodeTypeIf).Instances() {
 				nCursor := tree.Cursor(nn)
 				tCursor := tree.CursorAt(nCursor, context)
 				pCursor := tree.CursorAt(tCursor, p)
@@ -288,7 +290,7 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 		otherPort.RemoveConnection(p)
 
 	default:
-		log.Fatalf("Port.RemoveObject error: invalid type %T: %v\n", obj, obj)
+		log.Fatalf("bh.Port.RemoveObject error: invalid type %T: %v\n", obj, obj)
 	}
 	return
 }
@@ -296,7 +298,7 @@ func (p *port) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
 /*
  *  freesp private functions
  */
-func findPort(list []Port, prt *port) bool {
+func findPort(list []bh.Port, prt *port) bool {
 	for _, p := range list {
 		if unsafe.Pointer(p.(*port)) == unsafe.Pointer(prt) {
 			return true
@@ -311,7 +313,7 @@ func findPort(list []Port, prt *port) bool {
  */
 
 type portList struct {
-	ports    []Port
+	ports    []bh.Port
 	exported []interfaces.PortObject
 }
 
@@ -324,7 +326,7 @@ func (l *portList) Append(p *port) {
 	l.exported = append(l.exported, p)
 }
 
-func (l *portList) Remove(p Port) {
+func (l *portList) Remove(p bh.Port) {
 	var i int
 	for i = range l.ports {
 		if p.Node().Name() == l.ports[i].Node().Name() && p.Name() == l.ports[i].Name() {
@@ -333,9 +335,9 @@ func (l *portList) Remove(p Port) {
 	}
 	if i >= len(l.ports) {
 		for _, v := range l.ports {
-			log.Printf("portList.RemovePort have Port %v\n", v)
+			log.Printf("portList.RemovePort have bh.Port %v\n", v)
 		}
-		log.Fatalf("portList.RemovePort error: Port %v not in this list\n", p)
+		log.Fatalf("portList.RemovePort error: bh.Port %v not in this list\n", p)
 	}
 	for i++; i < len(l.ports); i++ {
 		l.ports[i-1] = l.ports[i]
@@ -345,7 +347,7 @@ func (l *portList) Remove(p Port) {
 	l.exported = l.exported[:len(l.exported)-1]
 }
 
-func (l *portList) Ports() []Port {
+func (l *portList) Ports() []bh.Port {
 	return l.ports
 }
 
@@ -353,7 +355,7 @@ func (l *portList) Exports() []interfaces.PortObject {
 	return l.exported
 }
 
-func (l *portList) Find(nodeName, portName string) (p Port, ok bool, index int) {
+func (l *portList) Find(nodeName, portName string) (p bh.Port, ok bool, index int) {
 	ok = false
 	for index, p = range l.ports {
 		if p.Node().Name() == nodeName && p.Name() == portName {

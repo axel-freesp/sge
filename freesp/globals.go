@@ -1,6 +1,8 @@
 package freesp
 
 import (
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/tool"
 )
 
@@ -22,7 +24,7 @@ func Init() {
 	registeredIOTypes = tool.StringListInit()
 }
 
-func RemoveRegisteredNodeType(nt NodeTypeIf) {
+func RemoveRegisteredNodeType(nt bh.NodeTypeIf) {
 	name := nt.TypeName()
 	delete(nodeTypes, name)
 	_, ok := registeredNodeTypes.Find(name)
@@ -31,7 +33,7 @@ func RemoveRegisteredNodeType(nt NodeTypeIf) {
 	}
 }
 
-func RemoveRegisteredSignalType(st SignalType) {
+func RemoveRegisteredSignalType(st bh.SignalType) {
 	name := st.TypeName()
 	delete(signalTypes, name)
 	_, ok := registeredSignalTypes.Find(name)
@@ -40,7 +42,7 @@ func RemoveRegisteredSignalType(st SignalType) {
 	}
 }
 
-func RemoveRegisteredIOType(iot IOTypeIf) {
+func RemoveRegisteredIOType(iot pf.IOTypeIf) {
 	name := iot.Name()
 	delete(ioTypes, name)
 	_, ok := registeredIOTypes.Find(name)

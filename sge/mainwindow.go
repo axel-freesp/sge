@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
@@ -31,14 +34,14 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		MenuEditCurrent(menu, treeStore, global.jl)
 		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
-		case freesp.ImplementationIf:
-			impl := obj.(freesp.ImplementationIf)
-			if impl.ImplementationType() == freesp.NodeTypeGraph {
+		case bh.ImplementationIf:
+			impl := obj.(bh.ImplementationIf)
+			if impl.ImplementationType() == bh.NodeTypeGraph {
 				gv, ok := global.graphviewMap[impl]
 				if !ok {
 					cursor := treeStore.Cursor(obj)
 					ntCursor := treeStore.Parent(cursor)
-					nt := treeStore.Object(ntCursor).(freesp.NodeTypeIf)
+					nt := treeStore.Object(ntCursor).(bh.NodeTypeIf)
 					_, err = global.libraryMgr.Access(nt.DefinedAt())
 					log.Printf("treeSelectionChangedCB: Need library %s: %v\n", nt.DefinedAt(), ok)
 					if err != nil {
@@ -55,7 +58,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				}
 				gv.Sync()
 			}
-		case freesp.NodeIf, freesp.Port, freesp.Connection, freesp.ArchIf, freesp.ProcessIf, freesp.ChannelIf, freesp.MappedElementIf:
+		case bh.NodeIf, bh.Port, bh.Connection, pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
 			global.win.graphViews.Select(obj)
 		}
 	}

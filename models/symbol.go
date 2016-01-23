@@ -2,7 +2,7 @@ package models
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/gotk3/gotk3/gdk"
 	"image"
 	_ "image/jpeg"
@@ -20,16 +20,16 @@ const (
 const imageMethod = gdkReadFile
 
 // Access the Pixbuf objects
-func normalPixbuf(s freesp.Symbol) *gdk.Pixbuf {
+func normalPixbuf(s tr.Symbol) *gdk.Pixbuf {
 	return normalTable[s]
 }
 
-func readonlyPixbuf(s freesp.Symbol) *gdk.Pixbuf {
+func readonlyPixbuf(s tr.Symbol) *gdk.Pixbuf {
 	return readonlyTable[s]
 }
 
 type symbolConfig struct {
-	symbol   freesp.Symbol
+	symbol   tr.Symbol
 	filename string
 }
 
@@ -40,36 +40,36 @@ func makeFilename(s string) string {
 }
 
 var sConfig = []symbolConfig{
-	{freesp.SymbolSignalType, makeFilename("signal-type")},
-	{freesp.SymbolInputPort, makeFilename("inputPic")},
-	{freesp.SymbolOutputPort, makeFilename("outputPic")},
-	{freesp.SymbolConnection, makeFilename("linkPic")},
-	{freesp.SymbolImplElement, makeFilename("implementationPic")},
-	{freesp.SymbolImplGraph, makeFilename("implGraphPic")},
-	{freesp.SymbolLibrary, makeFilename("libraryPic")},
-	{freesp.SymbolInputPortType, makeFilename("inputPic")},
-	{freesp.SymbolOutputPortType, makeFilename("outputPic")},
-	{freesp.SymbolInputNode, makeFilename("inputNodePic")},
-	{freesp.SymbolOutputNode, makeFilename("outputNodePic")},
-	{freesp.SymbolProcessingNode, makeFilename("processingNodePic")},
-	{freesp.SymbolNodeType, makeFilename("nodeTypePic")},
-	{freesp.SymbolSignalGraph, makeFilename("signalGraphPic")},
-	{freesp.SymbolPlatform, makeFilename("platformPic")},
-	{freesp.SymbolArch, makeFilename("archPic")},
-	{freesp.SymbolProcess, makeFilename("processPic")},
-	{freesp.SymbolIOType, makeFilename("signal-type")},
-	{freesp.SymbolInChannel, makeFilename("inputPic")},
-	{freesp.SymbolOutChannel, makeFilename("outputPic")},
-	{freesp.SymbolMappings, makeFilename("mappingsPic")},
-	{freesp.SymbolMapped, makeFilename("mappedPic")},
-	{freesp.SymbolUnmapped, makeFilename("unmappedPic")},
+	{tr.SymbolSignalType, makeFilename("signal-type")},
+	{tr.SymbolInputPort, makeFilename("inputPic")},
+	{tr.SymbolOutputPort, makeFilename("outputPic")},
+	{tr.SymbolConnection, makeFilename("linkPic")},
+	{tr.SymbolImplElement, makeFilename("implementationPic")},
+	{tr.SymbolImplGraph, makeFilename("implGraphPic")},
+	{tr.SymbolLibrary, makeFilename("libraryPic")},
+	{tr.SymbolInputPortType, makeFilename("inputPic")},
+	{tr.SymbolOutputPortType, makeFilename("outputPic")},
+	{tr.SymbolInputNode, makeFilename("inputNodePic")},
+	{tr.SymbolOutputNode, makeFilename("outputNodePic")},
+	{tr.SymbolProcessingNode, makeFilename("processingNodePic")},
+	{tr.SymbolNodeType, makeFilename("nodeTypePic")},
+	{tr.SymbolSignalGraph, makeFilename("signalGraphPic")},
+	{tr.SymbolPlatform, makeFilename("platformPic")},
+	{tr.SymbolArch, makeFilename("archPic")},
+	{tr.SymbolProcess, makeFilename("processPic")},
+	{tr.SymbolIOType, makeFilename("signal-type")},
+	{tr.SymbolInChannel, makeFilename("inputPic")},
+	{tr.SymbolOutChannel, makeFilename("outputPic")},
+	{tr.SymbolMappings, makeFilename("mappingsPic")},
+	{tr.SymbolMapped, makeFilename("mappedPic")},
+	{tr.SymbolUnmapped, makeFilename("unmappedPic")},
 }
 
-var normalTable, readonlyTable map[freesp.Symbol]*gdk.Pixbuf
+var normalTable, readonlyTable map[tr.Symbol]*gdk.Pixbuf
 
 func symbolInit(iconPath string) (err error) {
-	normalTable = make(map[freesp.Symbol]*gdk.Pixbuf)
-	readonlyTable = make(map[freesp.Symbol]*gdk.Pixbuf)
+	normalTable = make(map[tr.Symbol]*gdk.Pixbuf)
+	readonlyTable = make(map[tr.Symbol]*gdk.Pixbuf)
 	for _, s := range sConfig {
 		normalTable[s.symbol], err = normalInit(iconPath, s)
 		if err != nil {

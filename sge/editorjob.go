@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"log"
 )
@@ -73,7 +73,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		var object freesp.TreeElement
+		var object tr.TreeElement
 		object, err = job.newElement.CreateObject(a.fts)
 		if err != nil {
 			log.Printf("jobApplier.Apply error (JobNewElement): %s\n", err)
@@ -128,7 +128,7 @@ func (a *jobApplier) Revert(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		var del []freesp.IdWithObject
+		var del []tr.IdWithObject
 		del, err = a.fts.DeleteObject(job.newElement.newId)
 		if err == nil {
 			state = del[0].ParentId

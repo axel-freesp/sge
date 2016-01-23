@@ -5,9 +5,12 @@ import (
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	"github.com/axel-freesp/sge/models"
 	"log"
 	"strings"
+	//pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 )
 
 type PasteJob struct {
@@ -30,7 +33,7 @@ func (j *PasteJob) String() (text string) {
 }
 
 func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err error) {
-	var parent freesp.TreeElement
+	var parent tr.TreeElement
 	context := fts.GetCurrentId()
 	if len(context) == 0 {
 		err = fmt.Errorf("NewElementJob.ParseText TODO: Toplevel elements not implemented")
@@ -43,31 +46,31 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 	var ok bool
 	var j *PasteJob
 	switch parent.(type) {
-	case freesp.SignalGraphIf:
-		j, ok = parseNode(text, context, parent.(freesp.SignalGraphIf).ItsType())
+	case bh.SignalGraphIf:
+		j, ok = parseNode(text, context, parent.(bh.SignalGraphIf).ItsType())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
 			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.SignalGraphTypeIf:
-		j, ok = parseNode(text, context, parent.(freesp.SignalGraphTypeIf))
+	case bh.SignalGraphTypeIf:
+		j, ok = parseNode(text, context, parent.(bh.SignalGraphTypeIf))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
 			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.NodeIf:
-		j, ok = parseNode(text, getParentId(context), parent.(freesp.NodeIf).Context())
+	case bh.NodeIf:
+		j, ok = parseNode(text, getParentId(context), parent.(bh.NodeIf).Context())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
 			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
-	case freesp.NodeTypeIf:
+	case bh.NodeTypeIf:
 		j, ok = parseNodeType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
@@ -75,13 +78,13 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case freesp.Port:
+	case bh.Port:
 
-	case freesp.PortType:
+	case bh.PortType:
 
-	case freesp.Connection:
+	case bh.Connection:
 
-	case freesp.SignalType:
+	case bh.SignalType:
 		j, ok = parseSignalType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
@@ -89,7 +92,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case freesp.LibraryIf:
+	case bh.LibraryIf:
 		j, ok = parseNodeType(text, context)
 		if ok {
 			job = EditorJobNew(JobPaste, j)
@@ -103,7 +106,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case freesp.ImplementationIf:
+	case bh.ImplementationIf:
 
 	default:
 		err = fmt.Errorf("NewElementJob.ParseText error: can't insert to context %T", parent)
@@ -114,7 +117,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 	return
 }
 
-func parseNode(text, context string, graph freesp.SignalGraphTypeIf) (job *PasteJob, ok bool) {
+func parseNode(text, context string, graph bh.SignalGraphTypeIf) (job *PasteJob, ok bool) {
 	xmln := backend.XmlNode{}
 	_, xmlerr := xmln.Read([]byte(text))
 	if xmlerr != nil {
@@ -210,9 +213,9 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 		j := NewElementJobNew("", eImplementation)
 		j.input[iImplName] = impl.Name
 		if impl.SignalGraph == nil {
-			j.input[iImplementationType] = implType2string[freesp.NodeTypeElement]
+			j.input[iImplementationType] = implType2string[bh.NodeTypeElement]
 		} else {
-			j.input[iImplementationType] = implType2string[freesp.NodeTypeGraph]
+			j.input[iImplementationType] = implType2string[bh.NodeTypeGraph]
 			// nodes: (no need for i/o nodes linked to ports...)
 			// TODO: how to set position? Info is in XML, but not in job...
 			// Add IO nodes, handle them specifically ??
@@ -236,7 +239,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 				// TODO: put validity check of edges somewhere else...
 				var fromPort *backend.XmlOutPort
 				var toPort *backend.XmlInPort
-				var p1, p2 freesp.PortType
+				var p1, p2 bh.PortType
 				for _, n := range impl.SignalGraph[0].InputNodes {
 					if n.NName == e.From {
 						for _, p := range n.OutPort {

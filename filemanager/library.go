@@ -4,31 +4,34 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
 type fileManagerLib struct {
 	filenameFactory
 	context    FilemanagerContextIf
-	libraryMap map[string]freesp.LibraryIf
+	libraryMap map[string]bh.LibraryIf
 }
 
-var _ freesp.FileManagerIf = (*fileManagerLib)(nil)
+var _ mod.FileManagerIf = (*fileManagerLib)(nil)
 
 func FileManagerLibNew(context FilemanagerContextIf) *fileManagerLib {
-	return &fileManagerLib{FilenameFactoryInit("alml"), context, make(map[string]freesp.LibraryIf)}
+	return &fileManagerLib{FilenameFactoryInit("alml"), context, make(map[string]bh.LibraryIf)}
 }
 
 //
 //      FileManagerIf interface
 //
 
-func (f *fileManagerLib) New() (lib freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerLib) New() (lib tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	lib = freesp.LibraryNew(filename, f.context)
-	f.libraryMap[filename] = lib.(freesp.LibraryIf)
+	f.libraryMap[filename] = lib.(bh.LibraryIf)
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(lib.(freesp.LibraryIf))
+	newId, err = f.context.FTS().AddToplevel(lib.(bh.LibraryIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerLib.New: %s.\n", err)
 		return
@@ -37,7 +40,7 @@ func (f *fileManagerLib) New() (lib freesp.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerLib) Access(name string) (lib freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElement, err error) {
 	var ok bool
 	lib, ok = f.libraryMap[name]
 	if ok {
@@ -54,9 +57,9 @@ func (f *fileManagerLib) Access(name string) (lib freesp.ToplevelTreeElement, er
 		err = fmt.Errorf("fileManagerLib.Access: library file %s not found", name)
 		return
 	}
-	f.libraryMap[name] = lib.(freesp.LibraryIf)
+	f.libraryMap[name] = lib.(bh.LibraryIf)
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(lib.(freesp.LibraryIf))
+	newId, err = f.context.FTS().AddToplevel(lib.(bh.LibraryIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerLib.Access: %s", err)
 		return

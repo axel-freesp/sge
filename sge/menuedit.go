@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/axel-freesp/sge/freesp"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
@@ -25,7 +26,7 @@ func MenuEditInit(menu *GoAppMenu) {
 func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	MenuEditCurrent(menu, fts, jl)
 	cursor := fts.Current()
-	var obj freesp.TreeElement
+	var obj tr.TreeElement
 	if len(cursor.Path) != 0 {
 		obj = fts.Object(cursor)
 	}
@@ -36,7 +37,7 @@ func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 func MenuEditCurrent(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	menu.editUndo.SetSensitive(jl.CanUndo())
 	menu.editRedo.SetSensitive(jl.CanRedo())
-	var prop freesp.Property
+	var prop tr.Property
 	cursor := fts.Current()
 	if len(cursor.Path) != 0 {
 		prop = fts.Property(cursor)

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -11,31 +14,31 @@ import (
 type fileManagerSG struct {
 	filenameFactory
 	context        FilemanagerContextIf
-	signalGraphMap map[string]freesp.SignalGraphIf
+	signalGraphMap map[string]bh.SignalGraphIf
 }
 
-var _ freesp.FileManagerIf = (*fileManagerSG)(nil)
+var _ mod.FileManagerIf = (*fileManagerSG)(nil)
 
 func FileManagerSGNew(context FilemanagerContextIf) *fileManagerSG {
-	return &fileManagerSG{FilenameFactoryInit("sml"), context, make(map[string]freesp.SignalGraphIf)}
+	return &fileManagerSG{FilenameFactoryInit("sml"), context, make(map[string]bh.SignalGraphIf)}
 }
 
 //
 //      FileManagerIf interface
 //
 
-func (f *fileManagerSG) New() (sg freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	sg = freesp.SignalGraphNew(filename, f.context)
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(sg.(freesp.SignalGraphIf))
+	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.New: %s", err)
 		return
 	}
 	f.context.FTV().SelectId(newId)
 	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraphIf).GraphObject(), f.context)
+	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf).GraphObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.New: %s", err)
 		return
@@ -45,7 +48,7 @@ func (f *fileManagerSG) New() (sg freesp.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerSG) Access(name string) (sg freesp.ToplevelTreeElement, err error) {
+func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err error) {
 	var ok bool
 	sg, ok = f.signalGraphMap[name]
 	if ok {
@@ -63,7 +66,7 @@ func (f *fileManagerSG) Access(name string) (sg freesp.ToplevelTreeElement, err 
 		return
 	}
 	var newId string
-	newId, err = f.context.FTS().AddToplevel(sg.(freesp.SignalGraphIf))
+	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.Access: %s", err)
 		return
@@ -71,13 +74,13 @@ func (f *fileManagerSG) Access(name string) (sg freesp.ToplevelTreeElement, err 
 	f.context.FTV().SelectId(newId)
 
 	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(freesp.SignalGraphIf).GraphObject(), f.context)
+	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf).GraphObject(), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.Access: %s", err)
 		return
 	}
 	f.context.GVC().Add(gv, name)
-	f.signalGraphMap[name] = sg.(freesp.SignalGraphIf)
+	f.signalGraphMap[name] = sg.(bh.SignalGraphIf)
 	log.Printf("fileManagerSG.Access: graph %s successfully loaded.\n", name)
 	return
 }
@@ -90,7 +93,7 @@ func (f *fileManagerSG) Remove(name string) {
 		return
 	}
 	delete(f.signalGraphMap, name)
-	var nodes []freesp.NodeIf
+	var nodes []bh.NodeIf
 	for _, n := range sg.ItsType().Nodes() {
 		nodes = append(nodes, n)
 	}

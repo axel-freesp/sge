@@ -4,36 +4,39 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mod "github.com/axel-freesp/sge/interface/model"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
-func SignalGraphNew(filename string, context ContextIf) *signalGraph {
+func SignalGraphNew(filename string, context mod.ModelContextIf) *signalGraph {
 	return &signalGraph{filename, SignalGraphTypeNew(context)}
 }
 
-func SignalGraphUsesNodeType(s SignalGraphIf, nt NodeTypeIf) bool {
+func SignalGraphUsesNodeType(s bh.SignalGraphIf, nt bh.NodeTypeIf) bool {
 	return SignalGraphTypeUsesNodeType(s.ItsType(), nt)
 }
 
-func SignalGraphUsesSignalType(s SignalGraphIf, st SignalType) bool {
+func SignalGraphUsesSignalType(s bh.SignalGraphIf, st bh.SignalType) bool {
 	return SignalGraphTypeUsesSignalType(s.ItsType(), st)
 }
 
 type signalGraph struct {
 	filename string
-	itsType  SignalGraphTypeIf
+	itsType  bh.SignalGraphTypeIf
 }
 
 /*
- *  freesp.SignalGraphIf API
+ *  freesp.bh.SignalGraphIf API
  */
-var _ SignalGraphIf = (*signalGraph)(nil)
+var _ bh.SignalGraphIf = (*signalGraph)(nil)
 
 func (s *signalGraph) Filename() string {
 	return s.filename
 }
 
-func (s *signalGraph) ItsType() SignalGraphTypeIf {
+func (s *signalGraph) ItsType() bh.SignalGraphTypeIf {
 	return s.itsType
 }
 
@@ -78,7 +81,7 @@ func (s *signalGraph) SetFilename(filename string) {
 	s.filename = filename
 }
 
-func (s *signalGraph) RemoveFromTree(tree Tree) {
+func (s *signalGraph) RemoveFromTree(tree tr.TreeIf) {
 	gt := s.ItsType()
 	tree.Remove(tree.Cursor(s))
 	for len(gt.Nodes()) > 0 {
@@ -87,23 +90,23 @@ func (s *signalGraph) RemoveFromTree(tree Tree) {
 }
 
 /*
- *  TreeElement API
+ *  tr.TreeElement API
  */
 
-var _ TreeElement = (*signalGraph)(nil)
+var _ tr.TreeElement = (*signalGraph)(nil)
 
-func (t *signalGraph) AddToTree(tree Tree, cursor Cursor) {
-	err := tree.AddEntry(cursor, SymbolSignalGraph, t.Filename(), t, mayAddObject)
+func (t *signalGraph) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
+	err := tree.AddEntry(cursor, tr.SymbolSignalGraph, t.Filename(), t, MayAddObject)
 	if err != nil {
 		log.Fatal("LibraryIf.AddToTree error: AddEntry failed: %s", err)
 	}
 	t.ItsType().AddToTree(tree, cursor)
 }
 
-func (t *signalGraph) AddNewObject(tree Tree, cursor Cursor, obj TreeElement) (newCursor Cursor, err error) {
+func (t *signalGraph) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	return t.ItsType().AddNewObject(tree, cursor, obj)
 }
 
-func (t *signalGraph) RemoveObject(tree Tree, cursor Cursor) (removed []IdWithObject) {
+func (t *signalGraph) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
 	return t.ItsType().RemoveObject(tree, cursor)
 }

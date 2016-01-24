@@ -2,16 +2,16 @@ package mapping
 
 import (
 	"fmt"
-	"image"
-	"log"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	fd "github.com/axel-freesp/sge/interface/filedata"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	mp "github.com/axel-freesp/sge/interface/mapping"
-	fd "github.com/axel-freesp/sge/interface/filedata"
-	mod "github.com/axel-freesp/sge/interface/model"
+	"image"
+	"log"
 )
 
 type mapping struct {
@@ -29,7 +29,7 @@ func MappingNew(filename string, context mod.ModelContextIf) *mapping {
 }
 
 func (m *mapping) CreateXml() (buf []byte, err error) {
-	xmlm := freesp.CreateXmlMapping(m)
+	xmlm := CreateXmlMapping(m)
 	buf, err = xmlm.Write()
 	return
 }
@@ -149,13 +149,13 @@ func (m *mapping) ReadFile(filepath string) error {
 }
 
 func (m mapping) Write() (data []byte, err error) {
-	xmlm := freesp.CreateXmlMapping(&m)
+	xmlm := CreateXmlMapping(&m)
 	data, err = xmlm.Write()
 	return
 }
 
 func (m mapping) WriteFile(filepath string) error {
-	xmlm := freesp.CreateXmlMapping(&m)
+	xmlm := CreateXmlMapping(&m)
 	return xmlm.WriteFile(filepath)
 }
 

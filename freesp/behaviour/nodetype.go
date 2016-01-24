@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
@@ -135,20 +136,20 @@ func (t *nodeType) Implementation() []bh.ImplementationIf {
 func createNodeTypeFromXmlNode(n backend.XmlNode, ntName string) *nodeType {
 	nt := NodeTypeNew(ntName, "")
 	for _, p := range n.InPort {
-		pType, ok := signalTypes[p.PType]
+		pType, ok := freesp.GetSignalTypeByName(p.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXmlNode error: FIXME signal type '%s' not found\n", p.PType)
 		}
 		nt.addInPort(p.PName, pType)
 	}
 	for _, p := range n.OutPort {
-		pType, ok := signalTypes[p.PType]
+		pType, ok := freesp.GetSignalTypeByName(p.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXmlNode error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXmlNode error: FIXME signal type '%s' not found\n", p.PType)
 		}
 		nt.addOutPort(p.PName, pType)
 	}
-	nodeTypes[ntName] = nt
+	freesp.RegisterNodeType(nt)
 	return nt
 }
 
@@ -186,16 +187,16 @@ func (t *nodeType) doResolvePort(name string, dir gr.PortDirection) *portType {
 func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context mod.ModelContextIf) *nodeType {
 	nt := NodeTypeNew(n.TypeName, filename)
 	for _, p := range n.InPort {
-		pType, ok := signalTypes[p.PType]
+		pType, ok := freesp.GetSignalTypeByName(p.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXml error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", p.PType)
 		}
 		nt.addInPort(p.PName, pType)
 	}
 	for _, p := range n.OutPort {
-		pType, ok := signalTypes[p.PType]
+		pType, ok := freesp.GetSignalTypeByName(p.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXml error: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", p.PType)
 		}
 		nt.addOutPort(p.PName, pType)
 	}
@@ -232,14 +233,14 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context mod.M
 var _ tr.TreeElement = (*nodeType)(nil)
 
 func (t *nodeType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	var prop property
+	var prop tr.Property
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
 	case bh.LibraryIf:
-		prop = MayAddObject | MayEdit | MayRemove
+		prop = freesp.PropertyNew(true, true, true)
 	case bh.NodeIf:
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	default:
 		log.Fatalf("nodeType.AddToTree error: invalid parent type %T\n", parent)
 	}

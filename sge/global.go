@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/filemanager"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	mod "github.com/axel-freesp/sge/interface/model"
@@ -143,11 +144,11 @@ func (g *Global) NodeTypeIsInUse(nt bh.NodeTypeIf) bool {
 		te, err = g.fts.GetObjectById(id)
 		switch te.(type) {
 		case bh.SignalGraphIf:
-			if freesp.SignalGraphUsesNodeType(te.(bh.SignalGraphIf), nt) {
+			if behaviour.SignalGraphUsesNodeType(te.(bh.SignalGraphIf), nt) {
 				return true
 			}
 		case bh.LibraryIf:
-			if freesp.LibraryUsesNodeType(te.(bh.LibraryIf), nt) {
+			if behaviour.LibraryUsesNodeType(te.(bh.LibraryIf), nt) {
 				return true
 			}
 		}
@@ -172,11 +173,11 @@ func (g *Global) SignalTypeIsInUse(st bh.SignalTypeIf) bool {
 		te, err = g.fts.GetObjectById(id)
 		switch te.(type) {
 		case bh.SignalGraphIf:
-			if freesp.SignalGraphUsesSignalType(te.(bh.SignalGraphIf), st) {
+			if behaviour.SignalGraphUsesSignalType(te.(bh.SignalGraphIf), st) {
 				return true
 			}
 		case bh.LibraryIf:
-			if freesp.LibraryUsesSignalType(te.(bh.LibraryIf), st) {
+			if behaviour.LibraryUsesSignalType(te.(bh.LibraryIf), st) {
 				return true
 			}
 		}

@@ -121,6 +121,13 @@ func main() {
 	selection.SetMode(gtk.SELECTION_SINGLE)
 	selection.Connect("changed", treeSelectionChangedCB, menu)
 
+	japp := jobApplierNew(global.fts)
+	global.jl = jobListNew(japp)
+
+	MenuFileInit(menu)
+	MenuEditInit(menu)
+	MenuAboutInit(menu)
+
 	// Handle command line arguments: treat each as a filename:
 	for i, p := range unhandledArgs {
 		if i > 0 {
@@ -142,13 +149,6 @@ func main() {
 			}
 		}
 	}
-
-	japp := jobApplierNew(global.fts)
-	global.jl = jobListNew(japp)
-
-	MenuFileInit(menu)
-	MenuEditInit(menu)
-	MenuAboutInit(menu)
 
 	global.win.Window().ShowAll()
 	gtk.Main()

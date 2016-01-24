@@ -1,21 +1,21 @@
 package graph
 
 import (
-	"log"
-	"image"
-	"github.com/gotk3/gotk3/cairo"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	"github.com/gotk3/gotk3/cairo"
+	"image"
+	"log"
 )
 
 type Arch struct {
 	Container
-	userObj pf.ArchIf
+	userObj    pf.ArchIf
 	channelMap map[pf.ChannelIf]*ContainerPort
-	processes []ProcessIf
-	mode gr.PositionMode
-	mapping mp.MappingIf
+	processes  []ProcessIf
+	mode       gr.PositionMode
+	mapping    mp.MappingIf
 }
 
 var _ ArchIf = (*Arch)(nil)
@@ -29,11 +29,11 @@ func ArchNew(userObj pf.ArchIf) *Arch {
 		Children = append(Children, p)
 	}
 	config := DrawConfig{ColorInit(ColorOption(ArchNormal)),
-			ColorInit(ColorOption(ArchHighlight)),
-			ColorInit(ColorOption(ArchSelected)),
-			ColorInit(ColorOption(BoxFrame)),
-			ColorInit(ColorOption(Text)),
-			image.Point{archPortOutBorder, archPortOutBorder}}
+		ColorInit(ColorOption(ArchHighlight)),
+		ColorInit(ColorOption(ArchSelected)),
+		ColorInit(ColorOption(BoxFrame)),
+		ColorInit(ColorOption(Text)),
+		image.Point{archPortOutBorder, archPortOutBorder}}
 	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
 		make(map[pf.ChannelIf]*ContainerPort), processes, gr.PositionModeNormal, nil}
@@ -58,11 +58,11 @@ func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Ar
 		Children = append(Children, p)
 	}
 	config := DrawConfig{ColorInit(ColorOption(ArchNormal)),
-			ColorInit(ColorOption(ArchHighlight)),
-			ColorInit(ColorOption(ArchSelected)),
-			ColorInit(ColorOption(BoxFrame)),
-			ColorInit(ColorOption(Text)),
-			image.Point{archPortOutBorder, archPortOutBorder}}
+		ColorInit(ColorOption(ArchHighlight)),
+		ColorInit(ColorOption(ArchSelected)),
+		ColorInit(ColorOption(BoxFrame)),
+		ColorInit(ColorOption(Text)),
+		image.Point{archPortOutBorder, archPortOutBorder}}
 	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
 		make(map[pf.ChannelIf]*ContainerPort), processes, gr.PositionModeMapping, mapping}
@@ -81,7 +81,7 @@ func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Ar
 
 func (a *Arch) init() {
 	a.ContainerInit()
-	a.RegisterOnDraw(func(ctxt interface{}){
+	a.RegisterOnDraw(func(ctxt interface{}) {
 		archOnDraw(a, ctxt)
 	})
 	for _, pr := range a.Children {
@@ -129,11 +129,11 @@ func (a *Arch) initPorts() {
 
 func (a *Arch) addExternalPort(c pf.ChannelIf, mode gr.PositionMode, idx int) {
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
-			ColorInit(ColorOption(HighlightArchPort)),
-			ColorInit(ColorOption(SelectArchPort)),
-			ColorInit(ColorOption(BoxFrame)),
-			Color{},
-			image.Point{}}
+		ColorInit(ColorOption(HighlightArchPort)),
+		ColorInit(ColorOption(SelectArchPort)),
+		ColorInit(ColorOption(BoxFrame)),
+		Color{},
+		image.Point{}}
 	empty := image.Point{}
 	ap := c.ArchPort()
 	if ap == nil {
@@ -184,8 +184,6 @@ func (a *Arch) ChannelPort(ch pf.ChannelIf) ArchPortIf {
 	return nil
 }
 
-
-
 func (a *Arch) SelectProcess(pr pf.ProcessIf) (p ProcessIf) {
 	for _, ch := range a.Children {
 		if pr == ch.(ProcessIf).UserObj() {
@@ -229,7 +227,6 @@ func (a *Arch) SetPosition(pos image.Point) {
 	a.userObj.SetModePosition(a.mode, pos)
 }
 
-
 //
 //	Drawer interface
 //
@@ -250,16 +247,16 @@ func archOnDraw(a *Arch, ctxt interface{}) {
 //
 
 const (
-	archPortWidth = 10
-	archPortHeight = 10
+	archPortWidth     = 10
+	archPortHeight    = 10
 	archPortOutBorder = 8
-	archMinWidth = 50
-	archMinHeight = 30
+	archMinWidth      = 50
+	archMinHeight     = 30
 )
 
 func (a Arch) drawLocalChannel(ctxt interface{}, ch pf.ChannelIf) {
-    switch ctxt.(type) {
-    case *cairo.Context:
+	switch ctxt.(type) {
+	case *cairo.Context:
 		context := ctxt.(*cairo.Context)
 		link := ch.Link()
 		if ch.Process().Arch().Name() != a.Name() {
@@ -313,5 +310,3 @@ func (a Arch) numExtChannel() (extCnt int) {
 	}
 	return
 }
-
-

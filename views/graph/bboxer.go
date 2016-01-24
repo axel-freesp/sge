@@ -1,8 +1,8 @@
 package graph
 
 import (
-    //"log"
-    "image"
+	//"log"
+	"image"
 )
 
 //
@@ -10,48 +10,45 @@ import (
 //
 
 type BBoxObject struct {
-    box image.Rectangle
+	box image.Rectangle
 }
 
-func BBoxInit(box image.Rectangle) BBoxObject{
-    return BBoxObject{box}
+func BBoxInit(box image.Rectangle) BBoxObject {
+	return BBoxObject{box}
 }
 
 func (b BBoxObject) BBox() image.Rectangle {
-    return b.box
+	return b.box
 }
-
 
 //
 //	Positioner implementation
 //
 
 func (b BBoxObject) Position() image.Point {
-    return b.box.Min
+	return b.box.Min
 }
 
 func (b *BBoxObject) BBoxDefaultSetPosition(pos image.Point) {
-    shift := pos.Sub(b.Position())
-    b.box = b.box.Add(shift)
+	shift := pos.Sub(b.Position())
+	b.box = b.box.Add(shift)
 }
 
 func (b *BBoxObject) SetPosition(pos image.Point) {
-    b.BBoxDefaultSetPosition(pos)
+	b.BBoxDefaultSetPosition(pos)
 }
-
 
 //
 //	Shaper implementation
 //
 
 func (b BBoxObject) Shape() image.Point {
-    return b.box.Max.Sub(b.box.Min)
+	return b.box.Max.Sub(b.box.Min)
 }
 
 func (b *BBoxObject) SetShape(newSize image.Point) {
-    b.box.Max = b.box.Min.Add(newSize)
+	b.box.Max = b.box.Min.Add(newSize)
 }
-
 
 //
 //      Helper functions
@@ -75,6 +72,3 @@ func boxToDraw(b BBoxer, pad image.Point) (x, y, w, h float64) {
 	h = h0 - float64(2*dy)
 	return
 }
-
-
-

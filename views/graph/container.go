@@ -1,16 +1,16 @@
 package graph
 
 import (
-    "image"
 	"github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/tool"
+	"image"
 )
 
 //
 //		Children must implement:
 //
 type ContainerChild interface {
-	Layout()   image.Rectangle
+	Layout() image.Rectangle
 	BoxedSelecter
 }
 
@@ -18,26 +18,25 @@ type ContainerChild interface {
 //		Container Base
 //
 type Container struct {
-    NamedBoxObject
-	Children []ContainerChild
-	ports []*ContainerPort
+	NamedBoxObject
+	Children                    []ContainerChild
+	ports                       []*ContainerPort
 	selectedChild, selectedPort int
-	config ContainerConfig
+	config                      ContainerConfig
 }
 
 type ContainerConfig struct {
 	portWidth, portHeight, minWidth, minHeight int
 }
 
-
 //
 //		Port Base
 //
 type ContainerPort struct {
 	SelectableBox
-	UserObj graph.Positioner
+	UserObj  graph.Positioner
 	UserObj2 graph.ModePositioner
-	mode graph.PositionMode
+	mode     graph.PositionMode
 }
 
 //
@@ -59,9 +58,9 @@ func (c *Container) ContainerInit() {
 	c.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return c.onHighlight(hit, pos)
 	})
-	c.RegisterOnSelect(func(){
+	c.RegisterOnSelect(func() {
 		c.onSelect()
-	}, func(){
+	}, func() {
 		c.onDeselect()
 	})
 }
@@ -80,9 +79,8 @@ func (p *ContainerPort) SetPosition(pos image.Point) {
 	if p.UserObj2 != nil {
 		p.UserObj2.SetModePosition(p.mode, pos)
 	}
-    p.BBoxDefaultSetPosition(pos)
+	p.BBoxDefaultSetPosition(pos)
 }
-
 
 //
 //		AddPort
@@ -104,7 +102,6 @@ func (c *Container) AddModePort(pos image.Point, config DrawConfig, userObj grap
 	return
 }
 
-
 //
 //		Container may be child of container
 //
@@ -120,10 +117,10 @@ func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
 	} else {
 		box = c.box
 	}
-	if box.Max.X - box.Min.X < c.config.minWidth {
+	if box.Max.X-box.Min.X < c.config.minWidth {
 		box.Max.X = box.Min.X + c.config.minWidth
 	}
-	if box.Max.Y - box.Min.Y < c.config.minHeight {
+	if box.Max.Y-box.Min.Y < c.config.minHeight {
 		box.Max.Y = box.Min.Y + c.config.minHeight
 	}
 	c.box = box
@@ -150,7 +147,6 @@ func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
 	}
 	return
 }
-
 
 //
 //		Set position
@@ -189,8 +185,8 @@ func (c *Container) ContainerDefaultSetPosition(pos image.Point) {
 
 func (c Container) CalcPortPos(idx, cnt int) (pos image.Point) {
 	lX, rX, _, bY := c.portCorners()
-	k := float64(idx + 1) / float64(cnt + 1)
-	x := int(k * float64(rX - lX))
+	k := float64(idx+1) / float64(cnt+1)
+	x := int(k * float64(rX-lX))
 	pos = image.Point{lX + x, bY}
 	return
 }
@@ -199,7 +195,7 @@ func (c Container) CalcPortPos(idx, cnt int) (pos image.Point) {
 //	Selecter interface
 //
 
-var _ Selecter  = (*Arch)(nil)
+var _ Selecter = (*Arch)(nil)
 
 func (c *Container) onSelect() {
 	for _, ch := range c.Children {
@@ -298,7 +294,7 @@ func (c Container) GetSelectedModePort() (ok bool, userObj graph.ModePositioner)
 //	Highlighter interface
 //
 
-var _ Highlighter  = (*Container)(nil)
+var _ Highlighter = (*Container)(nil)
 
 func (c *Container) onHighlight(hit bool, pos image.Point) (modified bool) {
 	c.selectedChild = -1
@@ -335,11 +331,11 @@ func (c *Container) onHighlight(hit bool, pos image.Point) (modified bool) {
 //	Drawer interface
 //
 
-func (c Container) Draw(ctxt interface{}){
+func (c Container) Draw(ctxt interface{}) {
 	c.ContainerDefaultDraw(ctxt)
 }
 
-func (c Container) ContainerDefaultDraw(ctxt interface{}){
+func (c Container) ContainerDefaultDraw(ctxt interface{}) {
 	c.NamedBoxDefaultDraw(ctxt)
 	for _, p := range c.ports {
 		p.Draw(ctxt)
@@ -417,5 +413,3 @@ func (c Container) portClipPos(pos image.Point) (ret image.Point) {
 	}
 	return
 }
-
-

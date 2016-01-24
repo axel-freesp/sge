@@ -1,4 +1,4 @@
-package freesp
+package platform
 
 import (
 	"github.com/axel-freesp/sge/interface/graph"

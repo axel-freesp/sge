@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
@@ -53,7 +54,8 @@ var _ tr.TreeElement = (*connection)(nil)
 func (c *connection) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	text := fmt.Sprintf("%s/%s -> %s/%s", c.from.Node().Name(), c.from.Name(),
 		c.to.Node().Name(), c.to.Name())
-	err := tree.AddEntry(cursor, tr.SymbolConnection, text, c, MayRemove)
+	prop := freesp.PropertyNew(false, false, true)
+	err := tree.AddEntry(cursor, tr.SymbolConnection, text, c, prop)
 	if err != nil {
 		log.Fatalf("connection.AddToTree error: AddEntry failed: %s\n", err)
 	}

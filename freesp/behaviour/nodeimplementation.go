@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -73,18 +74,18 @@ var _ tr.TreeElement = (*implementation)(nil)
 func (impl *implementation) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var image tr.Symbol
 	var text string
-	var prop property
+	var prop tr.Property
 	parentId := tree.Parent(tree.Parent(cursor))
 	parent := tree.Object(parentId)
 	switch parent.(type) {
 	case bh.LibraryIf:
 		if impl.ImplementationType() == bh.NodeTypeGraph {
-			prop = MayAddObject | MayRemove
+			prop = freesp.PropertyNew(true, false, true)
 		} else {
-			prop = MayEdit | MayRemove | MayAddObject
+			prop = freesp.PropertyNew(true, true, true)
 		}
 	case bh.NodeIf:
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	default:
 		log.Fatalf("implementation.AddToTree error: invalid parent type: %T\n", parent)
 	}

@@ -1,9 +1,9 @@
 package graph
 
 import (
-	"image"
-	gr "github.com/axel-freesp/sge/interface/graph"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	"image"
 )
 
 type Port struct {
@@ -36,4 +36,3 @@ var _ PortIf = (*Port)(nil)
 func (p Port) UserObj() bh.PortIf {
 	return p.userObj
 }
-

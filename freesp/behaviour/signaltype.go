@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
@@ -23,27 +24,25 @@ var _ bh.SignalTypeIf = (*signalType)(nil)
 
 func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode) (t *signalType, err error) {
 	newT := &signalType{name, ctype, msgid, scope, mode}
-	sType := signalTypes[name]
-	if sType != nil {
-		if (*newT) != (*sType) {
+	sType, ok := freesp.GetSignalTypeByName(name)
+	if ok {
+		if (*newT) != (*(sType.(*signalType))) {
 			err = fmt.Errorf(`SignalTypeNew error: adding existing signal
 				type %s, which is incompatible`, name)
 			return
 		}
 		log.Printf(`SignalTypeNew: warning: adding existing
 			signal type definition %s (taking the existing)`, name)
-		t = sType
+		t = sType.(*signalType)
 	} else {
 		t = newT
-		signalTypes[name] = t
-		registeredSignalTypes.Append(name)
+		freesp.RegisterSignalType(t)
 	}
 	return
 }
 
 func SignalTypeDestroy(t bh.SignalTypeIf) {
-	registeredSignalTypes.Remove(t.TypeName())
-	delete(signalTypes, t.TypeName())
+	freesp.RemoveRegisteredSignalType(t)
 }
 
 func (t *signalType) TypeName() string {
@@ -110,14 +109,14 @@ func (t *signalType) String() string {
 var _ tr.TreeElement = (*signalType)(nil)
 
 func (t *signalType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	var prop property
+	var prop tr.Property
 	parentId := tree.Parent(cursor)
 	parent := tree.Object(parentId)
 	switch parent.(type) {
 	case bh.LibraryIf:
-		prop = MayAddObject | MayEdit | MayRemove
+		prop = freesp.PropertyNew(true, true, true)
 	case bh.PortIf, bh.PortTypeIf:
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	default:
 		log.Fatalf("signalType.AddToTree error: invalid parent type %T\n", parent)
 	}

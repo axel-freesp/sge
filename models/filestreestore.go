@@ -199,13 +199,14 @@ func (tree *FilesTreeStore) RemoveToplevel(id string) (deleted []tr.IdWithObject
 
 func (tree *FilesTreeStore) GetToplevelId(obj tr.ToplevelTreeElement) (id string, err error) {
 	var o Element
-	ok := false
-	for i := 0; !ok; i++ {
+	ok := true
+	for i := 0; ok; i++ {
 		path := fmt.Sprintf("%d", i)
 		o, ok = tree.lookup[path]
 		if !ok {
 			break
-		} else if o.elem == obj {
+		}
+		if o.elem == obj {
 			id = path
 			return
 		}

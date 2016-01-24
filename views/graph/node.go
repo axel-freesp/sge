@@ -2,17 +2,17 @@ package graph
 
 import (
 	//"log"
-	"image"
-	"github.com/gotk3/gotk3/cairo"
-	"github.com/axel-freesp/sge/tool"
-	gr "github.com/axel-freesp/sge/interface/graph"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	"github.com/axel-freesp/sge/tool"
+	"github.com/gotk3/gotk3/cairo"
+	"image"
 )
 
 type ColorMode int
 
 const (
-	NormalMode       ColorMode = iota
+	NormalMode ColorMode = iota
 	HighlightMode
 	SelectedMode
 	NumColorMode
@@ -20,8 +20,8 @@ const (
 
 type Node struct {
 	NamedBoxObject
-	userObj  bh.NodeIf
-	ports []*Port
+	userObj      bh.NodeIf
+	ports        []*Port
 	selectedPort int
 }
 
@@ -30,20 +30,20 @@ var _ ContainerChild = (*Node)(nil)
 
 func NodeNew(pos image.Point, n bh.NodeIf) (ret *Node) {
 	dy := NumericOption(PortDY)
-	box := image.Rect(pos.X, pos.Y, pos.X + global.nodeWidth, pos.Y + global.nodeHeight + numPorts(n)*dy)
+	box := image.Rect(pos.X, pos.Y, pos.X+global.nodeWidth, pos.Y+global.nodeHeight+numPorts(n)*dy)
 	config := DrawConfig{ColorInit(ColorOption(NodeNormal)),
-			ColorInit(ColorOption(NodeHighlight)),
-			ColorInit(ColorOption(NodeSelected)),
-			ColorInit(ColorOption(BoxFrame)),
-			ColorInit(ColorOption(Text)),
-			image.Point{global.padX, global.padY}}
+		ColorInit(ColorOption(NodeHighlight)),
+		ColorInit(ColorOption(NodeSelected)),
+		ColorInit(ColorOption(BoxFrame)),
+		ColorInit(ColorOption(Text)),
+		image.Point{global.padX, global.padY}}
 	ret = &Node{NamedBoxObjectInit(box, config, n), n, nil, -1}
-	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool{
+	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
-	ret.RegisterOnSelect(func(){
+	ret.RegisterOnSelect(func() {
 		ret.onSelect()
-	}, func(){
+	}, func() {
 		ret.onDeselect()
 	})
 	portBox := image.Rect(0, 0, global.portW, global.portH)
@@ -135,13 +135,12 @@ func (n Node) Layout() (box image.Rectangle) {
 	return n.BBox()
 }
 
-
 //
 //      freesp.Positioner interface
 //
 
-var _ gr.Positioner  = (*Node)(nil)
-var _ gr.Positioner  = (*Port)(nil)
+var _ gr.Positioner = (*Node)(nil)
+var _ gr.Positioner = (*Port)(nil)
 
 // (overwrite BBoxObject default implementation)
 func (n *Node) SetPosition(pos image.Point) {
@@ -153,18 +152,17 @@ func (n *Node) SetPosition(pos image.Point) {
 	}
 }
 
-
 //
 //      Drawer interface
 //
 
-var _ Drawer  = (*Node)(nil)
-var _ Drawer  = (*Port)(nil)
+var _ Drawer = (*Node)(nil)
+var _ Drawer = (*Port)(nil)
 
-func (n Node) Draw(ctxt interface{}){
+func (n Node) Draw(ctxt interface{}) {
 	n.NamedBoxDefaultDraw(ctxt)
-    switch ctxt.(type) {
-    case *cairo.Context:
+	switch ctxt.(type) {
+	case *cairo.Context:
 		context := ctxt.(*cairo.Context)
 		context.SetLineWidth(1)
 		for _, p := range n.ports {
@@ -173,13 +171,12 @@ func (n Node) Draw(ctxt interface{}){
 	}
 }
 
-
 //
 //	Selecter interface
 //
 
-var _ Selecter  = (*Node)(nil)
-var _ Selecter  = (*Port)(nil)
+var _ Selecter = (*Node)(nil)
+var _ Selecter = (*Port)(nil)
 
 func (n *Node) onSelect() (selected bool) {
 	for i, p := range n.ports {
@@ -199,13 +196,12 @@ func (n *Node) onDeselect() (selected bool) {
 	return
 }
 
-
 //
 //	Highlighter interface
 //
 
-var _ Highlighter  = (*Node)(nil)
-var _ Highlighter  = (*Port)(nil)
+var _ Highlighter = (*Node)(nil)
+var _ Highlighter = (*Port)(nil)
 
 func (n *Node) onHighlight(hit bool, pos image.Point) (modified bool) {
 	n.selectedPort = -1
@@ -225,7 +221,6 @@ func (n *Node) onHighlight(hit bool, pos image.Point) (modified bool) {
 	return
 }
 
-
 //
 //	Private functions
 //
@@ -235,6 +230,3 @@ func numPorts(n Porter) int {
 	npo := len(n.OutPorts())
 	return tool.MaxInt(npi, npo)
 }
-
-
-

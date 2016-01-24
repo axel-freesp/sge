@@ -1,10 +1,10 @@
 package graph
 
 import (
-	"image"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	"image"
 )
 
 /*
@@ -70,8 +70,8 @@ type ProcessIf interface {
  */
 
 type BBoxer interface {
-    gr.Positioner
-    gr.Shaper
+	gr.Positioner
+	gr.Shaper
 	BBox() image.Rectangle
 }
 
@@ -99,7 +99,7 @@ type Drawer interface {
 type BoxedSelecter interface {
 	BBoxer
 	Selecter
-    Highlighter
+	Highlighter
 	Drawer
 	CheckHit(image.Point) (hit, modified bool)
 }
@@ -108,5 +108,3 @@ type NamedBox interface {
 	gr.Namer
 	BoxedSelecter
 }
-
-

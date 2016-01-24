@@ -1,27 +1,27 @@
 package graph
 
 import (
-	"image"
-	"github.com/gotk3/gotk3/cairo"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
+	"github.com/gotk3/gotk3/cairo"
+	"image"
 )
 
 type Process struct {
 	Container
 	userObj pf.ProcessIf
-	arch ArchIf
+	arch    ArchIf
 }
 
 var _ ProcessIf = (*Process)(nil)
 
 func ProcessNew(pos image.Point, userObj pf.ProcessIf) (ret *Process) {
 	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
-			ColorInit(ColorOption(ProcessHighlight)),
-			ColorInit(ColorOption(ProcessSelected)),
-			ColorInit(ColorOption(BoxFrame)),
-			ColorInit(ColorOption(Text)),
-			image.Point{procPortWidth, procPortHeight}}
+		ColorInit(ColorOption(ProcessHighlight)),
+		ColorInit(ColorOption(ProcessSelected)),
+		ColorInit(ColorOption(BoxFrame)),
+		ColorInit(ColorOption(Text)),
+		image.Point{procPortWidth, procPortHeight}}
 	cconfig := ContainerConfig{procPortWidth, procPortHeight, procMinWidth, procMinHeight}
 	ret = &Process{ContainerInit(nil, config, userObj, cconfig), userObj, nil}
 	shape := image.Point{global.processWidth, global.processHeight}
@@ -42,9 +42,9 @@ func (pr Process) ArchObject() ArchIf {
 	return pr.arch
 }
 
-func processDrawChannel(p *ContainerPort, ctxt interface{}){
-    switch ctxt.(type) {
-    case *cairo.Context:
+func processDrawChannel(p *ContainerPort, ctxt interface{}) {
+	switch ctxt.(type) {
+	case *cairo.Context:
 		empty := image.Point{}
 		context := ctxt.(*cairo.Context)
 		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
@@ -74,7 +74,7 @@ func processDrawChannel(p *ContainerPort, ctxt interface{}){
 				DrawArrow(context, pos1, pos2)
 			}
 		}
-    }
+	}
 }
 
 func (pr *Process) SetArchObject(a ArchIf) {
@@ -84,18 +84,18 @@ func (pr *Process) SetArchObject(a ArchIf) {
 	outCnt := len(pr.userObj.OutChannels())
 	empty := image.Point{}
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
-			ColorInit(ColorOption(HighlightArchPort)),
-			ColorInit(ColorOption(SelectArchPort)),
-			ColorInit(ColorOption(BoxFrame)),
-			Color{},
-			image.Point{}}
+		ColorInit(ColorOption(HighlightArchPort)),
+		ColorInit(ColorOption(SelectArchPort)),
+		ColorInit(ColorOption(BoxFrame)),
+		Color{},
+		image.Point{}}
 	for _, c := range pr.userObj.InChannels() {
 		pos := c.ModePosition(gr.PositionModeNormal)
 		if pos == empty {
-			pos = pr.CalcPortPos(idx, inCnt + outCnt)
+			pos = pr.CalcPortPos(idx, inCnt+outCnt)
 		}
 		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
-		p.RegisterOnDraw(func(ctxt interface{}){
+		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
 		a.(*Arch).channelMap[c] = p
@@ -104,10 +104,10 @@ func (pr *Process) SetArchObject(a ArchIf) {
 	for _, c := range pr.userObj.OutChannels() {
 		pos := c.ModePosition(gr.PositionModeNormal)
 		if pos == empty {
-			pos = pr.CalcPortPos(idx, inCnt + outCnt)
+			pos = pr.CalcPortPos(idx, inCnt+outCnt)
 		}
 		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
-		p.RegisterOnDraw(func(ctxt interface{}){
+		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
 		a.(*Arch).channelMap[c] = p
@@ -135,10 +135,9 @@ func (pr *Process) SetPosition(pos image.Point) {
 }
 
 const (
-	procPortWidth = 8
-	procPortHeight = 8
+	procPortWidth     = 8
+	procPortHeight    = 8
 	procPortOutBorder = 6
-	procMinWidth = 120
-	procMinHeight = 80
+	procMinWidth      = 120
+	procMinHeight     = 80
 )
-

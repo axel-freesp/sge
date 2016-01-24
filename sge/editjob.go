@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
@@ -104,7 +105,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		(*old)[iDirection] = direction2string[pt.Direction()]
 		fts.DeleteObject(ptCursor.Path)
 		fts.AddNewObject(ntCursor.Path, ntCursor.Position,
-			freesp.PortTypeNew((*detail)[iPortName],
+			behaviour.PortTypeNew((*detail)[iPortName],
 				(*detail)[iSignalTypeSelect],
 				string2direction[(*detail)[iDirection]]))
 		state = ptCursor.Path

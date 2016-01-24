@@ -3,7 +3,7 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -28,7 +28,7 @@ func FileManagerLibNew(context FilemanagerContextIf) *fileManagerLib {
 
 func (f *fileManagerLib) New() (lib tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
-	lib = freesp.LibraryNew(filename, f.context)
+	lib = behaviour.LibraryNew(filename, f.context)
 	f.libraryMap[filename] = lib.(bh.LibraryIf)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(lib.(bh.LibraryIf))
@@ -46,7 +46,7 @@ func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElement, err er
 	if ok {
 		return
 	}
-	lib = freesp.LibraryNew(name, f.context)
+	lib = behaviour.LibraryNew(name, f.context)
 	for _, try := range backend.XmlSearchPaths() {
 		err = lib.ReadFile(fmt.Sprintf("%s/%s", try, name))
 		if err == nil {

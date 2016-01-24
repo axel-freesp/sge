@@ -3,7 +3,7 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -29,7 +29,7 @@ func FileManagerSGNew(context FilemanagerContextIf) *fileManagerSG {
 
 func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
-	sg = freesp.SignalGraphNew(filename, f.context)
+	sg = behaviour.SignalGraphNew(filename, f.context)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {
@@ -54,7 +54,7 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 	if ok {
 		return
 	}
-	sg = freesp.SignalGraphNew(name, f.context)
+	sg = behaviour.SignalGraphNew(name, f.context)
 	for _, try := range backend.XmlSearchPaths() {
 		err = sg.ReadFile(fmt.Sprintf("%s/%s", try, name))
 		if err == nil {

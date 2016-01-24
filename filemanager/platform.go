@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/platform"
 	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -29,7 +30,7 @@ func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
 
 func (f *fileManagerPF) New() (pl tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
-	pl = freesp.PlatformNew(filename)
+	pl = platform.PlatformNew(filename)
 	f.platformMap[filename] = pl.(pf.PlatformIf)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(pl.(pf.PlatformIf))
@@ -55,7 +56,7 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 	if ok {
 		return
 	}
-	pl = freesp.PlatformNew(name)
+	pl = platform.PlatformNew(name)
 	for _, try := range backend.XmlSearchPaths() {
 		err = pl.ReadFile(fmt.Sprintf("%s/%s", try, name))
 		if err == nil {

@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -145,12 +146,12 @@ func (p *port) String() (s string) {
 var _ tr.TreeElement = (*port)(nil)
 
 func (p *port) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	var prop property
+	var prop tr.Property
 	parentId := tree.Parent(cursor)
 	if tree.Property(parentId).IsReadOnly() {
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	} else {
-		prop = MayAddObject
+		prop = freesp.PropertyNew(true, false, false)
 	}
 	var kind tr.Symbol
 	if p.Direction() == gr.InPort {

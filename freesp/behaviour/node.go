@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -47,33 +48,33 @@ func NodeNew(name string, ntype bh.NodeTypeIf, context bh.SignalGraphTypeIf) (re
 }
 
 func InputNodeNew(name string, stypeName string, context bh.SignalGraphTypeIf) (ret *node, err error) {
-	st, ok := signalTypes[stypeName]
+	st, ok := freesp.GetSignalTypeByName(stypeName)
 	if !ok {
 		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
 		return
 	}
 	ntName := createInputNodeTypeName(stypeName)
-	nt, ok := nodeTypes[ntName]
+	nt, ok := freesp.GetNodeTypeByName(ntName)
 	if !ok {
 		nt = NodeTypeNew(ntName, "")
-		nt.addOutPort("", st)
-		nodeTypes[ntName] = nt
+		nt.(*nodeType).addOutPort("", st)
+		freesp.RegisterNodeType(nt)
 	}
 	return NodeNew(name, nt, context)
 }
 
 func OutputNodeNew(name string, stypeName string, context bh.SignalGraphTypeIf) (ret *node, err error) {
-	st, ok := signalTypes[stypeName]
+	st, ok := freesp.GetSignalTypeByName(stypeName)
 	if !ok {
 		err = fmt.Errorf("InputNodeNew error: signaltype %s not defined", stypeName)
 		return
 	}
 	ntName := createOutputNodeTypeName(stypeName)
-	nt, ok := nodeTypes[ntName]
+	nt, ok := freesp.GetNodeTypeByName(ntName)
 	if !ok {
 		nt = NodeTypeNew(ntName, "")
-		nt.addInPort("", st)
-		nodeTypes[ntName] = nt
+		nt.(*nodeType).addInPort("", st)
+		freesp.RegisterNodeType(nt)
 	}
 	return NodeNew(name, nt, context)
 }
@@ -126,11 +127,11 @@ func (n *node) String() (s string) {
 var _ tr.TreeElement = (*node)(nil)
 
 func (n *node) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	var prop property
+	var prop tr.Property
 	if isParentReadOnly(tree, cursor) {
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	} else {
-		prop = MayEdit | MayRemove | MayAddObject
+		prop = freesp.PropertyNew(true, true, true)
 	}
 	var image tr.Symbol
 	if len(n.InPorts()) == 0 {

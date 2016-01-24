@@ -1,7 +1,8 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -19,9 +20,9 @@ type portType struct {
 var _ bh.PortTypeIf = (*portType)(nil)
 
 func PortTypeNew(name string, pTypeName string, dir gr.PortDirection) *portType {
-	st, ok := signalTypes[pTypeName]
+	st, ok := freesp.GetSignalTypeByName(pTypeName)
 	if !ok {
-		log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
+		log.Fatalf("NamedPortTypeNew error: FIXME: signal type '%s' not defined\n", pTypeName)
 	}
 	return &portType{st, name, dir}
 }
@@ -73,12 +74,12 @@ func (t *portType) CreateXml() (buf []byte, err error) {
 var _ tr.TreeElement = (*portType)(nil)
 
 func (p *portType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	var prop property
+	var prop tr.Property
 	parentId := tree.Parent(cursor)
 	if tree.Property(parentId).IsReadOnly() {
-		prop = 0
+		prop = freesp.PropertyNew(false, false, false)
 	} else {
-		prop = MayEdit | MayRemove | MayAddObject
+		prop = freesp.PropertyNew(true, true, true)
 	}
 	var kind tr.Symbol
 	if p.Direction() == gr.InPort {

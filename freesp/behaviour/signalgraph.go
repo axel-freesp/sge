@@ -1,8 +1,9 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
@@ -102,7 +103,8 @@ func (s *signalGraph) Nodes() []bh.NodeIf {
 var _ tr.TreeElement = (*signalGraph)(nil)
 
 func (t *signalGraph) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	err := tree.AddEntry(cursor, tr.SymbolSignalGraph, t.Filename(), t, MayAddObject)
+	prop := freesp.PropertyNew(true, false, false)
+	err := tree.AddEntry(cursor, tr.SymbolSignalGraph, t.Filename(), t, prop)
 	if err != nil {
 		log.Fatal("LibraryIf.AddToTree error: AddEntry failed: %s", err)
 	}

@@ -1,8 +1,9 @@
-package freesp
+package platform
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -31,18 +32,17 @@ var _ pf.IOTypeIf = (*iotype)(nil)
 
 func IOTypeNew(name string, mode gr.IOMode, platform pf.PlatformIf) (t *iotype, err error) {
 	newT := &iotype{name, mode, platform}
-	ioType := ioTypes[name]
-	if ioType != nil {
-		if (*newT) != (*ioType) {
+	ioType, ok := freesp.GetIOTypeByName(name)
+	if ok {
+		if (*newT) != (*(ioType.(*iotype))) {
 			err = fmt.Errorf("IOTypeNew error: adding existing io type %s, which is incompatible.", name)
 			err = fmt.Errorf("%s\nexisting: %v - new: %v\n", err, ioType, newT)
 			return
 		}
-		t = ioType
+		t = ioType.(*iotype)
 	} else {
 		t = newT
-		ioTypes[name] = t
-		registeredIOTypes.Append(name)
+		freesp.RegisterIOType(t)
 	}
 	return
 }
@@ -74,15 +74,14 @@ func (t *iotype) Name() string {
 }
 
 func (t *iotype) SetName(newName string) {
-	if ioTypes[newName] != nil {
+	_, ok := freesp.GetIOTypeByName(newName)
+	if ok {
 		log.Printf("iotype.SetName error: cannot rename to existing iotype.\n")
 		return
 	}
-	registeredIOTypes.Remove(t.name)
-	delete(ioTypes, t.name)
+	freesp.RemoveRegisteredIOType(t)
 	t.name = newName
-	ioTypes[t.name] = t
-	registeredIOTypes.Append(t.name)
+	freesp.RegisterIOType(t)
 }
 
 //
@@ -90,7 +89,8 @@ func (t *iotype) SetName(newName string) {
 //
 
 func (t *iotype) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	err := tree.AddEntry(cursor, tr.SymbolIOType, t.Name(), t, MayEdit|MayAddObject|MayRemove)
+	prop := freesp.PropertyNew(true, true, true)
+	err := tree.AddEntry(cursor, tr.SymbolIOType, t.Name(), t, prop)
 	if err != nil {
 		log.Fatalf("iotype.AddToTree error: AddEntry failed: %s\n", err)
 	}

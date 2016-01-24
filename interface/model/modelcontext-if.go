@@ -11,7 +11,6 @@ type ModelContextIf interface {
 	MappingMgr() FileManagerMappingIf
 }
 
-
 type FileManagerIf interface {
 	New() (tree.ToplevelTreeElement, error)
 	Access(name string) (tree.ToplevelTreeElement, error)
@@ -24,4 +23,3 @@ type FileManagerMappingIf interface {
 	SetGraphForNew(g interface{})
 	SetPlatformForNew(p interface{})
 }
-

@@ -6,22 +6,79 @@ import (
 	"github.com/axel-freesp/sge/tool"
 )
 
-var signalTypes map[string]*signalType
-var nodeTypes map[string]*nodeType
-var libraries map[string]*library
-var ioTypes map[string]*iotype
+var signalTypes map[string]bh.SignalTypeIf
+var nodeTypes map[string]bh.NodeTypeIf
+var libraries map[string]bh.LibraryIf
+var ioTypes map[string]pf.IOTypeIf
 var registeredNodeTypes tool.StringList
 var registeredSignalTypes tool.StringList
 var registeredIOTypes tool.StringList
 
 func Init() {
-	signalTypes = make(map[string]*signalType)
-	nodeTypes = make(map[string]*nodeType)
-	libraries = make(map[string]*library)
-	ioTypes = make(map[string]*iotype)
+	signalTypes = make(map[string]bh.SignalTypeIf)
+	nodeTypes = make(map[string]bh.NodeTypeIf)
+	// TODO: is this redundant with global.libraries?
+	libraries = make(map[string]bh.LibraryIf)
+	ioTypes = make(map[string]pf.IOTypeIf)
 	registeredNodeTypes = tool.StringListInit()
 	registeredSignalTypes = tool.StringListInit()
 	registeredIOTypes = tool.StringListInit()
+}
+
+// TODO: Turn into interface
+func GetRegisteredNodeTypes() []string {
+	return registeredNodeTypes.Strings()
+}
+
+func GetRegisteredSignalTypes() []string {
+	return registeredSignalTypes.Strings()
+}
+
+func GetNodeTypeByName(typeName string) (nType bh.NodeTypeIf, ok bool) {
+	nType, ok = nodeTypes[typeName]
+	return
+}
+
+func GetSignalTypeByName(typeName string) (sType bh.SignalTypeIf, ok bool) {
+	sType, ok = signalTypes[typeName]
+	return
+}
+
+func GetLibraryByName(filename string) (lib bh.LibraryIf, ok bool) {
+	lib, ok = libraries[filename]
+	return
+}
+
+func GetRegisteredIOTypes() []string {
+	return registeredIOTypes.Strings()
+}
+
+func GetIOTypeByName(name string) (ioType pf.IOTypeIf, ok bool) {
+	ioType, ok = ioTypes[name]
+	return
+}
+
+func RegisterSignalType(st bh.SignalTypeIf) {
+	signalTypes[st.TypeName()] = st
+	registeredSignalTypes.Append(st.TypeName())
+}
+
+func RegisterNodeType(nt bh.NodeTypeIf) {
+	nodeTypes[nt.TypeName()] = nt
+	registeredNodeTypes.Append(nt.TypeName())
+}
+
+func RegisterLibrary(lib bh.LibraryIf) {
+	libraries[lib.Filename()] = lib
+}
+
+func RegisterIOType(iot pf.IOTypeIf) {
+	ioTypes[iot.Name()] = iot
+	registeredIOTypes.Append(iot.Name())
+}
+
+func RemoveRegisteredLibrary(lib bh.LibraryIf) {
+	delete(libraries, lib.Filename())
 }
 
 func RemoveRegisteredNodeType(nt bh.NodeTypeIf) {

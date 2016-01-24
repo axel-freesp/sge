@@ -1,7 +1,7 @@
 package graph
 
 import (
-    "fmt"
+	"fmt"
 )
 
 var _ fmt.Stringer = PortDirection(false)
@@ -14,4 +14,3 @@ func (d PortDirection) String() (s string) {
 	}
 	return
 }
-

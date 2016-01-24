@@ -1,8 +1,9 @@
-package freesp
+package platform
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -44,7 +45,7 @@ func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, er
 		pr.outChannels.Append(ch)
 	}
 	for _, xmlh := range xmlp.Entry {
-		mode, ok := ModeFromString[xmlh.Mode]
+		mode, ok := freesp.ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("createProcessFromXml Warning: hint mode %s not defined\n",
 				xmlh.Mode)
@@ -111,7 +112,8 @@ func (p *process) String() string {
  */
 
 func (p *process) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	err := tree.AddEntry(cursor, tr.SymbolProcess, p.Name(), p, MayAddObject|MayEdit|MayRemove)
+	prop := freesp.PropertyNew(true, true, true)
+	err := tree.AddEntry(cursor, tr.SymbolProcess, p.Name(), p, prop)
 	if err != nil {
 		log.Fatalf("process.AddToTree error: AddEntry failed: %s\n", err)
 	}

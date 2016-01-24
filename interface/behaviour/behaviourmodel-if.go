@@ -1,9 +1,9 @@
 package behaviour
 
 import (
-	"github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/interface/model"
 	"github.com/axel-freesp/sge/interface/graph"
+	"github.com/axel-freesp/sge/interface/model"
+	"github.com/axel-freesp/sge/interface/tree"
 )
 
 /*

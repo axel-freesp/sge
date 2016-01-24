@@ -23,6 +23,7 @@ type mappingView struct {
 	arch        []graph.ArchIf
 	context     Context
 	unmapped    graph.ProcessIf
+	unmappedObj pf.ProcessIf
 
 	dragOffs       image.Point
 	button1Pressed bool
@@ -32,7 +33,7 @@ var _ ScaledScene = (*mappingView)(nil)
 var _ GraphViewIf = (*mappingView)(nil)
 
 func MappingViewNew(m mp.MappingIf, context Context) (viewer *mappingView, err error) {
-	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, image.Point{}, false}
+	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, &unmappedProcess{}, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -59,53 +60,6 @@ func (v *mappingView) init() (err error) {
 		return
 	}
 	v.parent.Container().Add(v.area)
-	return
-}
-
-type unmappedProcess struct {
-	pos image.Point
-}
-
-var _ pf.ProcessIf = (*unmappedProcess)(nil)
-
-func (p *unmappedProcess) Name() string {
-	return "unmapped"
-}
-
-func (p *unmappedProcess) SetName(string) {
-}
-
-func (p *unmappedProcess) ModePosition(gr.PositionMode) image.Point {
-	return p.pos
-}
-
-func (p *unmappedProcess) SetModePosition(m gr.PositionMode, pos image.Point) {
-	p.pos = pos
-}
-
-func (p *unmappedProcess) Arch() pf.ArchIf {
-	return nil
-}
-
-func (p *unmappedProcess) InChannels() []pf.ChannelIf {
-	return nil
-}
-
-func (p *unmappedProcess) OutChannels() []pf.ChannelIf {
-	return nil
-}
-
-func (p *unmappedProcess) AddToTree(tr.TreeIf, tr.Cursor) {
-	return
-}
-func (p *unmappedProcess) AddNewObject(tr.TreeIf, tr.Cursor, tr.TreeElement) (c tr.Cursor, e error) {
-	return
-}
-func (p *unmappedProcess) RemoveObject(tr.TreeIf, tr.Cursor) (r []tr.IdWithObject) {
-	return
-}
-
-func (p *unmappedProcess) CreateXml() (buf []byte, err error) {
 	return
 }
 
@@ -148,7 +102,7 @@ func (v *mappingView) Sync() {
 			unmappedNodes = append(unmappedNodes, n.(*graph.Node))
 		}
 	}
-	v.unmapped = graph.ProcessMappingNew(unmappedNodes, &unmappedProcess{})
+	v.unmapped = graph.ProcessMappingNew(unmappedNodes, v.unmappedObj)
 	// TODO: add v.unmapped to scene
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
@@ -590,5 +544,52 @@ func (v *mappingView) drawScene(r image.Rectangle) {
 	x, y, w, h := r.Min.X, r.Min.Y, r.Size().X, r.Size().Y
 	v.area.QueueDrawArea(v.parent.ScaleCoord(x, false), v.parent.ScaleCoord(y, false),
 		v.parent.ScaleCoord(w, true)+1, v.parent.ScaleCoord(h, true)+1)
+	return
+}
+
+type unmappedProcess struct {
+	pos image.Point
+}
+
+var _ pf.ProcessIf = (*unmappedProcess)(nil)
+
+func (p *unmappedProcess) Name() string {
+	return "unmapped"
+}
+
+func (p *unmappedProcess) SetName(string) {
+}
+
+func (p *unmappedProcess) ModePosition(gr.PositionMode) image.Point {
+	return p.pos
+}
+
+func (p *unmappedProcess) SetModePosition(m gr.PositionMode, pos image.Point) {
+	p.pos = pos
+}
+
+func (p *unmappedProcess) Arch() pf.ArchIf {
+	return nil
+}
+
+func (p *unmappedProcess) InChannels() []pf.ChannelIf {
+	return nil
+}
+
+func (p *unmappedProcess) OutChannels() []pf.ChannelIf {
+	return nil
+}
+
+func (p *unmappedProcess) AddToTree(tr.TreeIf, tr.Cursor) {
+	return
+}
+func (p *unmappedProcess) AddNewObject(tr.TreeIf, tr.Cursor, tr.TreeElement) (c tr.Cursor, e error) {
+	return
+}
+func (p *unmappedProcess) RemoveObject(tr.TreeIf, tr.Cursor) (r []tr.IdWithObject) {
+	return
+}
+
+func (p *unmappedProcess) CreateXml() (buf []byte, err error) {
 	return
 }

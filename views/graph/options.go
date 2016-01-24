@@ -15,19 +15,19 @@ type Global struct {
 }
 
 var global = Global{
-	nodeWidth: NumericOption(NodeWidth),
-	nodeHeight: NumericOption(NodeHeight),
-	padX: NumericOption(NodePadX),
-	padY: NumericOption(NodePadY),
-	portX0: NumericOption(PortX0),
-	portY0: NumericOption(PortY0),
-	portDY: NumericOption(PortDY),
-	portW: NumericOption(PortW),
-	portH: NumericOption(PortH),
-	textX: NumericOption(NodeTextX),
-	textY: NumericOption(NodeTextY),
-	fontSize: NumericOption(FontSize),
-	processWidth: NumericOption(ProcessWidth),
+	nodeWidth:     NumericOption(NodeWidth),
+	nodeHeight:    NumericOption(NodeHeight),
+	padX:          NumericOption(NodePadX),
+	padY:          NumericOption(NodePadY),
+	portX0:        NumericOption(PortX0),
+	portY0:        NumericOption(PortY0),
+	portDY:        NumericOption(PortDY),
+	portW:         NumericOption(PortW),
+	portH:         NumericOption(PortH),
+	textX:         NumericOption(NodeTextX),
+	textY:         NumericOption(NodeTextY),
+	fontSize:      NumericOption(FontSize),
+	processWidth:  NumericOption(ProcessWidth),
 	processHeight: NumericOption(ProcessHeight),
 }
 
@@ -107,23 +107,23 @@ func StringOption(index int) string {
 
 type optionNumeric struct {
 	label string
-	val int
+	val   int
 }
 
 type optionColor struct {
 	label string
-	val color.RGBA
+	val   color.RGBA
 }
 
 type optionString struct {
 	label string
-	val string
+	val   string
 }
 
 type gOptions struct {
 	numericOptions []optionNumeric
-	colorOptions  []optionColor
-	stringOptions []optionString
+	colorOptions   []optionColor
+	stringOptions  []optionString
 }
 
 // Default options: hardcoded, read-only
@@ -163,9 +163,9 @@ var defaultOptions = gOptions{
 		{"NormalArch", color.RGBA{70, 140, 0, 0xff}},
 		{"HighlightArch", color.RGBA{90, 180, 0, 0xff}},
 		{"SelectedArch", color.RGBA{201, 187, 0, 0xff}},
-		{"NormalProcess", color.RGBA{255, 204, 146, 0xff}},
-		{"HighlightProcess", color.RGBA{255, 234, 170, 0xff}},
-		{"SelectedProcess", color.RGBA{221, 255, 190, 0xff}},
+		{"NormalProcess", color.RGBA{204, 255, 153, 0xff}},
+		{"HighlightProcess", color.RGBA{255, 255, 170, 0xff}},
+		{"SelectedProcess", color.RGBA{255, 153, 51, 0xff}},
 		{"SelectArchPort", color.RGBA{255, 255, 120, 0xff}},
 		{"HighlightArchPort", color.RGBA{255, 170, 170, 0xff}},
 		{"NormalArchPort", color.RGBA{225, 225, 225, 0xff}},
@@ -173,11 +173,10 @@ var defaultOptions = gOptions{
 		{"HighlightChannelLine", color.RGBA{255, 255, 180, 0xff}},
 		{"NormalChannelLine", color.RGBA{0, 0, 0, 0xff}},
 	},
-	[]optionString{	// actually not needed anymore:
+	[]optionString{ // actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},
 	},
 }
 
 // Options, initialized by default options
 var options = defaultOptions
-

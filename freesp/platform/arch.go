@@ -1,8 +1,9 @@
-package freesp
+package platform
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -45,7 +46,7 @@ func createArchFromXml(xmla backend.XmlArch, platform pf.PlatformIf) (a *arch, e
 		a.processes.Append(pr)
 	}
 	for _, xmlh := range xmla.Entry {
-		mode, ok := ModeFromString[xmlh.Mode]
+		mode, ok := freesp.ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
 			continue
@@ -124,7 +125,8 @@ func (a *arch) String() string {
 
 func (a *arch) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	//log.Printf("arch.AddToTree: %s\n", a.Name())
-	err := tree.AddEntry(cursor, tr.SymbolArch, a.Name(), a, MayAddObject|MayEdit|MayRemove)
+	prop := freesp.PropertyNew(true, true, true)
+	err := tree.AddEntry(cursor, tr.SymbolArch, a.Name(), a, prop)
 	if err != nil {
 		log.Fatalf("arch.AddToTree error: AddEntry failed: %s", err)
 	}

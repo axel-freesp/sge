@@ -1,8 +1,9 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	fd "github.com/axel-freesp/sge/interface/filedata"
 	gr "github.com/axel-freesp/sge/interface/graph"
@@ -107,8 +108,8 @@ func (t *signalGraphType) AddNode(n bh.NodeIf) error {
 			return fmt.Errorf("signalGraphType.AddNode error: node type %s has no DefinedAt...", nType.TypeName())
 		}
 		if !t.containsLibRef(libname) {
-			lib := libraries[libname]
-			if lib == nil {
+			lib, ok := freesp.GetLibraryByName(libname)
+			if !ok {
 				return fmt.Errorf("signalGraphType.AddNode error: library %s not registered", libname)
 			}
 			t.libraries = append(t.libraries, lib)
@@ -186,8 +187,8 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 	resolvePort func(portname string, dir gr.PortDirection) *portType) (t *signalGraphType, err error) {
 	t = SignalGraphTypeNew(context)
 	for _, ref := range g.Libraries {
-		l := libraries[ref.Name]
-		if l == nil {
+		l, ok := freesp.GetLibraryByName(ref.Name)
+		if !ok {
 			var f fd.FileDataIf
 			var lib bh.LibraryIf
 			f, err = t.context.LibraryMgr().Access(ref.Name)
@@ -196,8 +197,7 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 				return
 			}
 			lib = f.(bh.LibraryIf)
-			l = lib.(*library)
-			libraries[ref.Name] = l
+			freesp.RegisterLibrary(lib)
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
 		}
 		t.libraries = append(t.libraries, l)
@@ -294,8 +294,8 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 	if len(ntName) == 0 {
 		ntName = createNodeTypeName(n)
 	}
-	nt := nodeTypes[ntName]
-	if nt == nil {
+	nt, ok := freesp.GetNodeTypeByName(ntName)
+	if !ok {
 		nt = createNodeTypeFromXmlNode(n, ntName)
 	}
 	var err error
@@ -346,13 +346,13 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 func (g *signalGraphType) addInputNodeFromPortType(p bh.PortTypeIf) {
 	st := p.SignalType()
 	ntName := createInputNodeTypeName(st.TypeName())
-	nt, ok := nodeTypes[ntName]
+	nt, ok := freesp.GetNodeTypeByName(ntName)
 	if !ok {
 		nt = NodeTypeNew(ntName, "")
-		nt.addOutPort("", st)
-		nodeTypes[ntName] = nt
+		nt.(*nodeType).addOutPort("", st)
+		freesp.RegisterNodeType(nt)
 	}
-	if len(nt.outPorts.PortTypes()) == 0 {
+	if len(nt.(*nodeType).outPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addInputNodeFromNamedPortType: invalid input node type")
 	}
 	n, err := NodeNew(fmt.Sprintf("in-%s", p.Name()), nt, g)
@@ -369,13 +369,13 @@ func (g *signalGraphType) addInputNodeFromPortType(p bh.PortTypeIf) {
 func (g *signalGraphType) addOutputNodeFromPortType(p bh.PortTypeIf) {
 	st := p.SignalType()
 	ntName := createOutputNodeTypeName(st.TypeName())
-	nt, ok := nodeTypes[ntName]
+	nt, ok := freesp.GetNodeTypeByName(ntName)
 	if !ok {
 		nt = NodeTypeNew(ntName, "")
-		nt.addInPort("", st)
-		nodeTypes[ntName] = nt
+		nt.(*nodeType).addInPort("", st)
+		freesp.RegisterNodeType(nt)
 	}
-	if len(nt.inPorts.PortTypes()) == 0 {
+	if len(nt.(*nodeType).inPorts.PortTypes()) == 0 {
 		log.Fatal("signalGraphType.addOutputNodeFromNamedPortType: invalid output node type")
 	}
 	n, err := NodeNew(fmt.Sprintf("out-%s", p.Name()), nt, g)

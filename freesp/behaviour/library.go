@@ -1,8 +1,9 @@
-package freesp
+package behaviour
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -20,7 +21,7 @@ var _ bh.LibraryIf = (*library)(nil)
 
 func LibraryNew(filename string, context mod.ModelContextIf) *library {
 	ret := &library{filename, signalTypeListInit(), nodeTypeListInit(), context}
-	libraries[filename] = ret
+	freesp.RegisterLibrary(ret)
 	return ret
 }
 
@@ -63,12 +64,13 @@ func (l library) Filename() string {
 }
 
 func (l *library) SetFilename(filename string) {
-	delete(libraries, l.filename)
+	// TODO: check if new name is existing
+	freesp.RemoveRegisteredLibrary(l)
 	l.filename = filename
 	for _, t := range l.NodeTypes() {
 		t.(*nodeType).definedAt = filename
 	}
-	libraries[filename] = l
+	freesp.RegisterLibrary(l)
 }
 
 func (l library) SignalTypes() []bh.SignalTypeIf {
@@ -144,18 +146,17 @@ func (l library) WriteFile(filepath string) error {
 
 func (l *library) RemoveFromTree(tree tr.TreeIf) {
 	tree.Remove(tree.Cursor(l))
-	delete(libraries, l.filename)
+	freesp.RemoveRegisteredLibrary(l)
 }
 
 func (l *library) AddNodeType(t bh.NodeTypeIf) error {
-	nType, ok := nodeTypes[t.TypeName()]
+	nType, ok := freesp.GetNodeTypeByName(t.TypeName())
 	if ok {
 		log.Printf(`library.AddNodeType: warning: adding existing node
 			type definition %s (taking the existing one)`, t.TypeName())
 	} else {
 		nType = t.(*nodeType)
-		nodeTypes[t.TypeName()] = nType
-		registeredNodeTypes.Append(t.TypeName())
+		freesp.RegisterNodeType(nType)
 		log.Println("library.AddNodeType: registered ", t.TypeName())
 	}
 	for _, nt := range l.nodeTypes.NodeTypes() {
@@ -172,8 +173,7 @@ func (l *library) RemoveNodeType(nt bh.NodeTypeIf) {
 	for _, n := range nt.(*nodeType).instances.Nodes() {
 		n.(*node).context.RemoveNode(n)
 	}
-	delete(nodeTypes, nt.TypeName())
-	registeredNodeTypes.Remove(nt.TypeName())
+	freesp.RemoveRegisteredNodeType(nt)
 	l.nodeTypes.Remove(nt)
 }
 
@@ -191,8 +191,11 @@ func (l *library) AddSignalType(s bh.SignalTypeIf) (ok bool) {
 }
 
 func (l *library) RemoveSignalType(st bh.SignalTypeIf) {
-	for _, ntName := range registeredNodeTypes.Strings() {
-		nt := nodeTypes[ntName]
+	for _, ntName := range freesp.GetRegisteredNodeTypes() {
+		nt, ok := freesp.GetNodeTypeByName(ntName)
+		if !ok {
+			log.Panicf("library.RemoveSignalType internal error: node type %s\n", ntName)
+		}
 		for _, p := range nt.InPorts() {
 			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
@@ -225,7 +228,8 @@ var _ tr.TreeElement = (*library)(nil)
 //
 
 func (l *library) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	err := tree.AddEntry(cursor, tr.SymbolLibrary, l.Filename(), l, MayAddObject)
+	prop := freesp.PropertyNew(true, false, false)
+	err := tree.AddEntry(cursor, tr.SymbolLibrary, l.Filename(), l, prop)
 	if err != nil {
 		log.Fatalf("bh.LibraryIf.AddToTree error: AddEntry failed: %s\n", err)
 	}

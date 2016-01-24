@@ -1,11 +1,11 @@
 package graph
 
 import (
-    "image"
+	"image"
 )
 
 type XmlCreator interface {
-    CreateXml() (buf []byte, err error)
+	CreateXml() (buf []byte, err error)
 }
 
 type Namer interface {
@@ -24,6 +24,7 @@ type ModePositioner interface {
 }
 
 type PositionMode string
+
 const (
 	PositionModeNormal  PositionMode = "normal"
 	PositionModeMapping PositionMode = "mapping"
@@ -40,6 +41,7 @@ type Directioner interface {
 }
 
 type PortDirection bool
+
 const (
 	InPort  PortDirection = false
 	OutPort PortDirection = true
@@ -51,9 +53,9 @@ type IOModer interface {
 }
 
 type IOMode string
+
 const (
 	IOModeShmem IOMode = "Shared Memory"
 	IOModeAsync IOMode = "Asynchronous"
 	IOModeSync  IOMode = "Isochronous"
 )
-

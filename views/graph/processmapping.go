@@ -1,20 +1,20 @@
 package graph
 
 import (
-	"log"
-	"image"
-	"github.com/gotk3/gotk3/cairo"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
+	"github.com/gotk3/gotk3/cairo"
+	"image"
+	"log"
 )
 
 type ProcessMapping struct {
 	Container
-	userObj pf.ProcessIf
-	nodes []*Node
+	userObj      pf.ProcessIf
+	nodes        []*Node
 	selectedPort int
-	arch ArchIf
+	arch         ArchIf
 }
 
 var _ ProcessIf = (*ProcessMapping)(nil)
@@ -22,11 +22,11 @@ var _ ContainerChild = (*Node)(nil)
 
 func ProcessMappingNew(nodes []*Node, userObj pf.ProcessIf) (ret *ProcessMapping) {
 	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
-			ColorInit(ColorOption(ProcessHighlight)),
-			ColorInit(ColorOption(ProcessSelected)),
-			ColorInit(ColorOption(BoxFrame)),
-			ColorInit(ColorOption(Text)),
-			image.Point{procPortOutBorder, procPortOutBorder}}
+		ColorInit(ColorOption(ProcessHighlight)),
+		ColorInit(ColorOption(ProcessSelected)),
+		ColorInit(ColorOption(BoxFrame)),
+		ColorInit(ColorOption(Text)),
+		image.Point{procPortOutBorder, procPortOutBorder}}
 	cconfig := ContainerConfig{procPortWidth, procPortHeight, procMinWidth, procMinHeight}
 	var children []ContainerChild
 	for _, n := range nodes {
@@ -45,9 +45,9 @@ func (pr ProcessMapping) ArchObject() ArchIf {
 	return pr.arch
 }
 
-func processDrawMappedChannel(p *ContainerPort, ctxt interface{}){
-    switch ctxt.(type) {
-    case *cairo.Context:
+func processDrawMappedChannel(p *ContainerPort, ctxt interface{}) {
+	switch ctxt.(type) {
+	case *cairo.Context:
 		empty := image.Point{}
 		context := ctxt.(*cairo.Context)
 		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
@@ -77,7 +77,7 @@ func processDrawMappedChannel(p *ContainerPort, ctxt interface{}){
 				DrawArrow(context, pos1, pos2)
 			}
 		}
-    }
+	}
 }
 
 func (pr *ProcessMapping) SetArchObject(a ArchIf) {
@@ -97,17 +97,17 @@ func (pr *ProcessMapping) addPort(c pf.ChannelIf, a ArchIf, idx int) {
 	cnt := len(pr.userObj.InChannels()) + len(pr.userObj.OutChannels())
 	empty := image.Point{}
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
-			ColorInit(ColorOption(HighlightArchPort)),
-			ColorInit(ColorOption(SelectArchPort)),
-			ColorInit(ColorOption(BoxFrame)),
-			Color{},
-			image.Point{}}
+		ColorInit(ColorOption(HighlightArchPort)),
+		ColorInit(ColorOption(SelectArchPort)),
+		ColorInit(ColorOption(BoxFrame)),
+		Color{},
+		image.Point{}}
 	pos := c.ModePosition(gr.PositionModeMapping)
 	if pos == empty {
 		pos = pr.CalcPortPos(idx, cnt)
 	}
 	p := pr.AddModePort(pos, config, c, gr.PositionModeMapping)
-	p.RegisterOnDraw(func(ctxt interface{}){
+	p.RegisterOnDraw(func(ctxt interface{}) {
 		processDrawMappedChannel(p, ctxt)
 	})
 	a.(*Arch).channelMap[c] = p
@@ -150,7 +150,7 @@ func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
 func (pr *ProcessMapping) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
 	pr.userObj.SetModePosition(gr.PositionModeMapping, pos)
-	if pr.arch != nil {	// else is unmapped process
+	if pr.arch != nil { // else is unmapped process
 		a := pr.arch.(*Arch)
 		if a.mapping != nil {
 			for _, ch := range pr.Children {
@@ -165,7 +165,3 @@ func (pr *ProcessMapping) SetPosition(pos image.Point) {
 		}
 	}
 }
-
-
-
-

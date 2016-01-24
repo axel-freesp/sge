@@ -1,0 +1,160 @@
+package behaviour
+
+import (
+	"github.com/axel-freesp/sge/backend"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	"strings"
+)
+
+func CreateXmlInPort(p bh.PortIf) *backend.XmlInPort {
+	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+}
+
+func CreateXmlOutPort(p bh.PortIf) *backend.XmlOutPort {
+	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+}
+
+func CreateXmlNamedInPort(p bh.PortTypeIf) *backend.XmlInPort {
+	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+}
+
+func CreateXmlNamedOutPort(p bh.PortTypeIf) *backend.XmlOutPort {
+	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+}
+
+func CreateXmlInputNode(n bh.NodeIf) *backend.XmlInputNode {
+	tName := n.ItsType().TypeName()
+	if strings.HasPrefix(tName, "autoInputNodeType-") {
+		tName = ""
+	}
+	pos := n.Position()
+	ret := backend.XmlInputNodeNew(n.Name(), tName, pos.X, pos.Y)
+	if n.(*node).portlink != nil {
+		ret.NPort = n.(*node).portlink.Name()
+	}
+	for _, p := range n.OutPorts() {
+		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+	}
+	return ret
+}
+
+func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
+	tName := n.ItsType().TypeName()
+	if strings.HasPrefix(tName, "autoOutputNodeType-") {
+		tName = ""
+	}
+	pos := n.Position()
+	ret := backend.XmlOutputNodeNew(n.Name(), tName, pos.X, pos.Y)
+	if n.(*node).portlink != nil {
+		ret.NPort = n.(*node).portlink.Name()
+	}
+	for _, p := range n.InPorts() {
+		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
+	}
+	return ret
+}
+
+func CreateXmlProcessingNode(n bh.NodeIf) *backend.XmlProcessingNode {
+	pos := n.Position()
+	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), pos.X, pos.Y)
+	if len(n.ItsType().DefinedAt()) == 0 {
+		for _, p := range n.InPorts() {
+			ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
+		}
+		for _, p := range n.OutPorts() {
+			ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+		}
+	}
+	return ret
+}
+
+func CreateXmlNodeType(t bh.NodeTypeIf) *backend.XmlNodeType {
+	ret := backend.XmlNodeTypeNew(t.TypeName())
+	for _, p := range t.InPorts() {
+		ret.InPort = append(ret.InPort, *CreateXmlNamedInPort(p))
+	}
+	for _, p := range t.OutPorts() {
+		ret.OutPort = append(ret.OutPort, *CreateXmlNamedOutPort(p))
+	}
+	for _, impl := range t.Implementation() {
+		ret.Implementation = append(ret.Implementation, *CreateXmlImplementation(impl))
+	}
+	return ret
+}
+
+func CreateXmlImplementation(impl bh.ImplementationIf) *backend.XmlImplementation {
+	ret := backend.XmlImplementationNew(impl.ElementName())
+	if impl.ImplementationType() == bh.NodeTypeGraph {
+		ret.SignalGraph = append(ret.SignalGraph, *CreateXmlSignalGraphType(impl.Graph()))
+	}
+	return ret
+}
+
+func CreateXmlConnection(c bh.ConnectionIf) *backend.XmlConnect {
+	from := c.From()
+	to := c.To()
+	fromNode := from.Node()
+	toNode := to.Node()
+	switch from.Direction() {
+	case gr.OutPort:
+		return backend.XmlConnectNew(fromNode.Name(), toNode.Name(), from.Name(), to.Name())
+	default:
+		return backend.XmlConnectNew(toNode.Name(), fromNode.Name(), to.Name(), from.Name())
+	}
+}
+
+func CreateXmlSignalType(s bh.SignalTypeIf) *backend.XmlSignalType {
+	var scope, mode string
+	if s.Scope() == bh.Local {
+		scope = "local"
+	}
+	if s.Mode() == bh.Synchronous {
+		mode = "sync"
+	}
+	return backend.XmlSignalTypeNew(s.TypeName(), scope, mode, s.CType(), s.ChannelId())
+}
+
+func CreateXmlLibrary(l bh.LibraryIf) *backend.XmlLibrary {
+	ret := backend.XmlLibraryNew()
+	for _, t := range l.SignalTypes() {
+		ret.SignalTypes = append(ret.SignalTypes, *CreateXmlSignalType(t))
+	}
+	for _, t := range l.NodeTypes() {
+		ret.NodeTypes = append(ret.NodeTypes, *CreateXmlNodeType(t))
+	}
+	return ret
+}
+
+func CreateXmlSignalGraph(g bh.SignalGraphIf) *backend.XmlSignalGraph {
+	return CreateXmlSignalGraphType(g.ItsType())
+}
+
+func CreateXmlSignalGraphType(t bh.SignalGraphTypeIf) *backend.XmlSignalGraph {
+	ret := backend.XmlSignalGraphNew()
+	for _, l := range t.Libraries() {
+		ret.Libraries = append(ret.Libraries, *CreateXmlLibraryRef(l))
+	}
+	for _, n := range t.InputNodes() {
+		ret.InputNodes = append(ret.InputNodes, *CreateXmlInputNode(n))
+	}
+	for _, n := range t.OutputNodes() {
+		ret.OutputNodes = append(ret.OutputNodes, *CreateXmlOutputNode(n))
+	}
+	for _, n := range t.ProcessingNodes() {
+		ret.ProcessingNodes = append(ret.ProcessingNodes, *CreateXmlProcessingNode(n))
+	}
+	for _, n := range t.Nodes() {
+		for _, p := range n.OutPorts() {
+			for _, c := range p.Connections() {
+				conn := p.Connection(c)
+				ret.Connections = append(ret.Connections, *CreateXmlConnection(conn))
+			}
+		}
+	}
+	return ret
+}
+
+func CreateXmlLibraryRef(l bh.LibraryIf) *backend.XmlLibraryRef {
+	return backend.XmlLibraryRefNew(l.Filename())
+}

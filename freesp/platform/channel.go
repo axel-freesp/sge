@@ -1,8 +1,9 @@
-package freesp
+package platform
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -56,9 +57,9 @@ func createOutChannelFromXml(xmlc backend.XmlOutChannel, p pf.ProcessIf) (ch *ch
 
 func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
 	for _, xmlh := range xmlc.Entry {
-		mode, ok := ModeFromString[xmlh.Mode]
+		mode, ok := freesp.ModeFromString[xmlh.Mode]
 		if !ok {
-			log.Printf("createInChannelFromXml warning: hint mode %s not defined\n",
+			log.Printf("channelPositionsFromXml warning: hint mode %s not defined\n",
 				xmlh.Mode)
 			continue
 		}
@@ -69,7 +70,7 @@ func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
 
 func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
 	for _, xmlh := range xmlc.ArchPortHints.Entry {
-		mode, ok := ModeFromString[xmlh.Mode]
+		mode, ok := freesp.ModeFromString[xmlh.Mode]
 		if !ok {
 			log.Printf("archPortPositionsFromXml warning: hint mode %s not defined\n",
 				xmlh.Mode)
@@ -201,7 +202,8 @@ func (c *channel) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	} else {
 		symbol = tr.SymbolOutChannel
 	}
-	err := tree.AddEntry(cursor, symbol, c.Name(), c, MayEdit|MayAddObject|MayRemove)
+	prop := freesp.PropertyNew(true, true, true)
+	err := tree.AddEntry(cursor, symbol, c.Name(), c, prop)
 	if err != nil {
 		log.Fatalf("channel.AddToTree error: AddEntry failed: %s\n", err)
 	}

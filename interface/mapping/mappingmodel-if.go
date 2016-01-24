@@ -2,9 +2,9 @@ package mapping
 
 import (
 	"github.com/axel-freesp/sge/interface/behaviour"
+	"github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/interface/graph"
 )
 
 /*
@@ -30,4 +30,3 @@ type MappedElementIf interface {
 	Process() (platform.ProcessIf, bool)
 	SetProcess(platform.ProcessIf)
 }
-

@@ -1,8 +1,9 @@
-package freesp
+package platform
 
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -187,7 +188,8 @@ func (p *platform) RemoveFromTree(tree tr.TreeIf) {
 //
 
 func (p *platform) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
-	err := tree.AddEntry(cursor, tr.SymbolPlatform, p.Filename(), p, MayAddObject)
+	prop := freesp.PropertyNew(true, false, false)
+	err := tree.AddEntry(cursor, tr.SymbolPlatform, p.Filename(), p, prop)
 	if err != nil {
 		log.Fatalf("platform.AddToTree error: AddEntry failed: %s", err)
 	}

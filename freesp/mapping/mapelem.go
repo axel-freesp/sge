@@ -1,14 +1,14 @@
 package mapping
 
 import (
+	"fmt"
+	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
-	"fmt"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	mp "github.com/axel-freesp/sge/interface/mapping"
-	tr "github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/freesp"
 )
 
 type mapelem struct {
@@ -76,19 +76,18 @@ func (m *mapelem) SetProcess(p pf.ProcessIf) {
 	m.process = p
 }
 
-func (m *mapelem) CreateXml() (buf []byte, err error) {
+func (m mapelem) CreateXml() (buf []byte, err error) {
 	var pname string
 	p, ok := m.Process()
 	if ok {
 		pname = fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
 	}
 	if len(m.Node().InPorts()) > 0 && len(m.Node().OutPorts()) > 0 {
-		xmlm := freesp.CreateXmlNodeMap(m.Node().Name(), pname, m.Position())
+		xmlm := CreateXmlNodeMap(m.Node().Name(), pname, m.Position())
 		buf, err = xmlm.Write()
 	} else {
-		xmlm := freesp.CreateXmlIOMap(m.Node().Name(), pname, m.Position())
+		xmlm := CreateXmlIOMap(m.Node().Name(), pname, m.Position())
 		buf, err = xmlm.Write()
 	}
 	return
 }
-

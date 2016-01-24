@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/freesp/behaviour"
+	"github.com/axel-freesp/sge/freesp/platform"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
@@ -68,11 +70,11 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			if !ok {
 				log.Fatal("NewElementJob.CreateObject(eNode) error: referenced parentObject type wrong...")
 			}
-			ret, err = freesp.NodeNew(j.input[iNodeName], ntype, context)
+			ret, err = behaviour.NodeNew(j.input[iNodeName], ntype, context)
 		} else if j.elemType == eInputNode {
-			ret, err = freesp.InputNodeNew(j.input[iInputNodeName], j.input[iInputTypeSelect], context)
+			ret, err = behaviour.InputNodeNew(j.input[iInputNodeName], j.input[iInputTypeSelect], context)
 		} else {
-			ret, err = freesp.OutputNodeNew(j.input[iOutputNodeName], j.input[iOutputTypeSelect], context)
+			ret, err = behaviour.OutputNodeNew(j.input[iOutputNodeName], j.input[iOutputTypeSelect], context)
 		}
 		if len(j.extra) > 0 {
 			coords := strings.Split(j.extra, "|")
@@ -99,7 +101,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatal("NewElementJob.CreateObject(eNodeType) error: referenced parentObject wrong type...")
 		}
-		ret = freesp.NodeTypeNew(j.input[iTypeName], context)
+		ret = behaviour.NodeTypeNew(j.input[iTypeName], context)
 
 	case eConnection:
 		switch parentObject.(type) {
@@ -153,7 +155,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 					from = p
 					to = parentObject.(bh.PortIf)
 				}
-				ret = freesp.ConnectionNew(from, to)
+				ret = behaviour.ConnectionNew(from, to)
 				break
 			}
 		}
@@ -171,7 +173,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			err = fmt.Errorf("NewElementJob.CreateObject(ePortType) error: referenced signal type wrong...")
 			return
 		}
-		ret = freesp.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], string2direction[j.input[iDirection]])
+		ret = behaviour.PortTypeNew(j.input[iPortName], j.input[iSignalTypeSelect], string2direction[j.input[iDirection]])
 
 	case eSignalType:
 		switch parentObject.(type) {
@@ -188,7 +190,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		channelId := j.input[iChannelId]
 		scope := string2scope[j.input[iScope]]
 		mode := string2mode[j.input[iSignalMode]]
-		ret, err = freesp.SignalTypeNew(name, cType, channelId, scope, mode)
+		ret, err = behaviour.SignalTypeNew(name, cType, channelId, scope, mode)
 		if err != nil {
 			log.Printf("NewElementJob.CreateObject(eSignalType) error: SignalTypeNew failed: %s\n", err)
 			return
@@ -203,7 +205,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
 		implType := string2implType[j.input[iImplementationType]]
-		ret = freesp.ImplementationNew(j.input[iImplName], implType, &global)
+		ret = behaviour.ImplementationNew(j.input[iImplName], implType, &global)
 
 	case eArch:
 		switch parentObject.(type) {
@@ -214,7 +216,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eArch) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret = freesp.ArchNew(j.input[iArchName], parentObject.(pf.PlatformIf))
+		ret = platform.ArchNew(j.input[iArchName], parentObject.(pf.PlatformIf))
 
 	case eIOType:
 		var p pf.PlatformIf
@@ -227,7 +229,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], gr.IOMode(j.input[iIOModeSelect]), p)
+		ret, err = platform.IOTypeNew(j.input[iIOTypeName], gr.IOMode(j.input[iIOModeSelect]), p)
 
 	case eProcess:
 		switch parentObject.(type) {
@@ -238,7 +240,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eProcess) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret = freesp.ProcessNew(j.input[iProcessName], parentObject.(pf.ArchIf))
+		ret = platform.ProcessNew(j.input[iProcessName], parentObject.(pf.ArchIf))
 
 	case eChannel:
 		switch parentObject.(type) {
@@ -264,7 +266,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		if !ok {
 			log.Fatalf("NewElementJob.CreateObject(eChannel) error: can't find chosen ioType\n", j.input[iIOTypeSelect])
 		}
-		ret = freesp.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(pf.ProcessIf), j.input[iChannelLinkSelect])
+		ret = platform.ChannelNew(string2direction[j.input[iChannelDirection]], ioType, parentObject.(pf.ProcessIf), j.input[iChannelLinkSelect])
 
 	default:
 		log.Fatal("NewElementJob.CreateObject error: invalid elemType ", j.elemType)

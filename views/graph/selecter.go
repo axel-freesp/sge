@@ -1,18 +1,18 @@
 package graph
 
 import (
-    "image"
 	"github.com/gotk3/gotk3/cairo"
+	"image"
 )
 
 type SelectObject struct {
-	selected bool
+	selected             bool
 	onSelect, onDeselect OnSelectionFunc
 }
 
 type HighlightObject struct {
 	highlighted bool
-	Pos image.Point
+	Pos         image.Point
 	onHighlight OnHighlightFunc
 }
 
@@ -20,7 +20,7 @@ type HighlightObject struct {
  *      Default Selecter implementation
  */
 
-var _ Selecter  = (*SelectObject)(nil)
+var _ Selecter = (*SelectObject)(nil)
 
 func (s *SelectObject) Select() (selected bool) {
 	selected = s.selected
@@ -44,13 +44,13 @@ func (s *SelectObject) RegisterOnSelect(onSelect, onDeselect OnSelectionFunc) {
 	s.onSelect, s.onDeselect = onSelect, onDeselect
 }
 
-var defaultSelection = func(){}
+var defaultSelection = func() {}
 
 /*
  *      Default Highlighter implementation
  */
 
-var _ Highlighter  = (*HighlightObject)(nil)
+var _ Highlighter = (*HighlightObject)(nil)
 
 func (h *HighlightObject) DoHighlight(hit bool, pos image.Point) (modified bool) {
 	modified = (h.highlighted != hit)
@@ -70,18 +70,18 @@ func (h *HighlightObject) RegisterOnHighlight(onHighlight OnHighlightFunc) {
 	h.onHighlight = onHighlight
 }
 
-var defaultHighlight = func(bool, image.Point)bool{return false}
+var defaultHighlight = func(bool, image.Point) bool { return false }
 
 /*
  *      Default SelectableBox implementation
  */
 
 type SelectableBox struct {
-    BBoxObject
-    SelectObject
-    HighlightObject
-    config DrawConfig
-    onDraw func(ctxt interface{})
+	BBoxObject
+	SelectObject
+	HighlightObject
+	config DrawConfig
+	onDraw func(ctxt interface{})
 }
 
 type Color struct {
@@ -96,14 +96,14 @@ var _ BoxedSelecter = (*SelectableBox)(nil)
 
 type DrawConfig struct {
 	nCol, hCol, sCol, fCol, tCol Color
-	pad image.Point
+	pad                          image.Point
 }
 
 func SelectableBoxInit(box image.Rectangle, config DrawConfig) SelectableBox {
-    return SelectableBox{BBoxInit(box),
+	return SelectableBox{BBoxInit(box),
 		SelectObject{false, defaultSelection, defaultSelection},
 		HighlightObject{false, image.Point{}, defaultHighlight},
-		config, func(ctxt interface{}){}}
+		config, func(ctxt interface{}) {}}
 }
 
 func (b *SelectableBox) CheckHit(pos image.Point) (hit, modified bool) {
@@ -117,14 +117,14 @@ func (b *SelectableBox) CheckHit(pos image.Point) (hit, modified bool) {
 //	Drawer interface
 //
 
-func (b SelectableBox) Draw(ctxt interface{}){
+func (b SelectableBox) Draw(ctxt interface{}) {
 	b.SelectorDefaultDraw(ctxt)
 	b.onDraw(ctxt)
 }
 
-func (b SelectableBox) SelectorDefaultDraw(ctxt interface{}){
-    switch ctxt.(type) {
-    case *cairo.Context:
+func (b SelectableBox) SelectorDefaultDraw(ctxt interface{}) {
+	switch ctxt.(type) {
+	case *cairo.Context:
 		context := ctxt.(*cairo.Context)
 		var color Color
 		if b.IsSelected() {
@@ -147,4 +147,3 @@ func (b SelectableBox) SelectorDefaultDraw(ctxt interface{}){
 func (b *SelectableBox) RegisterOnDraw(onDraw func(ctxt interface{})) {
 	b.onDraw = onDraw
 }
-

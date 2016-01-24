@@ -14,6 +14,19 @@ const (
 	MayRemove    property = (1 << 2)
 )
 
+func PropertyNew(add, edit, rem bool) (p property) {
+	if add {
+		p = p | MayAddObject
+	}
+	if edit {
+		p = p | MayEdit
+	}
+	if rem {
+		p = p | MayRemove
+	}
+	return
+}
+
 func (p property) IsReadOnly() bool {
 	return p&(MayAddObject|MayEdit) == 0
 }

@@ -3,9 +3,9 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
 	"log"
 	"strings"
 )
@@ -62,7 +62,6 @@ func (p *platform) CreateXml() (buf []byte, err error) {
 	buf, err = xmlp.Write()
 	return
 }
-
 
 //
 //  Filenamer API

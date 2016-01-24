@@ -1,17 +1,17 @@
 package views
 
 import (
-	"image"
-	"log"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/views/graph"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/axel-freesp/sge/views/graph"
-	gr "github.com/axel-freesp/sge/interface/graph"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	mp "github.com/axel-freesp/sge/interface/mapping"
-	tr "github.com/axel-freesp/sge/interface/tree"
+	"image"
+	"log"
 )
 
 type mappingView struct {
@@ -108,7 +108,6 @@ func (p *unmappedProcess) RemoveObject(tr.TreeIf, tr.Cursor) (r []tr.IdWithObjec
 func (p *unmappedProcess) CreateXml() (buf []byte, err error) {
 	return
 }
-
 
 func (v *mappingView) Sync() {
 	log.Printf("mappingView.Sync()\n")

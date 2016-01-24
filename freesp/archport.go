@@ -1,9 +1,9 @@
 package freesp
 
 import (
-	"image"
 	"github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
+	"image"
 )
 
 type archPort struct {

@@ -2,13 +2,13 @@ package freesp
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/backend"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 	"strings"
-	"github.com/axel-freesp/sge/backend"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type process struct {

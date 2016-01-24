@@ -85,7 +85,6 @@ func (a *arch) CreateXml() (buf []byte, err error) {
 	return
 }
 
-
 //
 //  Namer API
 //
@@ -254,7 +253,7 @@ func (a *arch) Identify(te tr.TreeElement) bool {
 //
 
 type archList struct {
-	archs   []pf.ArchIf
+	archs []pf.ArchIf
 }
 
 func archListInit() archList {

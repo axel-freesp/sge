@@ -2,8 +2,8 @@ package views
 
 import (
 	"fmt"
-	"github.com/gotk3/gotk3/gtk"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 type XmlTextView struct {

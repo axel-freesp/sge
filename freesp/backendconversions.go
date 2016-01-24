@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
-	gr "github.com/axel-freesp/sge/interface/graph"
 	"image"
 	"strings"
 )
@@ -22,6 +22,7 @@ var StringFromMode = map[gr.PositionMode]string{
 	gr.PositionModeNormal:  "normal",
 	gr.PositionModeMapping: "mp",
 }
+
 /*
 func CreateXML(object interface{}) (buf []byte, err error) {
 	if object != nil {

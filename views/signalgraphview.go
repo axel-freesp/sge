@@ -1,15 +1,15 @@
 package views
 
 import (
-	"image"
-	"log"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	"github.com/axel-freesp/sge/views/graph"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/axel-freesp/sge/views/graph"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	mp "github.com/axel-freesp/sge/interface/mapping"
+	"image"
+	"log"
 )
 
 type signalGraphView struct {

@@ -1,14 +1,14 @@
 package main
 
 import (
-	"log"
-	"github.com/gotk3/gotk3/gtk"
-	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	"github.com/axel-freesp/sge/models"
+	"github.com/gotk3/gotk3/gtk"
+	"log"
 )
 
 type EditDialog struct {

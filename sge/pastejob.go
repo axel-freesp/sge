@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"strings"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	"github.com/axel-freesp/sge/models"
+	"log"
+	"strings"
 	//pf "github.com/axel-freesp/sge/interface/platform"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	tr "github.com/axel-freesp/sge/interface/tree"
 )
 
 type PasteJob struct {

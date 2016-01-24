@@ -19,8 +19,6 @@ type Context interface {
 	SelectMapElement(mp.MappedElementIf)
 }
 
-
-
 const (
 	width  = 800
 	height = 600

@@ -2,11 +2,11 @@ package views
 
 import (
 	"fmt"
-	"log"
-	"github.com/gotk3/gotk3/gtk"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
 	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	"github.com/gotk3/gotk3/gtk"
+	"log"
 )
 
 type graphViewCollection struct {

@@ -95,7 +95,6 @@ func (t *signalType) CreateXml() (buf []byte, err error) {
 	return
 }
 
-
 /*
  *	fmt.Stringer API
  */

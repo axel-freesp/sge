@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	"github.com/axel-freesp/sge/models"
+	"log"
 )
 
 type EditJob struct {

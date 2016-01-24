@@ -2,12 +2,12 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	"github.com/axel-freesp/sge/backend"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	"log"
 )
 
 func SignalGraphNew(filename string, context mod.ModelContextIf) *signalGraph {

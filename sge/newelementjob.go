@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/models"
 	"image"
 	"log"
 	"strings"
-	"github.com/axel-freesp/sge/freesp"
-	"github.com/axel-freesp/sge/models"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type NewElementJob struct {

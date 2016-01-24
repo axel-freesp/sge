@@ -1,12 +1,12 @@
 package freesp
 
 import (
-	"log"
 	"github.com/axel-freesp/sge/backend"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	"log"
 )
 
 type nodeType struct {

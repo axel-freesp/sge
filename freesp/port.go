@@ -2,11 +2,11 @@ package freesp
 
 import (
 	"fmt"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 	"unsafe"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	tr "github.com/axel-freesp/sge/interface/tree"
-	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type port struct {
@@ -312,7 +312,7 @@ func findPort(list []bh.PortIf, prt *port) bool {
  */
 
 type portList struct {
-	ports    []bh.PortIf
+	ports []bh.PortIf
 }
 
 func portListInit() portList {
@@ -356,5 +356,3 @@ func (l *portList) Find(nodeName, portName string) (p bh.PortIf, ok bool, index 
 	}
 	return
 }
-
-

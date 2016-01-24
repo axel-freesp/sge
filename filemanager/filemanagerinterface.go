@@ -1,10 +1,10 @@
 package filemanager
 
 import (
-	"github.com/axel-freesp/sge/views"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/views"
 	//pf "github.com/axel-freesp/sge/interface/platform"
 )
 

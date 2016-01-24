@@ -2,9 +2,9 @@ package views
 
 import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	mp "github.com/axel-freesp/sge/interface/mapping"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -45,4 +45,3 @@ type GraphViewCollectionIf interface {
 	Sync()
 	Select(obj interface{})
 }
-

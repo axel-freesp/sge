@@ -2,8 +2,8 @@ package main
 
 import (
 	//"github.com/axel-freesp/sge/freesp"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"

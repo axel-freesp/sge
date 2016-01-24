@@ -2,10 +2,10 @@ package freesp
 
 import (
 	"fmt"
-	"log"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	"log"
 )
 
 // portType
@@ -65,7 +65,6 @@ func (t *portType) CreateXml() (buf []byte, err error) {
 	}
 	return
 }
-
 
 /*
  *  tr.TreeElement API

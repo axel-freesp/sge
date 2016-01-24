@@ -3,8 +3,8 @@ package freesp
 import (
 	"fmt"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 )
@@ -337,7 +337,7 @@ func (n *node) OutPortIndex(portName string) int {
  */
 
 type nodeList struct {
-	nodes   []bh.NodeIf
+	nodes []bh.NodeIf
 }
 
 func nodeListInit() nodeList {

@@ -48,7 +48,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 						log.Printf("%s\n", err)
 						return
 					}
-					gv, err = views.SignalGraphViewNew(impl.GraphObject(), &global)
+					gv, err = views.SignalGraphViewNewFromType(impl.Graph(), &global)
 					if err != nil {
 						log.Fatal("Could not create graph view.")
 					}
@@ -58,7 +58,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				}
 				gv.Sync()
 			}
-		case bh.NodeIf, bh.Port, bh.Connection, pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
+		case bh.NodeIf, bh.PortIf, bh.ConnectionIf, pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
 			global.win.graphViews.Select(obj)
 		}
 	}

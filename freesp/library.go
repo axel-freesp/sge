@@ -40,7 +40,7 @@ func LibraryUsesNodeType(l bh.LibraryIf, nt bh.NodeTypeIf) bool {
 	return false
 }
 
-func LibraryUsesSignalType(l bh.LibraryIf, st bh.SignalType) bool {
+func LibraryUsesSignalType(l bh.LibraryIf, st bh.SignalTypeIf) bool {
 	for _, t := range l.SignalTypes() {
 		if t.TypeName() == st.TypeName() {
 			return true
@@ -71,7 +71,7 @@ func (l *library) SetFilename(filename string) {
 	libraries[filename] = l
 }
 
-func (l library) SignalTypes() []bh.SignalType {
+func (l library) SignalTypes() []bh.SignalTypeIf {
 	return l.signalTypes.SignalTypes()
 }
 
@@ -177,7 +177,7 @@ func (l *library) RemoveNodeType(nt bh.NodeTypeIf) {
 	l.nodeTypes.Remove(nt)
 }
 
-func (l *library) AddSignalType(s bh.SignalType) (ok bool) {
+func (l *library) AddSignalType(s bh.SignalTypeIf) (ok bool) {
 	for _, st := range l.signalTypes.SignalTypes() {
 		if st.TypeName() == s.TypeName() {
 			log.Printf(`library.AddSignalType: warning: adding
@@ -190,26 +190,32 @@ func (l *library) AddSignalType(s bh.SignalType) (ok bool) {
 	return
 }
 
-func (l *library) RemoveSignalType(st bh.SignalType) {
+func (l *library) RemoveSignalType(st bh.SignalTypeIf) {
 	for _, ntName := range registeredNodeTypes.Strings() {
 		nt := nodeTypes[ntName]
 		for _, p := range nt.InPorts() {
 			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
-					bh.SignalType %v is still in use\n`, st)
+					bh.SignalTypeIf %v is still in use\n`, st)
 				return
 			}
 		}
 		for _, p := range nt.OutPorts() {
 			if p.SignalType().TypeName() == st.TypeName() {
 				log.Printf(`library.RemoveSignalType warning:
-					bh.SignalType %v is still in use\n`, st)
+					bh.SignalTypeIf %v is still in use\n`, st)
 				return
 			}
 		}
 	}
 	SignalTypeDestroy(st)
 	l.signalTypes.Remove(st)
+}
+
+func (l *library) CreateXml() (buf []byte, err error) {
+	xmllib := CreateXmlLibrary(l)
+	buf, err = xmllib.Write()
+	return
 }
 
 var _ tr.TreeElement = (*library)(nil)
@@ -239,8 +245,8 @@ func (l *library) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElem
 		return
 	}
 	switch obj.(type) {
-	case bh.SignalType:
-		t := obj.(bh.SignalType)
+	case bh.SignalTypeIf:
+		t := obj.(bh.SignalTypeIf)
 		ok := l.AddSignalType(t)
 		if !ok {
 			err = fmt.Errorf("library.AddNewObject warning: duplicate")
@@ -273,20 +279,20 @@ func (l *library) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.I
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case bh.SignalType:
-		st := tree.Object(cursor).(bh.SignalType)
+	case bh.SignalTypeIf:
+		st := tree.Object(cursor).(bh.SignalTypeIf)
 		for _, nt := range l.NodeTypes() {
 			for _, p := range nt.InPorts() {
 				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
-						bh.SignalType %v is still in use\n`, st)
+						bh.SignalTypeIf %v is still in use\n`, st)
 					return
 				}
 			}
 			for _, p := range nt.OutPorts() {
 				if p.SignalType().TypeName() == st.TypeName() {
 					log.Printf(`library.RemoveObject warning:
-						bh.SignalType %v is still in use\n`, st)
+						bh.SignalTypeIf %v is still in use\n`, st)
 					return
 				}
 			}

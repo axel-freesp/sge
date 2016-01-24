@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	//"strings"
 	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/models"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/models"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type EditJob struct {
@@ -91,7 +90,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		nt.SetTypeName((*detail)[iTypeName])
 		fts.SetValueById(j.objId, nt.TypeName())
 	case ePortType:
-		pt := obj.(bh.PortType)
+		pt := obj.(bh.PortTypeIf)
 		ptCursor := fts.Cursor(pt)
 		ntCursor := fts.Parent(ptCursor)
 		nt := fts.Object(ntCursor).(bh.NodeTypeIf)
@@ -110,7 +109,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 				string2direction[(*detail)[iDirection]]))
 		state = ptCursor.Path
 	case eSignalType:
-		st := obj.(bh.SignalType)
+		st := obj.(bh.SignalTypeIf)
 		if (*detail)[iSignalTypeName] != st.TypeName() {
 			log.Printf("jobApplier.Apply(JobEdit): Renaming SignalType is not implemented.\n")
 		}
@@ -182,7 +181,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 			}
 		}
 		(*old)[iIOModeSelect] = string(t.IOMode())
-		t.SetIOMode(interfaces.IOMode((*detail)[iIOModeSelect]))
+		t.SetIOMode(gr.IOMode((*detail)[iIOModeSelect]))
 		fts.SetValueById(j.objId, t.Name())
 	case eChannel:
 		c := obj.(pf.ChannelIf)
@@ -201,8 +200,8 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 		fts.SetValueById(id.Path, link.Name())
 	case eMapElement:
 		c := obj.(mp.MappedElementIf)
-		pr := c.Process()
-		if pr == nil {
+		pr, ok := c.Process()
+		if !ok {
 			(*old)[iProcessSelect] = "<unmapped>"
 		} else {
 			(*old)[iProcessSelect] = fmt.Sprintf("%s/%s", pr.Arch().Name(), pr.Name())
@@ -224,7 +223,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 	return
 }
 
-func updateConnections(p bh.Port, fts *models.FilesTreeStore) {
+func updateConnections(p bh.PortIf, fts *models.FilesTreeStore) {
 	nodeCursor := fts.Cursor(p.Node())
 	portCursor := fts.CursorAt(nodeCursor, p)
 	for _, c := range p.Connections() {

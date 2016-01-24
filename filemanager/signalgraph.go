@@ -37,8 +37,8 @@ func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
 		return
 	}
 	f.context.FTV().SelectId(newId)
-	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf).GraphObject(), f.context)
+	var gv views.GraphViewIf
+	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.New: %s", err)
 		return
@@ -73,8 +73,8 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 	}
 	f.context.FTV().SelectId(newId)
 
-	var gv views.GraphView
-	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf).GraphObject(), f.context)
+	var gv views.GraphViewIf
+	gv, err = views.SignalGraphViewNew(sg.(bh.SignalGraphIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerSG.Access: %s", err)
 		return
@@ -101,7 +101,7 @@ func (f *fileManagerSG) Remove(name string) {
 	f.context.CleanupSignalTypesFromNodes(nodes)
 	id, _ := f.context.FTS().GetToplevelId(sg)
 	f.context.FTS().RemoveToplevel(id)
-	f.context.GVC().RemoveGraphView(sg.GraphObject())
+	f.context.GVC().RemoveGraphView(sg)
 }
 
 func (f *fileManagerSG) Rename(oldName, newName string) (err error) {

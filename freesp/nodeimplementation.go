@@ -2,7 +2,6 @@ package freesp
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -41,8 +40,15 @@ func (n *implementation) Graph() bh.SignalGraphTypeIf {
 	return n.graph
 }
 
-func (n *implementation) GraphObject() interfaces.GraphObject {
-	return n.graph.(*signalGraphType)
+func (n *implementation) CreateXml() (buf []byte, err error) {
+	switch n.ImplementationType() {
+	case bh.NodeTypeElement:
+		// TODO
+	default:
+		xmlImpl := CreateXmlSignalGraphType(n.Graph())
+		buf, err = xmlImpl.Write()
+	}
+	return
 }
 
 /*
@@ -107,7 +113,7 @@ func (impl *implementation) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj t
 			log.Fatalf("implementation.AddNewObject error: cannot add node to elementary implementation.\n")
 		}
 
-	case bh.Connection:
+	case bh.ConnectionIf:
 		if impl.ImplementationType() == bh.NodeTypeGraph {
 			return impl.Graph().AddNewObject(tree, cursor, obj)
 		} else {

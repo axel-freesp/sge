@@ -2,35 +2,34 @@ package freesp
 
 import (
 	"fmt"
+	"log"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
-var ioModeMap = map[backend.XmlIOMode]interfaces.IOMode{
-	backend.IOModeShmem: interfaces.IOModeShmem,
-	backend.IOModeAsync: interfaces.IOModeAsync,
-	backend.IOModeSync:  interfaces.IOModeSync,
+var ioModeMap = map[backend.XmlIOMode]gr.IOMode{
+	backend.IOModeShmem: gr.IOModeShmem,
+	backend.IOModeAsync: gr.IOModeAsync,
+	backend.IOModeSync:  gr.IOModeSync,
 }
 
-var ioXmlModeMap = map[interfaces.IOMode]backend.XmlIOMode{
-	interfaces.IOModeShmem: backend.IOModeShmem,
-	interfaces.IOModeAsync: backend.IOModeAsync,
-	interfaces.IOModeSync:  backend.IOModeSync,
+var ioXmlModeMap = map[gr.IOMode]backend.XmlIOMode{
+	gr.IOModeShmem: backend.IOModeShmem,
+	gr.IOModeAsync: backend.IOModeAsync,
+	gr.IOModeSync:  backend.IOModeSync,
 }
 
 type iotype struct {
 	name     string
-	mode     interfaces.IOMode
+	mode     gr.IOMode
 	platform pf.PlatformIf
 }
 
 var _ pf.IOTypeIf = (*iotype)(nil)
-var _ interfaces.IOTypeObject = (*iotype)(nil)
 
-func IOTypeNew(name string, mode interfaces.IOMode, platform pf.PlatformIf) (t *iotype, err error) {
+func IOTypeNew(name string, mode gr.IOMode, platform pf.PlatformIf) (t *iotype, err error) {
 	newT := &iotype{name, mode, platform}
 	ioType := ioTypes[name]
 	if ioType != nil {
@@ -48,16 +47,22 @@ func IOTypeNew(name string, mode interfaces.IOMode, platform pf.PlatformIf) (t *
 	return
 }
 
-func (t *iotype) IOMode() interfaces.IOMode {
+func (t *iotype) IOMode() gr.IOMode {
 	return t.mode
 }
 
-func (t *iotype) SetIOMode(newMode interfaces.IOMode) {
+func (t *iotype) SetIOMode(newMode gr.IOMode) {
 	t.mode = newMode
 }
 
 func (t *iotype) Platform() pf.PlatformIf {
 	return t.platform
+}
+
+func (t *iotype) CreateXml() (buf []byte, err error) {
+	xmlt := CreateXmlIOType(t)
+	buf, err = xmlt.Write()
+	return
 }
 
 //
@@ -115,16 +120,14 @@ func (t *iotype) Identify(te tr.TreeElement) bool {
 
 type ioTypeList struct {
 	ioTypes []pf.IOTypeIf
-	exports []interfaces.IOTypeObject
 }
 
 func ioTypeListInit() ioTypeList {
-	return ioTypeList{nil, nil}
+	return ioTypeList{}
 }
 
 func (l *ioTypeList) Append(st *iotype) {
 	l.ioTypes = append(l.ioTypes, st)
-	l.exports = append(l.exports, st)
 }
 
 func (l *ioTypeList) Remove(st pf.IOTypeIf) {
@@ -142,18 +145,12 @@ func (l *ioTypeList) Remove(st pf.IOTypeIf) {
 	}
 	for i++; i < len(l.ioTypes); i++ {
 		l.ioTypes[i-1] = l.ioTypes[i]
-		l.exports[i-1] = l.exports[i]
 	}
 	l.ioTypes = l.ioTypes[:len(l.ioTypes)-1]
-	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *ioTypeList) IoTypes() []pf.IOTypeIf {
 	return l.ioTypes
-}
-
-func (l *ioTypeList) Exports() []interfaces.IOTypeObject {
-	return l.exports
 }
 
 func (l *ioTypeList) Find(name string) (t pf.IOTypeIf, ok bool) {

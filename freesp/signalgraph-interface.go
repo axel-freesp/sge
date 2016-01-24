@@ -19,7 +19,7 @@ func GetNodeTypeByName(typeName string) (nType bh.NodeTypeIf, ok bool) {
 	return
 }
 
-func GetSignalTypeByName(typeName string) (sType bh.SignalType, ok bool) {
+func GetSignalTypeByName(typeName string) (sType bh.SignalTypeIf, ok bool) {
 	sType, ok = signalTypes[typeName]
 	return
 }

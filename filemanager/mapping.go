@@ -58,8 +58,8 @@ func (f *fileManagerMap) New() (m tr.ToplevelTreeElement, err error) {
 		return
 	}
 	f.context.FTV().SelectId(newId)
-	var mv views.GraphView
-	mv, err = views.MappingViewNew(m.(mp.MappingIf).MappingObject(), f.context)
+	var mv views.GraphViewIf
+	mv, err = views.MappingViewNew(m.(mp.MappingIf), f.context)
 	if err != nil {
 		log.Fatal("fileNewMap: Could not create graph view.")
 	}
@@ -97,8 +97,8 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		return
 	}
 	f.context.FTV().SelectId(newId)
-	var mv views.GraphView
-	mv, err = views.MappingViewNew(m.(mp.MappingIf).MappingObject(), f.context)
+	var mv views.GraphViewIf
+	mv, err = views.MappingViewNew(m.(mp.MappingIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerMap.Access: Could not create platform view.")
 		return
@@ -118,7 +118,7 @@ func (f *fileManagerMap) Remove(name string) {
 	delete(f.mappingMap, name)
 	id, _ := f.context.FTS().GetToplevelId(m)
 	f.context.FTS().RemoveToplevel(id)
-	f.context.GVC().RemoveMappingView(m.MappingObject())
+	f.context.GVC().RemoveMappingView(m)
 	// TODO: remove depending graphs and platforms if not used otherwise
 }
 

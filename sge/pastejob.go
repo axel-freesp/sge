@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	"github.com/axel-freesp/sge/models"
 	"log"
 	"strings"
+	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/models"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	//pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type PasteJob struct {
@@ -78,13 +78,13 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 			return
 		}
 
-	case bh.Port:
+	case bh.PortIf:
 
-	case bh.PortType:
+	case bh.PortTypeIf:
 
-	case bh.Connection:
+	case bh.ConnectionIf:
 
-	case bh.SignalType:
+	case bh.SignalTypeIf:
 		j, ok = parseSignalType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
@@ -195,7 +195,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 		j := NewElementJobNew("", ePortType)
 		j.input[iPortName] = p.PName
 		j.input[iSignalTypeSelect] = p.PType
-		j.input[iDirection] = direction2string[interfaces.InPort]
+		j.input[iDirection] = direction2string[gr.InPort]
 		pj.newElements = append(pj.newElements, j)
 		job.children = append(job.children, pj)
 	}
@@ -204,7 +204,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 		j := NewElementJobNew("", ePortType)
 		j.input[iPortName] = p.PName
 		j.input[iSignalTypeSelect] = p.PType
-		j.input[iDirection] = direction2string[interfaces.OutPort]
+		j.input[iDirection] = direction2string[gr.OutPort]
 		pj.newElements = append(pj.newElements, j)
 		job.children = append(job.children, pj)
 	}
@@ -239,7 +239,7 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 				// TODO: put validity check of edges somewhere else...
 				var fromPort *backend.XmlOutPort
 				var toPort *backend.XmlInPort
-				var p1, p2 bh.PortType
+				var p1, p2 bh.PortTypeIf
 				for _, n := range impl.SignalGraph[0].InputNodes {
 					if n.NName == e.From {
 						for _, p := range n.OutPort {

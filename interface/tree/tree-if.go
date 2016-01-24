@@ -1,8 +1,8 @@
 package tree
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/interface/filedata"
+	"github.com/axel-freesp/sge/interface/graph"
 )
 
 type TreeViewIf interface {
@@ -31,9 +31,10 @@ type TreeIf interface {
 
 type NamedTreeElementIf interface {
 	TreeElement
-	interfaces.Namer
+	graph.Namer
 }
 type TreeElement interface {
+	graph.XmlCreator
 	AddToTree(tree TreeIf, cursor Cursor)
 	AddNewObject(tree TreeIf, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
 	RemoveObject(tree TreeIf, cursor Cursor) (removed []IdWithObject)

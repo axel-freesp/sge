@@ -2,23 +2,23 @@ package freesp
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"log"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 // portType
 
 type portType struct {
-	signalType bh.SignalType
+	signalType bh.SignalTypeIf
 	name       string
-	direction  interfaces.PortDirection
+	direction  gr.PortDirection
 }
 
-var _ bh.PortType = (*portType)(nil)
+var _ bh.PortTypeIf = (*portType)(nil)
 
-func PortTypeNew(name string, pTypeName string, dir interfaces.PortDirection) *portType {
+func PortTypeNew(name string, pTypeName string, dir gr.PortDirection) *portType {
 	st, ok := signalTypes[pTypeName]
 	if !ok {
 		log.Fatalf("NamedPortTypeNew error: signal type '%s' not defined\n", pTypeName)
@@ -34,26 +34,38 @@ func (t *portType) SetName(newName string) {
 	t.name = newName
 }
 
-func (t *portType) SignalType() bh.SignalType {
+func (t *portType) SignalType() bh.SignalTypeIf {
 	return t.signalType
 }
 
-func (t *portType) SetSignalType(newSignalType bh.SignalType) {
+func (t *portType) SetSignalType(newSignalType bh.SignalTypeIf) {
 	t.signalType = newSignalType
 }
 
-func (t *portType) Direction() interfaces.PortDirection {
+func (t *portType) Direction() gr.PortDirection {
 	return t.direction
 }
 
-func (t *portType) SetDirection(newDir interfaces.PortDirection) {
+func (t *portType) SetDirection(newDir gr.PortDirection) {
 	t.direction = newDir
 }
 
 func (t *portType) String() (s string) {
-	s = fmt.Sprintf("bh.PortType(%s, %s, %s)", t.name, t.direction, t.SignalType())
+	s = fmt.Sprintf("bh.PortTypeIf(%s, %s, %s)", t.name, t.direction, t.SignalType())
 	return
 }
+
+func (t *portType) CreateXml() (buf []byte, err error) {
+	if t.Direction() == gr.InPort {
+		xmlporttype := CreateXmlNamedInPort(t)
+		buf, err = xmlporttype.Write()
+	} else {
+		xmlporttype := CreateXmlNamedOutPort(t)
+		buf, err = xmlporttype.Write()
+	}
+	return
+}
+
 
 /*
  *  tr.TreeElement API
@@ -70,26 +82,26 @@ func (p *portType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 		prop = MayEdit | MayRemove | MayAddObject
 	}
 	var kind tr.Symbol
-	if p.Direction() == interfaces.InPort {
+	if p.Direction() == gr.InPort {
 		kind = tr.SymbolInputPortType
 	} else {
 		kind = tr.SymbolOutputPortType
 	}
 	err := tree.AddEntry(cursor, kind, p.Name(), p, prop)
 	if err != nil {
-		log.Fatal("bh.PortType.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
+		log.Fatal("bh.PortTypeIf.AddToTree: FilesTreeStore.AddEntry() failed: %s\n", err)
 	}
 	child := tree.Append(cursor)
 	p.SignalType().AddToTree(tree, child)
 }
 
 func (p *portType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
-	log.Fatal("bh.PortType.AddNewObject - nothing to add.")
+	log.Fatal("bh.PortTypeIf.AddNewObject - nothing to add.")
 	return
 }
 
 func (p *portType) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWithObject) {
-	log.Fatal("bh.PortType.AddNewObject - nothing to remove.")
+	log.Fatal("bh.PortTypeIf.AddNewObject - nothing to remove.")
 	return
 }
 
@@ -99,18 +111,18 @@ func (p *portType) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.
  */
 
 type portTypeList struct {
-	portTypes []bh.PortType
+	portTypes []bh.PortTypeIf
 }
 
 func portTypeListInit() portTypeList {
 	return portTypeList{nil}
 }
 
-func (l *portTypeList) Append(nt bh.PortType) {
+func (l *portTypeList) Append(nt bh.PortTypeIf) {
 	l.portTypes = append(l.portTypes, nt)
 }
 
-func (l *portTypeList) Remove(nt bh.PortType) {
+func (l *portTypeList) Remove(nt bh.PortTypeIf) {
 	var i int
 	for i = range l.portTypes {
 		if nt == l.portTypes[i] {
@@ -119,9 +131,9 @@ func (l *portTypeList) Remove(nt bh.PortType) {
 	}
 	if i >= len(l.portTypes) {
 		for _, v := range l.portTypes {
-			log.Printf("portTypeList.RemovePort have bh.PortType %v\n", v)
+			log.Printf("portTypeList.RemovePort have bh.PortTypeIf %v\n", v)
 		}
-		log.Fatalf("portTypeList.RemovePort error: bh.PortType %v not in this list\n", nt)
+		log.Fatalf("portTypeList.RemovePort error: bh.PortTypeIf %v not in this list\n", nt)
 	}
 	for i++; i < len(l.portTypes); i++ {
 		l.portTypes[i-1] = l.portTypes[i]
@@ -129,11 +141,11 @@ func (l *portTypeList) Remove(nt bh.PortType) {
 	l.portTypes = l.portTypes[:len(l.portTypes)-1]
 }
 
-func (l *portTypeList) PortTypes() []bh.PortType {
+func (l *portTypeList) PortTypes() []bh.PortTypeIf {
 	return l.portTypes
 }
 
-func (l *portTypeList) Find(name string) (p bh.PortType, ok bool, index int) {
+func (l *portTypeList) Find(name string) (p bh.PortTypeIf, ok bool, index int) {
 	ok = false
 	for index, p = range l.portTypes {
 		if p.Name() == name {

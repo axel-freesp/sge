@@ -2,15 +2,16 @@ package views
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
 	"github.com/gotk3/gotk3/gtk"
-	//"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type XmlTextView struct {
 	ScrolledView
 	view *gtk.TextView
 }
+
+var _ XmlTextViewIf = (*XmlTextView)(nil)
 
 func XmlTextViewNew(width, height int) (view *XmlTextView, err error) {
 	v, err := ScrolledViewNew(width, height)
@@ -31,7 +32,12 @@ func (x *XmlTextView) xmlTextViewInit() (err error) {
 	return nil
 }
 
-func (x *XmlTextView) Set(object interface{}) (err error) {
+func (x *XmlTextView) Set(object gr.XmlCreator) (err error) {
+	switch object.(type) {
+	case gr.XmlCreator:
+	default:
+		return fmt.Errorf("XmlTextView.Set: invalid type %T\n", object)
+	}
 	var textbuf *gtk.TextBuffer
 	textbuf, err = x.view.GetBuffer()
 	if err != nil {
@@ -42,7 +48,7 @@ func (x *XmlTextView) Set(object interface{}) (err error) {
 		return
 	}
 	var buf []byte
-	buf, err = freesp.CreateXML(object)
+	buf, err = object.(gr.XmlCreator).CreateXml()
 	if err != nil {
 		return err
 	}

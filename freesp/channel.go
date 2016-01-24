@@ -3,28 +3,27 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"image"
 	"log"
 )
 
 type channel struct {
-	direction interfaces.PortDirection
+	direction gr.PortDirection
 	iotype    pf.IOTypeIf
 	link      pf.ChannelIf
 	process   pf.ProcessIf
 	linkText  string
-	position  map[interfaces.PositionMode]image.Point
-	archPort  interfaces.ArchPortObject
+	position  map[gr.PositionMode]image.Point
+	archport  pf.ArchPortIf
 }
 
 var _ pf.ChannelIf = (*channel)(nil)
-var _ interfaces.ChannelObject = (*channel)(nil)
 
-func ChannelNew(dir interfaces.PortDirection, iotype pf.IOTypeIf, process pf.ProcessIf, linkText string) *channel {
-	return &channel{dir, iotype, nil, process, linkText, make(map[interfaces.PositionMode]image.Point), nil}
+func ChannelNew(dir gr.PortDirection, iotype pf.IOTypeIf, process pf.ProcessIf, linkText string) *channel {
+	return &channel{dir, iotype, nil, process, linkText, make(map[gr.PositionMode]image.Point), nil}
 }
 
 func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *channel, err error) {
@@ -33,11 +32,11 @@ func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *chan
 	if err != nil {
 		return
 	}
-	ch = ChannelNew(interfaces.InPort, iot, p, xmlc.Source)
+	ch = ChannelNew(gr.InPort, iot, p, xmlc.Source)
 	ch.channelPositionsFromXml(xmlc.XmlChannel)
 	ap := p.Arch().(*arch).AddArchPort(ch)
 	ap.archPortPositionsFromXml(xmlc.XmlChannel)
-	ch.archPort = ap
+	ch.archport = ap
 	return
 }
 
@@ -47,11 +46,11 @@ func createOutChannelFromXml(xmlc backend.XmlOutChannel, p pf.ProcessIf) (ch *ch
 	if err != nil {
 		return
 	}
-	ch = ChannelNew(interfaces.OutPort, iot, p, xmlc.Dest)
+	ch = ChannelNew(gr.OutPort, iot, p, xmlc.Dest)
 	ch.channelPositionsFromXml(xmlc.XmlChannel)
 	ap := p.Arch().(*arch).AddArchPort(ch)
 	ap.archPortPositionsFromXml(xmlc.XmlChannel)
-	ch.archPort = ap
+	ch.archport = ap
 	return
 }
 
@@ -96,20 +95,8 @@ func channelGetIOTypeFromArch(a pf.ArchIf, iotype string) (iot pf.IOTypeIf, err 
 	return
 }
 
-func (c *channel) IOTypeObject() interfaces.IOTypeObject {
-	return c.iotype.(*iotype)
-}
-
-func (c *channel) ProcessObject() interfaces.ProcessObject {
-	return c.process.(*process)
-}
-
-func (c *channel) LinkObject() interfaces.ChannelObject {
-	return c.link.(*channel)
-}
-
-func (c *channel) ArchPortObject() interfaces.ArchPortObject {
-	return c.archPort
+func (c *channel) ArchPort() pf.ArchPortIf {
+	return c.archport
 }
 
 func (c *channel) Process() pf.ProcessIf {
@@ -132,16 +119,27 @@ func (c *channel) Link() pf.ChannelIf {
 	return c.link
 }
 
+func (c *channel) CreateXml() (buf []byte, err error) {
+	if c.Direction() == gr.InPort {
+		xmlc := CreateXmlInChannel(c)
+		buf, err = xmlc.Write()
+	} else {
+		xmlc := CreateXmlOutChannel(c)
+		buf, err = xmlc.Write()
+	}
+	return
+}
+
 //
 //      ModePositioner API
 //
 
-func (c *channel) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+func (c *channel) ModePosition(mode gr.PositionMode) (p image.Point) {
 	p = c.position[mode]
 	return
 }
 
-func (c *channel) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+func (c *channel) SetModePosition(mode gr.PositionMode, p image.Point) {
 	c.position[mode] = p
 }
 
@@ -149,11 +147,11 @@ func (c *channel) SetModePosition(mode interfaces.PositionMode, p image.Point) {
 //  Directioner API
 //
 
-func (c *channel) Direction() interfaces.PortDirection {
+func (c *channel) Direction() gr.PortDirection {
 	return c.direction
 }
 
-func (c *channel) SetDirection(newDir interfaces.PortDirection) {
+func (c *channel) SetDirection(newDir gr.PortDirection) {
 	c.direction = newDir
 }
 
@@ -183,7 +181,7 @@ func (c *channel) SetName(newName string) {
 
 func (c *channel) String() string {
 	var dirtext string
-	if c.Direction() == interfaces.InPort {
+	if c.Direction() == gr.InPort {
 		dirtext = "in"
 	} else {
 		dirtext = "out"
@@ -198,7 +196,7 @@ func (c *channel) String() string {
 
 func (c *channel) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var symbol tr.Symbol
-	if c.Direction() == interfaces.InPort {
+	if c.Direction() == gr.InPort {
 		symbol = tr.SymbolInChannel
 	} else {
 		symbol = tr.SymbolOutChannel
@@ -233,7 +231,6 @@ func (c *channel) Identify(te tr.TreeElement) bool {
 
 type channelList struct {
 	channels []pf.ChannelIf
-	exports  []interfaces.ChannelObject
 }
 
 func channelListInit() channelList {
@@ -242,7 +239,6 @@ func channelListInit() channelList {
 
 func (l *channelList) Append(ch *channel) {
 	l.channels = append(l.channels, ch)
-	l.exports = append(l.exports, ch)
 }
 
 func (l *channelList) Remove(ch pf.ChannelIf) {
@@ -260,18 +256,12 @@ func (l *channelList) Remove(ch pf.ChannelIf) {
 	}
 	for i++; i < len(l.channels); i++ {
 		l.channels[i-1] = l.channels[i]
-		l.exports[i-1] = l.exports[i]
 	}
 	l.channels = l.channels[:len(l.channels)-1]
-	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *channelList) Channels() []pf.ChannelIf {
 	return l.channels
-}
-
-func (l *channelList) Exports() []interfaces.ChannelObject {
-	return l.exports
 }
 
 func (l *channelList) Find(name string) (c pf.ChannelIf, ok bool) {
@@ -283,3 +273,5 @@ func (l *channelList) Find(name string) (c pf.ChannelIf, ok bool) {
 	}
 	return
 }
+
+

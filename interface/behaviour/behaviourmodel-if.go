@@ -1,9 +1,9 @@
 package behaviour
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/interface/model"
+	"github.com/axel-freesp/sge/interface/graph"
 )
 
 /*
@@ -13,7 +13,7 @@ import (
 type SignalGraphIf interface {
 	tree.ToplevelTreeElement
 	ItsType() SignalGraphTypeIf
-	GraphObject() interfaces.GraphObject
+	Nodes() []NodeIf
 }
 
 type SignalGraphTypeIf interface {
@@ -31,12 +31,12 @@ type SignalGraphTypeIf interface {
 
 type LibraryIf interface {
 	tree.ToplevelTreeElement
-	SignalTypes() []SignalType
+	SignalTypes() []SignalTypeIf
 	NodeTypes() []NodeTypeIf
 	AddNodeType(NodeTypeIf) error
 	RemoveNodeType(t NodeTypeIf)
-	AddSignalType(SignalType) bool
-	RemoveSignalType(t SignalType)
+	AddSignalType(SignalTypeIf) bool
+	RemoveSignalType(SignalTypeIf)
 }
 
 type NodeTypeIf interface {
@@ -44,12 +44,12 @@ type NodeTypeIf interface {
 	TypeName() string
 	SetTypeName(string)
 	DefinedAt() string
-	InPorts() []PortType
-	OutPorts() []PortType
+	InPorts() []PortTypeIf
+	OutPorts() []PortTypeIf
 	Implementation() []ImplementationIf
 	Instances() []NodeIf
-	AddNamedPortType(PortType)
-	RemoveNamedPortType(PortType)
+	AddNamedPortType(PortTypeIf)
+	RemoveNamedPortType(PortTypeIf)
 	AddImplementation(ImplementationIf)
 	RemoveImplementation(ImplementationIf)
 }
@@ -60,7 +60,6 @@ type ImplementationIf interface {
 	ElementName() string
 	SetElemName(string)
 	Graph() SignalGraphTypeIf
-	GraphObject() interfaces.GraphObject
 }
 
 type ImplementationType int
@@ -72,12 +71,27 @@ const (
 
 type NodeIf interface {
 	tree.NamedTreeElementIf
-	interfaces.Positioner
-	interfaces.Porter
+	graph.Positioner
 	ItsType() NodeTypeIf
-	InPorts() []Port
-	OutPorts() []Port
+	InPorts() []PortIf
+	OutPorts() []PortIf
+	InPortIndex(portname string) int
+	OutPortIndex(portname string) int
 	Context() SignalGraphTypeIf
+}
+
+type SignalTypeIf interface {
+	tree.TreeElement
+	TypeName() string
+	SetTypeName(string)
+	CType() string
+	SetCType(string)
+	ChannelId() string
+	SetChannelId(string)
+	Scope() Scope
+	SetScope(Scope)
+	Mode() Mode
+	SetMode(Mode)
 }
 
 type Scope int
@@ -93,41 +107,27 @@ const (
 	Asynchronous
 )
 
-type SignalType interface {
-	tree.TreeElement
-	TypeName() string
-	SetTypeName(string)
-	CType() string
-	SetCType(string)
-	ChannelId() string
-	SetChannelId(string)
-	Scope() Scope
-	SetScope(Scope)
-	Mode() Mode
-	SetMode(Mode)
-}
-
-type PortType interface {
+type PortTypeIf interface {
 	tree.NamedTreeElementIf
-	interfaces.Directioner
-	SignalType() SignalType
-	SetSignalType(SignalType)
+	graph.Directioner
+	SignalType() SignalTypeIf
+	SetSignalType(SignalTypeIf)
 }
 
-type Port interface {
+type PortIf interface {
 	tree.TreeElement
-	interfaces.Directioner
+	graph.Directioner
 	Name() string
-	SignalType() SignalType
-	Connections() []Port
+	SignalType() SignalTypeIf
+	Connections() []PortIf
 	Node() NodeIf
-	Connection(Port) Connection
-	AddConnection(Connection) error
-	RemoveConnection(c Port)
+	Connection(PortIf) ConnectionIf
+	AddConnection(ConnectionIf) error
+	RemoveConnection(c PortIf)
 }
 
-type Connection interface {
+type ConnectionIf interface {
 	tree.TreeElement
-	From() Port
-	To() Port
+	From() PortIf
+	To() PortIf
 }

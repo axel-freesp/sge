@@ -3,11 +3,11 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	fd "github.com/axel-freesp/sge/interface/filedata"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"image"
 	"log"
 	"strings"
@@ -25,7 +25,6 @@ type signalGraphType struct {
  */
 
 var _ bh.SignalGraphTypeIf = (*signalGraphType)(nil)
-var _ interfaces.GraphObject = (*signalGraphType)(nil)
 
 func SignalGraphTypeNew(context mod.ModelContextIf) *signalGraphType {
 	return &signalGraphType{context, nil, nodeListInit(), nil, nil, nil}
@@ -47,7 +46,7 @@ func SignalGraphTypeUsesNodeType(t bh.SignalGraphTypeIf, nt bh.NodeTypeIf) bool 
 	return false
 }
 
-func SignalGraphTypeUsesSignalType(t bh.SignalGraphTypeIf, st bh.SignalType) bool {
+func SignalGraphTypeUsesSignalType(t bh.SignalGraphTypeIf, st bh.SignalTypeIf) bool {
 	for _, n := range t.Nodes() {
 		for _, p := range n.InPorts() {
 			if p.SignalType() == st {
@@ -72,10 +71,6 @@ func SignalGraphTypeUsesSignalType(t bh.SignalGraphTypeIf, st bh.SignalType) boo
 
 func (t *signalGraphType) Nodes() []bh.NodeIf {
 	return t.nodes.Nodes()
-}
-
-func (t *signalGraphType) NodeObjects() []interfaces.NodeObject {
-	return t.nodes.Exports()
 }
 
 func (t *signalGraphType) NodeByName(name string) (n bh.NodeIf, ok bool) {
@@ -188,7 +183,7 @@ func (t *signalGraphType) addNode(n bh.NodeIf) error {
 }
 
 func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, context mod.ModelContextIf,
-	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (t *signalGraphType, err error) {
+	resolvePort func(portname string, dir gr.PortDirection) *portType) (t *signalGraphType, err error) {
 	t = SignalGraphTypeNew(context)
 	for _, ref := range g.Libraries {
 		l := libraries[ref.Name]
@@ -313,7 +308,7 @@ func (t *signalGraphType) createNodeFromXml(n backend.XmlNode) (nd *node) {
 }
 
 func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
-	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (ret *node, err error) {
+	resolvePort func(portname string, dir gr.PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createInputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -322,7 +317,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
 		err = fmt.Errorf("signalGraphType.createInputNodeFromXml: %s", err)
 		return
 	}
-	pt := resolvePort(n.NPort, interfaces.InPort)
+	pt := resolvePort(n.NPort, gr.InPort)
 	if pt != nil {
 		ret.portlink = pt
 	}
@@ -331,7 +326,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
 }
 
 func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
-	resolvePort func(portname string, dir interfaces.PortDirection) *portType) (ret *node, err error) {
+	resolvePort func(portname string, dir gr.PortDirection) *portType) (ret *node, err error) {
 	nName := n.NName
 	ntName := createOutputNodeTypeName(nName)
 	nt := createNodeTypeFromXmlNode(n.XmlNode, ntName)
@@ -340,7 +335,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 		err = fmt.Errorf("signalGraphType.createOutputNodeFromXml: %s", err)
 		return
 	}
-	pt := resolvePort(n.NPort, interfaces.OutPort) // matches also empty names
+	pt := resolvePort(n.NPort, gr.OutPort) // matches also empty names
 	if pt != nil {
 		ret.portlink = pt
 	}
@@ -348,7 +343,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 	return
 }
 
-func (g *signalGraphType) addInputNodeFromPortType(p bh.PortType) {
+func (g *signalGraphType) addInputNodeFromPortType(p bh.PortTypeIf) {
 	st := p.SignalType()
 	ntName := createInputNodeTypeName(st.TypeName())
 	nt, ok := nodeTypes[ntName]
@@ -371,7 +366,7 @@ func (g *signalGraphType) addInputNodeFromPortType(p bh.PortType) {
 	}
 }
 
-func (g *signalGraphType) addOutputNodeFromPortType(p bh.PortType) {
+func (g *signalGraphType) addOutputNodeFromPortType(p bh.PortTypeIf) {
 	st := p.SignalType()
 	ntName := createOutputNodeTypeName(st.TypeName())
 	nt, ok := nodeTypes[ntName]
@@ -394,7 +389,7 @@ func (g *signalGraphType) addOutputNodeFromPortType(p bh.PortType) {
 	}
 }
 
-func (g *signalGraphType) removeInputNodeFromPortType(p bh.PortType) {
+func (g *signalGraphType) removeInputNodeFromPortType(p bh.PortTypeIf) {
 	for _, n := range g.InputNodes() {
 		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			g.RemoveNode(n)
@@ -403,7 +398,7 @@ func (g *signalGraphType) removeInputNodeFromPortType(p bh.PortType) {
 	}
 }
 
-func (g *signalGraphType) removeOutputNodeFromPortType(p bh.PortType) {
+func (g *signalGraphType) removeOutputNodeFromPortType(p bh.PortTypeIf) {
 	for _, n := range g.OutputNodes() {
 		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			g.RemoveNode(n)
@@ -412,7 +407,7 @@ func (g *signalGraphType) removeOutputNodeFromPortType(p bh.PortType) {
 	}
 }
 
-func (g *signalGraphType) findInputNodeFromPortType(p bh.PortType) bh.NodeIf {
+func (g *signalGraphType) findInputNodeFromPortType(p bh.PortTypeIf) bh.NodeIf {
 	for _, n := range g.InputNodes() {
 		if n.Name() == fmt.Sprintf("in-%s", p.Name()) {
 			return n
@@ -421,13 +416,19 @@ func (g *signalGraphType) findInputNodeFromPortType(p bh.PortType) bh.NodeIf {
 	return nil
 }
 
-func (g *signalGraphType) findOutputNodeFromPortType(p bh.PortType) bh.NodeIf {
+func (g *signalGraphType) findOutputNodeFromPortType(p bh.PortTypeIf) bh.NodeIf {
 	for _, n := range g.OutputNodes() {
 		if n.Name() == fmt.Sprintf("out-%s", p.Name()) {
 			return n
 		}
 	}
 	return nil
+}
+
+func (t *signalGraphType) CreateXml() (buf []byte, err error) {
+	xmlsignalgraph := CreateXmlSignalGraphType(t)
+	buf, err = xmlsignalgraph.Write()
+	return
 }
 
 /*
@@ -494,10 +495,10 @@ func (t *signalGraphType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.
 			log.Fatalf("signalGraphType.AddNewObject error: wrong parent type %T: %v\n", parent, parent)
 		}
 
-	case bh.Connection:
-		conn := obj.(bh.Connection)
+	case bh.ConnectionIf:
+		conn := obj.(bh.ConnectionIf)
 		var n bh.NodeIf
-		var p bh.Port
+		var p bh.PortIf
 		for _, n = range t.Nodes() {
 			if n.Name() == conn.From().Node().Name() {
 				nCursor := tree.CursorAt(cursor, n)

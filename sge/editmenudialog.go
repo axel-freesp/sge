@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/models"
-	"github.com/gotk3/gotk3/gtk"
-	"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 // Menu control wants to see this:
@@ -92,9 +92,9 @@ var modeStrings = []string{"Isochronous", "Asynchronous"}
 var directionStrings = []string{"InPort", "OutPort"}
 var implTypeStrings = []string{"Elementary Type", "Signal Graph"}
 var ioModeStrings = []string{
-	string(interfaces.IOModeShmem),
-	string(interfaces.IOModeAsync),
-	string(interfaces.IOModeSync),
+	string(gr.IOModeShmem),
+	string(gr.IOModeAsync),
+	string(gr.IOModeSync),
 }
 
 var scope2string = map[bh.Scope]string{
@@ -107,9 +107,9 @@ var mode2string = map[bh.Mode]string{
 	bh.Asynchronous: modeStrings[bh.Asynchronous],
 }
 
-var direction2string = map[interfaces.PortDirection]string{
-	interfaces.InPort:  directionStrings[0],
-	interfaces.OutPort: directionStrings[1],
+var direction2string = map[gr.PortDirection]string{
+	gr.InPort:  directionStrings[0],
+	gr.OutPort: directionStrings[1],
 }
 
 var implType2string = map[bh.ImplementationType]string{
@@ -127,9 +127,9 @@ var string2mode = map[string]bh.Mode{
 	"Asynchronous": bh.Asynchronous,
 }
 
-var string2direction = map[string]interfaces.PortDirection{
-	"InPort":  interfaces.InPort,
-	"OutPort": interfaces.OutPort,
+var string2direction = map[string]gr.PortDirection{
+	"InPort":  gr.InPort,
+	"OutPort": gr.OutPort,
 }
 
 var string2implType = map[string]bh.ImplementationType{
@@ -230,12 +230,12 @@ func (dialog *EditMenuDialog) CreateDialog(extra *gtk.Widget) (err error) {
 }
 
 // For connection only: lookup matching ports to connect.
-func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []bh.Port) {
-	var thisPort bh.Port
+func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []bh.PortIf) {
+	var thisPort bh.PortIf
 	switch object.(type) {
-	case bh.Port:
-		thisPort = object.(bh.Port)
-	case bh.Connection:
+	case bh.PortIf:
+		thisPort = object.(bh.PortIf)
+	case bh.ConnectionIf:
 		log.Fatal("getMatchingPorts error: expecting Port, not Connection")
 	default:
 		log.Fatal("getMatchingPorts error: expecting Port")
@@ -243,8 +243,8 @@ func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []
 	thisNode := thisPort.Node()
 	graph := thisNode.Context()
 	for _, n := range graph.Nodes() {
-		var ports []bh.Port
-		if thisPort.Direction() == interfaces.InPort {
+		var ports []bh.PortIf
+		if thisPort.Direction() == gr.InPort {
 			ports = n.OutPorts()
 		} else {
 			ports = n.InPorts()
@@ -431,8 +431,8 @@ var inputHandling = map[inputElement]inputElementHandling{
 			var choices []string
 			object := fts.Object(fts.Current())
 			switch object.(type) {
-			case bh.Port:
-			case bh.Connection:
+			case bh.PortIf:
+			case bh.ConnectionIf:
 				object = fts.Object(fts.Parent(fts.Current()))
 			default:
 				return

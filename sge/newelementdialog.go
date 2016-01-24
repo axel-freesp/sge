@@ -69,13 +69,13 @@ func getSelectorChoices(fts *models.FilesTreeStore) []elementType {
 		activeElem = eNode
 	case bh.NodeTypeIf:
 		activeElem = eNodeType
-	case bh.Port:
+	case bh.PortIf:
 		activeElem = ePort
-	case bh.PortType:
+	case bh.PortTypeIf:
 		activeElem = ePortType
-	case bh.Connection:
+	case bh.ConnectionIf:
 		activeElem = eConnection
-	case bh.SignalType:
+	case bh.SignalTypeIf:
 		activeElem = eSignalType
 	case bh.LibraryIf:
 		activeElem = eLibrary

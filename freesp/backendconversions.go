@@ -3,26 +3,26 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"image"
 	"strings"
 )
 
-var validModes = []interfaces.PositionMode{interfaces.PositionModeNormal, interfaces.PositionModeMapping}
+var validModes = []gr.PositionMode{gr.PositionModeNormal, gr.PositionModeMapping}
 
-var ModeFromString = map[string]interfaces.PositionMode{
-	"normal": interfaces.PositionModeNormal,
-	"mp":     interfaces.PositionModeMapping,
+var ModeFromString = map[string]gr.PositionMode{
+	"normal": gr.PositionModeNormal,
+	"mp":     gr.PositionModeMapping,
 }
 
-var StringFromMode = map[interfaces.PositionMode]string{
-	interfaces.PositionModeNormal:  "normal",
-	interfaces.PositionModeMapping: "mp",
+var StringFromMode = map[gr.PositionMode]string{
+	gr.PositionModeNormal:  "normal",
+	gr.PositionModeMapping: "mp",
 }
-
+/*
 func CreateXML(object interface{}) (buf []byte, err error) {
 	if object != nil {
 		switch object.(type) {
@@ -50,8 +50,8 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 			t := object.(bh.NodeTypeIf)
 			xmlnodetype := CreateXmlNodeType(t)
 			buf, err = xmlnodetype.Write()
-		case bh.Port:
-			p := object.(bh.Port)
+		case bh.PortIf:
+			p := object.(bh.PortIf)
 			if p.Direction() == interfaces.OutPort {
 				xmlport := CreateXmlOutPort(p)
 				buf, err = xmlport.Write()
@@ -59,8 +59,8 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlport := CreateXmlInPort(p)
 				buf, err = xmlport.Write()
 			}
-		case bh.PortType:
-			t := object.(bh.PortType)
+		case bh.PortTypeIf:
+			t := object.(bh.PortTypeIf)
 			if t.Direction() == interfaces.InPort {
 				xmlporttype := CreateXmlNamedInPort(t)
 				buf, err = xmlporttype.Write()
@@ -68,11 +68,11 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 				xmlporttype := CreateXmlNamedOutPort(t)
 				buf, err = xmlporttype.Write()
 			}
-		case bh.Connection:
-			xmlconn := CreateXmlConnection(object.(bh.Connection))
+		case bh.ConnectionIf:
+			xmlconn := CreateXmlConnection(object.(bh.ConnectionIf))
 			buf, err = xmlconn.Write()
-		case bh.SignalType:
-			s := object.(bh.SignalType)
+		case bh.SignalTypeIf:
+			s := object.(bh.SignalTypeIf)
 			if s != nil {
 				xmlsignaltype := CreateXmlSignalType(s)
 				buf, err = xmlsignaltype.Write()
@@ -138,20 +138,21 @@ func CreateXML(object interface{}) (buf []byte, err error) {
 	}
 	return
 }
+*/
 
-func CreateXmlInPort(p bh.Port) *backend.XmlInPort {
+func CreateXmlInPort(p bh.PortIf) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
 }
 
-func CreateXmlOutPort(p bh.Port) *backend.XmlOutPort {
+func CreateXmlOutPort(p bh.PortIf) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
 }
 
-func CreateXmlNamedInPort(p bh.PortType) *backend.XmlInPort {
+func CreateXmlNamedInPort(p bh.PortTypeIf) *backend.XmlInPort {
 	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
 }
 
-func CreateXmlNamedOutPort(p bh.PortType) *backend.XmlOutPort {
+func CreateXmlNamedOutPort(p bh.PortTypeIf) *backend.XmlOutPort {
 	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
 }
 
@@ -223,20 +224,20 @@ func CreateXmlImplementation(impl bh.ImplementationIf) *backend.XmlImplementatio
 	return ret
 }
 
-func CreateXmlConnection(c bh.Connection) *backend.XmlConnect {
+func CreateXmlConnection(c bh.ConnectionIf) *backend.XmlConnect {
 	from := c.From()
 	to := c.To()
 	fromNode := from.Node()
 	toNode := to.Node()
 	switch from.Direction() {
-	case interfaces.OutPort:
+	case gr.OutPort:
 		return backend.XmlConnectNew(fromNode.Name(), toNode.Name(), from.Name(), to.Name())
 	default:
 		return backend.XmlConnectNew(toNode.Name(), fromNode.Name(), to.Name(), from.Name())
 	}
 }
 
-func CreateXmlSignalType(s bh.SignalType) *backend.XmlSignalType {
+func CreateXmlSignalType(s bh.SignalTypeIf) *backend.XmlSignalType {
 	var scope, mode string
 	if s.Scope() == bh.Local {
 		scope = "local"
@@ -332,7 +333,7 @@ func CreateXmlInChannel(ch pf.ChannelIf) *backend.XmlInChannel {
 	ret := backend.XmlInChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
 	ret.Entry = CreateXmlModePosition(ch).Entry
 	c := ch.(*channel)
-	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archPort).Entry
+	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archport).Entry
 	return ret
 }
 
@@ -340,7 +341,7 @@ func CreateXmlOutChannel(ch pf.ChannelIf) *backend.XmlOutChannel {
 	ret := backend.XmlOutChannelNew(ch.Name(), ch.IOType().Name(), ch.(*channel).linkText)
 	ret.Entry = CreateXmlModePosition(ch).Entry
 	c := ch.(*channel)
-	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archPort).Entry
+	ret.ArchPortHints.Entry = CreateXmlModePosition(c.archport).Entry
 	return ret
 }
 
@@ -356,7 +357,7 @@ func CreateXmlMapping(m mp.MappingIf) (xmlm *backend.XmlMapping) {
 	xmlm = backend.XmlMappingNew(m.Graph().Filename(), m.Platform().Filename())
 	g := m.Graph().ItsType()
 	for _, n := range g.InputNodes() {
-		melem := m.MappedElement(n)
+		melem, _ := m.MappedElement(n)
 		p, ok := m.Mapped(n)
 		if ok {
 			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
@@ -364,7 +365,7 @@ func CreateXmlMapping(m mp.MappingIf) (xmlm *backend.XmlMapping) {
 		}
 	}
 	for _, n := range g.OutputNodes() {
-		melem := m.MappedElement(n)
+		melem, _ := m.MappedElement(n)
 		p, ok := m.Mapped(n)
 		if ok {
 			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
@@ -372,7 +373,7 @@ func CreateXmlMapping(m mp.MappingIf) (xmlm *backend.XmlMapping) {
 		}
 	}
 	for _, n := range g.ProcessingNodes() {
-		melem := m.MappedElement(n)
+		melem, _ := m.MappedElement(n)
 		p, ok := m.Mapped(n)
 		if ok {
 			pname := fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
@@ -382,7 +383,7 @@ func CreateXmlMapping(m mp.MappingIf) (xmlm *backend.XmlMapping) {
 	return
 }
 
-func CreateXmlModePosition(x interfaces.ModePositioner) (h *backend.XmlModeHint) {
+func CreateXmlModePosition(x gr.ModePositioner) (h *backend.XmlModeHint) {
 	h = backend.XmlModeHintNew()
 	for _, m := range validModes {
 		pos := x.ModePosition(m)

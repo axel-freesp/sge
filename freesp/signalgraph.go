@@ -2,12 +2,12 @@ package freesp
 
 import (
 	"fmt"
+	"log"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 func SignalGraphNew(filename string, context mod.ModelContextIf) *signalGraph {
@@ -18,7 +18,7 @@ func SignalGraphUsesNodeType(s bh.SignalGraphIf, nt bh.NodeTypeIf) bool {
 	return SignalGraphTypeUsesNodeType(s.ItsType(), nt)
 }
 
-func SignalGraphUsesSignalType(s bh.SignalGraphIf, st bh.SignalType) bool {
+func SignalGraphUsesSignalType(s bh.SignalGraphIf, st bh.SignalTypeIf) bool {
 	return SignalGraphTypeUsesSignalType(s.ItsType(), st)
 }
 
@@ -40,10 +40,6 @@ func (s *signalGraph) ItsType() bh.SignalGraphTypeIf {
 	return s.itsType
 }
 
-func (s *signalGraph) GraphObject() interfaces.GraphObject {
-	return s.itsType.(*signalGraphType)
-}
-
 func (s *signalGraph) Read(data []byte) (cnt int, err error) {
 	g := backend.XmlSignalGraphNew()
 	cnt, err = g.Read(data)
@@ -51,7 +47,7 @@ func (s *signalGraph) Read(data []byte) (cnt int, err error) {
 		err = fmt.Errorf("signalGraph.Read error: %v", err)
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
-		func(_ string, _ interfaces.PortDirection) *portType { return nil })
+		func(_ string, _ gr.PortDirection) *portType { return nil })
 	return
 }
 
@@ -62,7 +58,7 @@ func (s *signalGraph) ReadFile(filepath string) error {
 		return fmt.Errorf("signalGraph.ReadFile error: %v", err)
 	}
 	s.itsType, err = createSignalGraphTypeFromXml(g, s.filename, s.itsType.(*signalGraphType).context,
-		func(_ string, _ interfaces.PortDirection) *portType { return nil })
+		func(_ string, _ gr.PortDirection) *portType { return nil })
 	return err
 }
 
@@ -87,6 +83,16 @@ func (s *signalGraph) RemoveFromTree(tree tr.TreeIf) {
 	for len(gt.Nodes()) > 0 {
 		gt.RemoveNode(gt.Nodes()[0].(*node))
 	}
+}
+
+func (s *signalGraph) CreateXml() (buf []byte, err error) {
+	xmlsignalgraph := CreateXmlSignalGraph(s)
+	buf, err = xmlsignalgraph.Write()
+	return
+}
+
+func (s *signalGraph) Nodes() []bh.NodeIf {
+	return s.ItsType().Nodes()
 }
 
 /*

@@ -2,7 +2,7 @@ package graph
 
 import (
     "image"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/tool"
 )
 
@@ -35,21 +35,21 @@ type ContainerConfig struct {
 //
 type ContainerPort struct {
 	SelectableBox
-	UserObj interfaces.Positioner
-	UserObj2 interfaces.ModePositioner
-	mode interfaces.PositionMode
+	UserObj graph.Positioner
+	UserObj2 graph.ModePositioner
+	mode graph.PositionMode
 }
 
 //
 //		Construct a container with constructed Children (bottom up)
 //
-func ContainerInit(Children []ContainerChild, config DrawConfig, namer interfaces.Namer, cconfig ContainerConfig) (c Container) {
+func ContainerInit(Children []ContainerChild, config DrawConfig, namer graph.Namer, cconfig ContainerConfig) (c Container) {
 	c = Container{NamedBoxObjectInit(image.Rectangle{}, config, namer), Children, nil, -1, -1, cconfig}
 	c.box = c.Layout()
 	return
 }
 
-func ContainerNew(Children []ContainerChild, config DrawConfig, namer interfaces.Namer, cconfig ContainerConfig) (c *Container) {
+func ContainerNew(Children []ContainerChild, config DrawConfig, namer graph.Namer, cconfig ContainerConfig) (c *Container) {
 	c = &Container{NamedBoxObjectInit(image.Rectangle{}, config, namer), Children, nil, -1, -1, cconfig}
 	c.box = c.Layout()
 	return
@@ -69,7 +69,7 @@ func (c *Container) ContainerInit() {
 //
 //		Construct port
 //
-func ContainerPortNew(box image.Rectangle, config DrawConfig, userObj interfaces.Positioner, userObj2 interfaces.ModePositioner, mode interfaces.PositionMode) (p *ContainerPort) {
+func ContainerPortNew(box image.Rectangle, config DrawConfig, userObj graph.Positioner, userObj2 graph.ModePositioner, mode graph.PositionMode) (p *ContainerPort) {
 	return &ContainerPort{SelectableBoxInit(box, config), userObj, userObj2, mode}
 }
 
@@ -87,16 +87,16 @@ func (p *ContainerPort) SetPosition(pos image.Point) {
 //
 //		AddPort
 //
-func (c *Container) AddPort(pos image.Point, config DrawConfig, userObj interfaces.Positioner) (p *ContainerPort) {
+func (c *Container) AddPort(pos image.Point, config DrawConfig, userObj graph.Positioner) (p *ContainerPort) {
 	size := image.Point{c.config.portWidth, c.config.portHeight}
 	pos = c.portClipPos(pos)
 	box := image.Rectangle{pos, pos.Add(size)}
-	p = ContainerPortNew(box, config, userObj, nil, interfaces.PositionMode(-1))
+	p = ContainerPortNew(box, config, userObj, nil, graph.PositionMode(-1))
 	c.ports = append(c.ports, p)
 	return
 }
 
-func (c *Container) AddModePort(pos image.Point, config DrawConfig, userObj interfaces.ModePositioner, mode interfaces.PositionMode) (p *ContainerPort) {
+func (c *Container) AddModePort(pos image.Point, config DrawConfig, userObj graph.ModePositioner, mode graph.PositionMode) (p *ContainerPort) {
 	size := image.Point{c.config.portWidth, c.config.portHeight}
 	box := image.Rectangle{pos, pos.Add(size)}
 	p = ContainerPortNew(box, config, nil, userObj, mode)
@@ -252,7 +252,7 @@ func (c Container) GetSelectedChild() (ok bool, child ContainerChild) {
 	return
 }
 
-func (c *Container) SelectPort(userObj interfaces.Positioner) {
+func (c *Container) SelectPort(userObj graph.Positioner) {
 	c.selectedPort = -1
 	for i, p := range c.ports {
 		if p.UserObj == userObj {
@@ -264,7 +264,7 @@ func (c *Container) SelectPort(userObj interfaces.Positioner) {
 	}
 }
 
-func (c *Container) SelectModePort(userObj interfaces.ModePositioner) {
+func (c *Container) SelectModePort(userObj graph.ModePositioner) {
 	c.selectedPort = -1
 	for i, p := range c.ports {
 		if p.UserObj2 == userObj {
@@ -276,7 +276,7 @@ func (c *Container) SelectModePort(userObj interfaces.ModePositioner) {
 	}
 }
 
-func (c Container) GetSelectedPort() (ok bool, userObj interfaces.Positioner) {
+func (c Container) GetSelectedPort() (ok bool, userObj graph.Positioner) {
 	if c.selectedPort == -1 {
 		return
 	}
@@ -285,7 +285,7 @@ func (c Container) GetSelectedPort() (ok bool, userObj interfaces.Positioner) {
 	return
 }
 
-func (c Container) GetSelectedModePort() (ok bool, userObj interfaces.ModePositioner) {
+func (c Container) GetSelectedModePort() (ok bool, userObj graph.ModePositioner) {
 	if c.selectedPort == -1 {
 		return
 	}

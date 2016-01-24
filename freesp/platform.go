@@ -3,9 +3,9 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"log"
 	"strings"
 )
@@ -17,7 +17,6 @@ type platform struct {
 }
 
 var _ pf.PlatformIf = (*platform)(nil)
-var _ interfaces.PlatformObject = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
 	return &platform{filename, "", archListInit()}
@@ -33,14 +32,6 @@ func (p *platform) SetPlatformId(newId string) {
 
 func (p *platform) Arch() []pf.ArchIf {
 	return p.archlist.Archs()
-}
-
-func (p *platform) ArchObjects() []interfaces.ArchObject {
-	return p.archlist.Exports()
-}
-
-func (p *platform) PlatformObject() interfaces.PlatformObject {
-	return p
 }
 
 func (p *platform) ProcessByName(name string) (pr pf.ProcessIf, ok bool) {
@@ -65,6 +56,13 @@ func (p *platform) ProcessByName(name string) (pr pf.ProcessIf, ok bool) {
 	}
 	return
 }
+
+func (p *platform) CreateXml() (buf []byte, err error) {
+	xmlp := CreateXmlPlatform(p)
+	buf, err = xmlp.Write()
+	return
+}
+
 
 //
 //  Filenamer API
@@ -104,6 +102,40 @@ func (p *platform) ReadFile(filepath string) (err error) {
 	return
 }
 
+func (p *platform) FindLinkedChannel(c1 pf.ChannelIf) (c2 pf.ChannelIf, err error) {
+	linktext := c1.(*channel).linkText
+	p1 := c1.Process()
+	link := strings.Split(linktext, "/")
+	if len(link) != 2 {
+		err = fmt.Errorf("platform.FindLinkedChannel error: invalid reference %s\n", linktext)
+		return
+	}
+	var ok bool
+	var a2 pf.ArchIf
+	var p2 pf.ProcessIf
+	a2, ok = p.archlist.Find(link[0])
+	if !ok {
+		err = fmt.Errorf("platform.FindLinkedChannel error: invalid reference %s (no arch found)\n", linktext)
+		return
+	}
+	p2, ok = a2.(*arch).processes.Find(link[1])
+	if !ok {
+		err = fmt.Errorf("platform.FindLinkedChannel error: invalid reference %s (no process found)\n", linktext)
+		return
+	}
+	cName := channelMakeName(c1.IOType(), p1)
+	if c1.Direction() == gr.InPort {
+		c2, ok = p2.(*process).outChannels.Find(cName)
+	} else {
+		c2, ok = p2.(*process).inChannels.Find(cName)
+	}
+	if !ok {
+		err = fmt.Errorf("platform.FindLinkedChannel error: invalid reference %s (no channel found)\n", linktext)
+		return
+	}
+	return
+}
+
 func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) {
 	for _, xmla := range xmlp.Arch {
 		var a *arch
@@ -116,63 +148,22 @@ func (p *platform) createPlatformFromXml(xmlp *backend.XmlPlatform) (err error) 
 	for _, a := range p.archlist.Archs() {
 		for _, pr := range a.Processes() {
 			for _, c := range pr.InChannels() {
-				link := strings.Split(c.(*channel).linkText, "/")
-				if len(link) != 2 {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s\n", c.(*channel).linkText)
+				c.(*channel).link, err = p.FindLinkedChannel(c)
+				if err != nil {
+					err = fmt.Errorf("platform.createPlatformFromXml error (in): %s", err)
 					return
 				}
-				var ok bool
-				var aa pf.ArchIf
-				var pp pf.ProcessIf
-				var cc pf.ChannelIf
-				aa, ok = p.archlist.Find(link[0])
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
-					return
-				}
-				pp, ok = aa.(*arch).processes.Find(link[1])
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no process found)\n", c.(*channel).linkText)
-					return
-				}
-				cName := channelMakeName(c.IOType(), pr)
-				cc, ok = pp.(*process).outChannels.Find(cName)
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no channel found)\n", c.(*channel).linkText)
-					return
-				}
-				c.(*channel).link = cc
 			}
 			for _, c := range pr.OutChannels() {
-				link := strings.Split(c.(*channel).linkText, "/")
-				if len(link) != 2 {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s\n", c.(*channel).linkText)
+				c.(*channel).link, err = p.FindLinkedChannel(c)
+				if err != nil {
+					err = fmt.Errorf("platform.createPlatformFromXml error (out): %s", err)
 					return
 				}
-				var ok bool
-				var aa pf.ArchIf
-				var pp pf.ProcessIf
-				var cc pf.ChannelIf
-				aa, ok = p.archlist.Find(link[0])
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no arch found)\n", c.(*channel).linkText)
-					return
-				}
-				pp, ok = aa.(*arch).processes.Find(link[1])
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no process found)\n", c.(*channel).linkText)
-					return
-				}
-				cName := channelMakeName(c.IOType(), pr)
-				cc, ok = pp.(*process).inChannels.Find(cName)
-				if !ok {
-					err = fmt.Errorf("platform.createPlatformFromXml error (in): invalid source %s (no channel found)\n", c.(*channel).linkText)
-					return
-				}
-				c.(*channel).link = cc
 			}
 		}
 	}
+	log.Printf("platform.createPlatformFromXml: all channels linked\n")
 	return
 }
 

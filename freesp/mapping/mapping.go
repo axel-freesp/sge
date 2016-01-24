@@ -6,7 +6,6 @@ import (
 	"log"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
@@ -23,11 +22,16 @@ type mapping struct {
 	filename string
 }
 
-var _ interfaces.MappingObject = (*mapping)(nil)
 var _ mp.MappingIf = (*mapping)(nil)
 
 func MappingNew(filename string, context mod.ModelContextIf) *mapping {
 	return &mapping{nil, nil, context, make(map[string]*mapelem), filename}
+}
+
+func (m *mapping) CreateXml() (buf []byte, err error) {
+	xmlm := freesp.CreateXmlMapping(m)
+	buf, err = xmlm.Write()
+	return
 }
 
 //
@@ -74,41 +78,8 @@ func (m *mapping) Identify(te tr.TreeElement) bool {
 }
 
 //
-//		interfaces.MappingObject interface
-//
-
-func (m mapping) GraphObject() interfaces.GraphObject {
-	return m.graph.GraphObject()
-}
-
-func (m mapping) PlatformObject() interfaces.PlatformObject {
-	return m.platform.PlatformObject()
-}
-
-func (m mapping) MappedObject(n interfaces.NodeObject) (p interfaces.ProcessObject, ok bool) {
-	var melem *mapelem
-	melem, ok = m.maps[n.Name()]
-	if ok {
-		ok = melem.process != nil
-		if ok {
-			p = melem.process.(interfaces.ProcessObject)
-		}
-	}
-	return
-}
-
-func (m mapping) MapElemObject(n interfaces.NodeObject) (melem interfaces.MapElemObject, ok bool) {
-	melem, ok = m.maps[n.Name()]
-	return
-}
-
-//
 //		Mapping interface
 //
-
-func (m *mapping) MappingObject() interfaces.MappingObject {
-	return m
-}
 
 func (m *mapping) AddMapping(n bh.NodeIf, p pf.ProcessIf) {
 	m.maps[n.Name()] = mapelemNew(n, p, image.Point{}, m)
@@ -140,8 +111,9 @@ func (m *mapping) Mapped(n bh.NodeIf) (pr pf.ProcessIf, ok bool) {
 	return
 }
 
-func (m *mapping) MappedElement(n bh.NodeIf) mp.MappedElementIf {
-	return m.maps[n.Name()]
+func (m *mapping) MappedElement(n bh.NodeIf) (melem mp.MappedElementIf, ok bool) {
+	melem, ok = m.maps[n.Name()]
+	return
 }
 
 //

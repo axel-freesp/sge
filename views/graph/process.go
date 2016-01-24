@@ -1,21 +1,21 @@
 package graph
 
 import (
-	//"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	interfaces "github.com/axel-freesp/sge/interface"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	pf "github.com/axel-freesp/sge/interface/platform"
 )
 
 type Process struct {
 	Container
-	userObj interfaces.ProcessObject
+	userObj pf.ProcessIf
 	arch ArchIf
 }
 
 var _ ProcessIf = (*Process)(nil)
 
-func ProcessNew(pos image.Point, userObj interfaces.ProcessObject) (ret *Process) {
+func ProcessNew(pos image.Point, userObj pf.ProcessIf) (ret *Process) {
 	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
 			ColorInit(ColorOption(ProcessHighlight)),
 			ColorInit(ColorOption(ProcessSelected)),
@@ -34,7 +34,7 @@ func (p *Process) Layout() image.Rectangle {
 	return p.box
 }
 
-func (p Process) UserObj() interfaces.ProcessObject {
+func (p Process) UserObj() pf.ProcessIf {
 	return p.userObj
 }
 
@@ -49,12 +49,12 @@ func processDrawChannel(p *ContainerPort, ctxt interface{}){
 		context := ctxt.(*cairo.Context)
 		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
 		shift2 := image.Point{procPortWidth, procPortHeight}.Div(2)
-		extPort := p.UserObj2.(interfaces.ChannelObject).ArchPortObject()
+		extPort := p.UserObj2.(pf.ChannelIf).ArchPort()
 		if extPort != nil {
-			extPPos := extPort.ModePosition(interfaces.PositionModeNormal)
+			extPPos := extPort.ModePosition(gr.PositionModeNormal)
 			if extPPos != empty {
 				var pos1, pos2 image.Point
-				if p.UserObj2.(interfaces.ChannelObject).Direction() == interfaces.InPort {
+				if p.UserObj2.(pf.ChannelIf).Direction() == gr.InPort {
 					pos1 = extPPos.Add(shift1)
 					pos2 = p.Position().Add(shift2)
 				} else {
@@ -80,8 +80,8 @@ func processDrawChannel(p *ContainerPort, ctxt interface{}){
 func (pr *Process) SetArchObject(a ArchIf) {
 	pr.arch = a
 	idx := 0
-	inCnt := len(pr.userObj.InChannelObjects())
-	outCnt := len(pr.userObj.OutChannelObjects())
+	inCnt := len(pr.userObj.InChannels())
+	outCnt := len(pr.userObj.OutChannels())
 	empty := image.Point{}
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
@@ -89,24 +89,24 @@ func (pr *Process) SetArchObject(a ArchIf) {
 			ColorInit(ColorOption(BoxFrame)),
 			Color{},
 			image.Point{}}
-	for _, c := range pr.userObj.InChannelObjects() {
-		pos := c.ModePosition(interfaces.PositionModeNormal)
+	for _, c := range pr.userObj.InChannels() {
+		pos := c.ModePosition(gr.PositionModeNormal)
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt + outCnt)
 		}
-		p := pr.AddModePort(pos, config, c, interfaces.PositionModeNormal)
+		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
 		p.RegisterOnDraw(func(ctxt interface{}){
 			processDrawChannel(p, ctxt)
 		})
 		a.(*Arch).channelMap[c] = p
 		idx++
 	}
-	for _, c := range pr.userObj.OutChannelObjects() {
-		pos := c.ModePosition(interfaces.PositionModeNormal)
+	for _, c := range pr.userObj.OutChannels() {
+		pos := c.ModePosition(gr.PositionModeNormal)
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt + outCnt)
 		}
-		p := pr.AddModePort(pos, config, c, interfaces.PositionModeNormal)
+		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
 		p.RegisterOnDraw(func(ctxt interface{}){
 			processDrawChannel(p, ctxt)
 		})
@@ -115,23 +115,23 @@ func (pr *Process) SetArchObject(a ArchIf) {
 	}
 }
 
-func (pr *Process) SelectChannel(ch interfaces.ChannelObject) {
+func (pr *Process) SelectChannel(ch pf.ChannelIf) {
 	pr.SelectModePort(ch)
 }
 
-func (pr Process) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
-	var p interfaces.ModePositioner
+func (pr Process) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
+	var p gr.ModePositioner
 	ok, p = pr.GetSelectedModePort()
 	if !ok {
 		return
 	}
-	ch = p.(interfaces.ChannelObject)
+	ch = p.(pf.ChannelIf)
 	return
 }
 
 func (pr *Process) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
-	pr.userObj.SetModePosition(interfaces.PositionModeNormal, pos)
+	pr.userObj.SetModePosition(gr.PositionModeNormal, pos)
 }
 
 const (

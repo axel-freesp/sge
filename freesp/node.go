@@ -2,9 +2,9 @@ package freesp
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"image"
 	"log"
 )
@@ -15,7 +15,7 @@ type node struct {
 	nodetype bh.NodeTypeIf
 	inPort   portList
 	outPort  portList
-	portlink bh.PortType
+	portlink bh.PortTypeIf
 	position image.Point
 }
 
@@ -82,24 +82,30 @@ func (n *node) ItsType() bh.NodeTypeIf {
 	return n.nodetype
 }
 
-func (n *node) InPorts() []bh.Port {
+func (n *node) InPorts() []bh.PortIf {
 	return n.inPort.Ports()
 }
 
-func (n *node) OutPorts() []bh.Port {
+func (n *node) OutPorts() []bh.PortIf {
 	return n.outPort.Ports()
-}
-
-func (n *node) GetInPorts() []interfaces.PortObject {
-	return n.inPort.Exports()
-}
-
-func (n *node) GetOutPorts() []interfaces.PortObject {
-	return n.outPort.Exports()
 }
 
 func (n *node) Context() bh.SignalGraphTypeIf {
 	return n.context
+}
+
+func (n *node) CreateXml() (buf []byte, err error) {
+	if len(n.InPorts()) == 0 {
+		xmlnode := CreateXmlInputNode(n)
+		buf, err = xmlnode.Write()
+	} else if len(n.OutPorts()) == 0 {
+		xmlnode := CreateXmlOutputNode(n)
+		buf, err = xmlnode.Write()
+	} else {
+		xmlnode := CreateXmlProcessingNode(n)
+		buf, err = xmlnode.Write()
+	}
+	return
 }
 
 /*
@@ -163,14 +169,14 @@ func (n *node) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 	nt := n.ItsType()
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case bh.Port:
-		p := obj.(bh.Port)
+	case bh.PortIf:
+		p := obj.(bh.PortIf)
 		for index, c := range p.Connections() {
 			conn := p.Connection(c)
 			removed = append(removed, tr.IdWithObject{cursor.Path, index, conn})
 		}
 		var list portTypeList
-		if p.Direction() == interfaces.InPort {
+		if p.Direction() == gr.InPort {
 			list = nt.(*nodeType).inPorts
 		} else {
 			list = nt.(*nodeType).outPorts
@@ -191,15 +197,15 @@ func (n *node) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 /*
  *  freesp private functions
  */
-func (n *node) inPortFromName(name string) (p bh.Port, err error) {
+func (n *node) inPortFromName(name string) (p bh.PortIf, err error) {
 	return portFromName(n.inPort.Ports(), name)
 }
 
-func (n *node) outPortFromName(name string) (p bh.Port, err error) {
+func (n *node) outPortFromName(name string) (p bh.PortIf, err error) {
 	return portFromName(n.outPort.Ports(), name)
 }
 
-func portFromName(list []bh.Port, name string) (ret bh.Port, err error) {
+func portFromName(list []bh.PortIf, name string) (ret bh.PortIf, err error) {
 	switch {
 	case len(name) == 0:
 		if len(list) == 0 {
@@ -233,17 +239,17 @@ func portFromName(list []bh.Port, name string) (ret bh.Port, err error) {
 	return
 }
 
-func (n *node) addInPort(pt bh.PortType) {
+func (n *node) addInPort(pt bh.PortTypeIf) {
 	n.inPort.Append(newPort(pt, n))
 }
 
-func (n *node) addOutPort(pt bh.PortType) {
+func (n *node) addOutPort(pt bh.PortTypeIf) {
 	n.outPort.Append(newPort(pt, n))
 }
 
-func (n *node) removePort(pt bh.PortType) {
+func (n *node) removePort(pt bh.PortTypeIf) {
 	var list *portList
-	if pt.Direction() == interfaces.InPort {
+	if pt.Direction() == gr.InPort {
 		list = &n.inPort
 	} else {
 		list = &n.outPort
@@ -289,7 +295,7 @@ func (n *node) SetPosition(p image.Point) {
 	n.position = p
 }
 
-var _ interfaces.Positioner = (*node)(nil)
+var _ gr.Positioner = (*node)(nil)
 
 /*
  *      Namer API
@@ -303,7 +309,7 @@ func (n *node) SetName(newName string) {
 	n.name = newName
 }
 
-var _ interfaces.Namer = (*node)(nil)
+var _ gr.Namer = (*node)(nil)
 
 /*
  *      Porter API
@@ -325,8 +331,6 @@ func (n *node) OutPortIndex(portName string) int {
 	return -1
 }
 
-var _ interfaces.Porter = (*node)(nil)
-
 /*
  *      nodeList
  *
@@ -334,16 +338,14 @@ var _ interfaces.Porter = (*node)(nil)
 
 type nodeList struct {
 	nodes   []bh.NodeIf
-	exports []interfaces.NodeObject
 }
 
 func nodeListInit() nodeList {
-	return nodeList{nil, nil}
+	return nodeList{nil}
 }
 
 func (l *nodeList) Append(n *node) {
 	l.nodes = append(l.nodes, n)
-	l.exports = append(l.exports, n)
 }
 
 func (l *nodeList) Remove(n bh.NodeIf) {
@@ -361,18 +363,12 @@ func (l *nodeList) Remove(n bh.NodeIf) {
 	}
 	for i++; i < len(l.nodes); i++ {
 		l.nodes[i-1] = l.nodes[i]
-		l.exports[i-1] = l.exports[i]
 	}
 	l.nodes = l.nodes[:len(l.nodes)-1]
-	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *nodeList) Nodes() []bh.NodeIf {
 	return l.nodes
-}
-
-func (l *nodeList) Exports() []interfaces.NodeObject {
-	return l.exports
 }
 
 func (l *nodeList) Find(node bh.NodeIf) (ok bool, index int) {

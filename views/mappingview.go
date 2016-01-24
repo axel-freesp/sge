@@ -1,23 +1,27 @@
 package views
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/axel-freesp/sge/views/graph"
+	"image"
+	"log"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"image"
-	"log"
+	"github.com/axel-freesp/sge/views/graph"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	tr "github.com/axel-freesp/sge/interface/tree"
 )
 
 type mappingView struct {
 	parent      *ScaledView
 	area        DrawArea
-	mapping     interfaces.MappingObject
+	mapping     mp.MappingIf
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	arch        []graph.ArchIf
-	context     interfaces.Context
+	context     Context
 	unmapped    graph.ProcessIf
 
 	dragOffs       image.Point
@@ -25,9 +29,9 @@ type mappingView struct {
 }
 
 var _ ScaledScene = (*mappingView)(nil)
-var _ GraphView = (*mappingView)(nil)
+var _ GraphViewIf = (*mappingView)(nil)
 
-func MappingViewNew(m interfaces.MappingObject, context interfaces.Context) (viewer *mappingView, err error) {
+func MappingViewNew(m mp.MappingIf, context Context) (viewer *mappingView, err error) {
 	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -37,7 +41,7 @@ func MappingViewNew(m interfaces.MappingObject, context interfaces.Context) (vie
 	return
 }
 
-func MappingViewDestroy(viewer GraphView) {
+func MappingViewDestroy(viewer GraphViewIf) {
 	DrawAreaDestroy(viewer.(*mappingView).area)
 }
 
@@ -62,7 +66,7 @@ type unmappedProcess struct {
 	pos image.Point
 }
 
-var _ interfaces.ProcessObject = (*unmappedProcess)(nil)
+var _ pf.ProcessIf = (*unmappedProcess)(nil)
 
 func (p *unmappedProcess) Name() string {
 	return "unmapped"
@@ -71,61 +75,76 @@ func (p *unmappedProcess) Name() string {
 func (p *unmappedProcess) SetName(string) {
 }
 
-func (p *unmappedProcess) ModePosition(interfaces.PositionMode) image.Point {
+func (p *unmappedProcess) ModePosition(gr.PositionMode) image.Point {
 	return p.pos
 }
 
-func (p *unmappedProcess) SetModePosition(m interfaces.PositionMode, pos image.Point) {
+func (p *unmappedProcess) SetModePosition(m gr.PositionMode, pos image.Point) {
 	p.pos = pos
 }
 
-func (p *unmappedProcess) ArchObject() interfaces.ArchObject {
+func (p *unmappedProcess) Arch() pf.ArchIf {
 	return nil
 }
 
-func (p *unmappedProcess) InChannelObjects() []interfaces.ChannelObject {
+func (p *unmappedProcess) InChannels() []pf.ChannelIf {
 	return nil
 }
 
-func (p *unmappedProcess) OutChannelObjects() []interfaces.ChannelObject {
+func (p *unmappedProcess) OutChannels() []pf.ChannelIf {
 	return nil
 }
+
+func (p *unmappedProcess) AddToTree(tr.TreeIf, tr.Cursor) {
+	return
+}
+func (p *unmappedProcess) AddNewObject(tr.TreeIf, tr.Cursor, tr.TreeElement) (c tr.Cursor, e error) {
+	return
+}
+func (p *unmappedProcess) RemoveObject(tr.TreeIf, tr.Cursor) (r []tr.IdWithObject) {
+	return
+}
+
+func (p *unmappedProcess) CreateXml() (buf []byte, err error) {
+	return
+}
+
 
 func (v *mappingView) Sync() {
 	log.Printf("mappingView.Sync()\n")
-	g := v.mapping.GraphObject()
-	v.nodes = make([]graph.NodeIf, len(g.NodeObjects()))
+	g := v.mapping.Graph()
+	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 	var numberOfConnections = 0
-	for _, n := range g.NodeObjects() {
-		for _, p := range n.GetOutPorts() {
-			numberOfConnections += len(p.ConnectionObjects())
+	for _, n := range g.Nodes() {
+		for _, p := range n.OutPorts() {
+			numberOfConnections += len(p.Connections())
 		}
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
-	for i, n := range g.NodeObjects() {
+	for i, n := range g.Nodes() {
 		v.nodes[i] = graph.NodeNew(n.Position(), n)
 	}
 	var index = 0
-	for _, n := range g.NodeObjects() {
+	for _, n := range g.Nodes() {
 		from := v.findNode(n.Name())
-		for _, p := range n.GetOutPorts() {
+		for _, p := range n.OutPorts() {
 			fromId := from.OutPortIndex(p.Name())
-			for _, c := range p.ConnectionObjects() {
-				to := v.findNode(c.NodeObject().Name())
+			for _, c := range p.Connections() {
+				to := v.findNode(c.Node().Name())
 				toId := to.InPortIndex(c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
 			}
 		}
 	}
-	p := v.mapping.PlatformObject()
-	v.arch = make([]graph.ArchIf, len(p.ArchObjects()))
-	for i, a := range p.ArchObjects() {
+	p := v.mapping.Platform()
+	v.arch = make([]graph.ArchIf, len(p.Arch()))
+	for i, a := range p.Arch() {
 		v.arch[i] = graph.ArchMappingNew(a, v.nodes, v.mapping)
 	}
 	var unmappedNodes []*graph.Node
 	for _, n := range v.nodes {
-		_, ok := v.mapping.MappedObject(n.UserObj())
+		_, ok := v.mapping.Mapped(n.UserObj())
 		if !ok {
 			unmappedNodes = append(unmappedNodes, n.(*graph.Node))
 		}
@@ -136,15 +155,15 @@ func (v *mappingView) Sync() {
 	v.drawAll()
 }
 
-func (v mappingView) IdentifyGraph(g interfaces.GraphObject) bool {
+func (v mappingView) IdentifyGraph(g bh.SignalGraphIf) bool {
 	return false
 }
 
-func (v mappingView) IdentifyPlatform(p interfaces.PlatformObject) bool {
+func (v mappingView) IdentifyPlatform(p pf.PlatformIf) bool {
 	return false
 }
 
-func (v mappingView) IdentifyMapping(m interfaces.MappingObject) bool {
+func (v mappingView) IdentifyMapping(m mp.MappingIf) bool {
 	return v.mapping == m
 }
 
@@ -152,41 +171,41 @@ func (v mappingView) IdentifyMapping(m interfaces.MappingObject) bool {
 //		Handle selection in treeview
 //
 
-func (v *mappingView) Select(obj interfaces.GraphElement) {
+func (v *mappingView) Select(obj interface{}) {
 	switch obj.(type) {
-	case interfaces.ArchObject:
-		arch := obj.(interfaces.ArchObject)
+	case pf.ArchIf:
+		arch := obj.(pf.ArchIf)
 		a, ok := v.focusArchFromUserObject(arch)
 		if ok {
 			v.selectArch(a)
 		}
-	case interfaces.ProcessObject:
-		pr := obj.(interfaces.ProcessObject)
-		a, ok := v.focusArchFromUserObject(pr.ArchObject())
+	case pf.ProcessIf:
+		pr := obj.(pf.ProcessIf)
+		a, ok := v.focusArchFromUserObject(pr.Arch())
 		if ok {
 			a.SelectProcess(pr)
 			v.repaintArch(a)
 		}
-	case interfaces.ChannelObject:
-		ch := obj.(interfaces.ChannelObject)
-		a, ok := v.focusArchFromUserObject(ch.ProcessObject().ArchObject())
+	case pf.ChannelIf:
+		ch := obj.(pf.ChannelIf)
+		a, ok := v.focusArchFromUserObject(ch.Process().Arch())
 		if ok {
 			a.SelectChannel(ch)
 			v.repaintArch(a)
 		}
-	case interfaces.NodeObject:
-		n := obj.(interfaces.NodeObject)
-		melem, ok := v.mapping.MapElemObject(n)
+	case bh.NodeIf:
+		n := obj.(bh.NodeIf)
+		melem, ok := v.mapping.MappedElement(n)
 		if !ok {
 			// todo: unmapped nodes
 			return
 		}
-		p, ok := melem.ProcessObject()
+		p, ok := melem.Process()
 		if !ok {
 			return
 		}
 		var a graph.ArchIf
-		a, ok = v.focusArchFromUserObject(p.ArchObject())
+		a, ok = v.focusArchFromUserObject(p.Arch())
 		if !ok {
 			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
 			return
@@ -198,16 +217,16 @@ func (v *mappingView) Select(obj interfaces.GraphElement) {
 		}
 		pr.(*graph.ProcessMapping).SelectNode(n)
 		v.repaintArch(a)
-	case interfaces.MapElemObject:
-		melem := obj.(interfaces.MapElemObject)
-		p, isMapped := melem.ProcessObject()
+	case mp.MappedElementIf:
+		melem := obj.(mp.MappedElementIf)
+		p, isMapped := melem.Process()
 		var pr graph.ProcessIf
 		var a graph.ArchIf
 		if !isMapped {
 			pr = v.unmapped
 		} else {
 			var ok bool
-			a, ok = v.focusArchFromUserObject(p.ArchObject())
+			a, ok = v.focusArchFromUserObject(p.Arch())
 			if !ok {
 				log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
 				return
@@ -218,7 +237,7 @@ func (v *mappingView) Select(obj interfaces.GraphElement) {
 				return
 			}
 		}
-		n := melem.NodeObject()
+		n := melem.Node()
 		if n != nil {
 			pr.(*graph.ProcessMapping).SelectNode(n)
 		}
@@ -243,7 +262,7 @@ func (v *mappingView) selectArch(toSelect graph.ArchIf) {
 	}
 }
 
-func (v *mappingView) focusArchFromUserObject(obj interfaces.ArchObject) (ret graph.ArchIf, ok bool) {
+func (v *mappingView) focusArchFromUserObject(obj pf.ArchIf) (ret graph.ArchIf, ok bool) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
 		if obj.Name() == a.UserObj().Name() {
@@ -258,10 +277,10 @@ func (v *mappingView) focusArchFromUserObject(obj interfaces.ArchObject) (ret gr
 	return
 }
 
-func (v *mappingView) Expand(obj interfaces.GraphElement) {
+func (v *mappingView) Expand(obj interface{}) {
 }
 
-func (v *mappingView) Collapse(obj interfaces.GraphElement) {
+func (v *mappingView) Collapse(obj interface{}) {
 }
 
 //
@@ -318,9 +337,9 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 		}
 		v.context.SelectArch(a.UserObj())
 		var ok bool
-		var pr interfaces.ProcessObject
-		var ch interfaces.ChannelObject
-		var n interfaces.NodeObject
+		var pr pf.ProcessIf
+		var ch pf.ChannelIf
+		var n graph.NodeIf
 		var p graph.ProcessIf
 		ok, pr, p = a.GetSelectedProcess()
 		if !ok {
@@ -338,8 +357,8 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 		if !ok {
 			continue
 		}
-		var melem interfaces.MapElemObject
-		melem, ok = v.mapping.MapElemObject(n)
+		var melem mp.MappedElementIf
+		melem, ok = v.mapping.MappedElement(n.UserObj())
 		if !ok {
 			// todo: unmapped node
 		} else {
@@ -357,14 +376,14 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 		v.repaintUnmapped(v.unmapped)
 	}
 	var ok bool
-	var n interfaces.NodeObject
+	var n graph.NodeIf
 	//log.Printf("mappingView.handleArchSelect: select process %v\n", pr)
 	ok, n = v.unmapped.(*graph.ProcessMapping).GetSelectedNode()
 	if !ok {
 		return
 	}
-	var melem interfaces.MapElemObject
-	melem, ok = v.mapping.MapElemObject(n)
+	var melem mp.MappedElementIf
+	melem, ok = v.mapping.MappedElement(n.UserObj())
 	if !ok {
 		// todo: unmapped node
 	} else {
@@ -507,10 +526,10 @@ func (v *mappingView) drawArch(context *cairo.Context, r image.Rectangle) {
 func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 	for _, a := range v.arch {
 		for _, pr := range a.Processes() {
-			for _, c := range pr.UserObj().OutChannelObjects() {
-				link := c.LinkObject()
-				lpr := link.ProcessObject()
-				la := lpr.ArchObject()
+			for _, c := range pr.UserObj().OutChannels() {
+				link := c.Link()
+				lpr := link.Process()
+				la := lpr.Arch()
 				if la.Name() != a.Name() {
 					var a2 graph.ArchIf
 					for _, a2 = range v.arch {

@@ -2,13 +2,13 @@ package freesp
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
 	"strings"
+	"github.com/axel-freesp/sge/backend"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type process struct {
@@ -16,13 +16,13 @@ type process struct {
 	inChannels  channelList
 	outChannels channelList
 	arch        pf.ArchIf
-	position    map[interfaces.PositionMode]image.Point
+	position    map[gr.PositionMode]image.Point
 }
 
 var _ pf.ProcessIf = (*process)(nil)
 
 func ProcessNew(name string, arch pf.ArchIf) *process {
-	return &process{name, channelListInit(), channelListInit(), arch, make(map[interfaces.PositionMode]image.Point)}
+	return &process{name, channelListInit(), channelListInit(), arch, make(map[gr.PositionMode]image.Point)}
 }
 
 func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, err error) {
@@ -59,10 +59,6 @@ func (p process) Arch() pf.ArchIf {
 	return p.arch
 }
 
-func (p process) ArchObject() interfaces.ArchObject {
-	return p.arch.(*arch)
-}
-
 func (p process) InChannels() []pf.ChannelIf {
 	return p.inChannels.Channels()
 }
@@ -71,12 +67,10 @@ func (p process) OutChannels() []pf.ChannelIf {
 	return p.outChannels.Channels()
 }
 
-func (p process) InChannelObjects() []interfaces.ChannelObject {
-	return p.inChannels.Exports()
-}
-
-func (p process) OutChannelObjects() []interfaces.ChannelObject {
-	return p.outChannels.Exports()
+func (p process) CreateXml() (buf []byte, err error) {
+	xmlp := CreateXmlProcess(&p)
+	buf, err = xmlp.Write()
+	return
 }
 
 /*
@@ -95,12 +89,12 @@ func (p *process) SetName(newName string) {
  *      ModePositioner API
  */
 
-func (pr *process) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+func (pr *process) ModePosition(mode gr.PositionMode) (p image.Point) {
 	p = pr.position[mode]
 	return
 }
 
-func (pr *process) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+func (pr *process) SetModePosition(mode gr.PositionMode, p image.Point) {
 	pr.position[mode] = p
 }
 
@@ -159,19 +153,19 @@ func (p *process) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElem
 			return
 		}
 		var l *channelList
-		var dd interfaces.PortDirection
+		var dd gr.PortDirection
 		var ll *channelList
 		var cPos, ccPos int
-		if c.Direction() == interfaces.InPort {
+		if c.Direction() == gr.InPort {
 			l = &p.inChannels
 			ll = &pp.(*process).outChannels
-			dd = interfaces.OutPort
+			dd = gr.OutPort
 			cPos = len(l.Channels())
 			ccPos = tr.AppendCursor
 		} else {
 			l = &p.outChannels
 			ll = &pp.(*process).inChannels
-			dd = interfaces.InPort
+			dd = gr.InPort
 			cPos = tr.AppendCursor
 			ccPos = len(ll.Channels())
 		}
@@ -234,7 +228,7 @@ func (p *process) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.I
 		ccCursor := tree.CursorAt(ppCursor, cc)
 		var l *channelList
 		var ll *channelList
-		if c.Direction() == interfaces.InPort {
+		if c.Direction() == gr.InPort {
 			l = &p.inChannels
 			ll = &pp.(*process).outChannels
 		} else {
@@ -260,16 +254,14 @@ func (p *process) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.I
 
 type processList struct {
 	processs []pf.ProcessIf
-	exports  []interfaces.ProcessObject
 }
 
 func processListInit() processList {
-	return processList{nil, nil}
+	return processList{}
 }
 
 func (l *processList) Append(p *process) {
 	l.processs = append(l.processs, p)
-	l.exports = append(l.exports, p)
 }
 
 func (l *processList) Remove(p pf.ProcessIf) {
@@ -287,18 +279,12 @@ func (l *processList) Remove(p pf.ProcessIf) {
 	}
 	for i++; i < len(l.processs); i++ {
 		l.processs[i-1] = l.processs[i]
-		l.exports[i-1] = l.exports[i]
 	}
 	l.processs = l.processs[:len(l.processs)-1]
-	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *processList) Processes() []pf.ProcessIf {
 	return l.processs
-}
-
-func (l *processList) Exports() []interfaces.ProcessObject {
-	return l.exports
 }
 
 func (l *processList) Find(name string) (p pf.ProcessIf, ok bool) {

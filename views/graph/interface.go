@@ -2,7 +2,9 @@ package graph
 
 import (
 	"image"
-	interfaces "github.com/axel-freesp/sge/interface"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 /*
@@ -10,16 +12,23 @@ import (
  */
 
 type NodeIf interface {
-	interfaces.Porter
+	Porter
 	NamedBox
-	UserObj() interfaces.NodeObject
+	UserObj() bh.NodeIf
 	Expand()
 	Collapse()
 }
 
+type Porter interface {
+	InPorts() []bh.PortIf
+	OutPorts() []bh.PortIf
+	InPortIndex(portname string) int
+	OutPortIndex(portname string) int
+}
+
 type PortIf interface {
 	BoxedSelecter
-	UserObj() interfaces.PortObject
+	UserObj() bh.PortIf
 }
 
 type ConnectIf interface {
@@ -34,13 +43,13 @@ type ConnectIf interface {
 type ArchIf interface {
 	NamedBox
 	Processes() []ProcessIf
-	UserObj() interfaces.ArchObject
+	UserObj() pf.ArchIf
 	IsLinked(name string) bool
-	ChannelPort(interfaces.ChannelObject) ArchPortIf
-	SelectProcess(interfaces.ProcessObject) ProcessIf
-	GetSelectedProcess() (ok bool, pr interfaces.ProcessObject, p ProcessIf)
-	SelectChannel(ch interfaces.ChannelObject)
-	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
+	ChannelPort(pf.ChannelIf) ArchPortIf
+	SelectProcess(pf.ProcessIf) ProcessIf
+	GetSelectedProcess() (ok bool, pr pf.ProcessIf, p ProcessIf)
+	SelectChannel(ch pf.ChannelIf)
+	GetSelectedChannel() (ok bool, pr pf.ChannelIf)
 }
 
 type ArchPortIf interface {
@@ -49,11 +58,11 @@ type ArchPortIf interface {
 
 type ProcessIf interface {
 	NamedBox
-	UserObj() interfaces.ProcessObject
+	UserObj() pf.ProcessIf
 	ArchObject() ArchIf
 	SetArchObject(ArchIf)
-	SelectChannel(ch interfaces.ChannelObject)
-	GetSelectedChannel() (ok bool, pr interfaces.ChannelObject)
+	SelectChannel(ch pf.ChannelIf)
+	GetSelectedChannel() (ok bool, pr pf.ChannelIf)
 }
 
 /*
@@ -61,8 +70,8 @@ type ProcessIf interface {
  */
 
 type BBoxer interface {
-    interfaces.Positioner
-    interfaces.Shaper
+    gr.Positioner
+    gr.Shaper
 	BBox() image.Rectangle
 }
 
@@ -96,7 +105,7 @@ type BoxedSelecter interface {
 }
 
 type NamedBox interface {
-	interfaces.Namer
+	gr.Namer
 	BoxedSelecter
 }
 

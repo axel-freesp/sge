@@ -1,14 +1,14 @@
 package mapping
 
 import (
+	"image"
+	"log"
+	"fmt"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
-	"image"
-	"log"
 )
 
 type mapelem struct {
@@ -56,18 +56,6 @@ func (m mapelem) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.Id
 	return
 }
 
-func (m mapelem) NodeObject() interfaces.NodeObject {
-	return m.node.(interfaces.NodeObject)
-}
-
-func (m mapelem) ProcessObject() (p interfaces.ProcessObject, ok bool) {
-	ok = m.process != nil
-	if ok {
-		p = m.process.(interfaces.ProcessObject)
-	}
-	return
-}
-
 func (m mapelem) Mapping() mp.MappingIf {
 	return m.mapping
 }
@@ -76,11 +64,31 @@ func (m mapelem) Node() bh.NodeIf {
 	return m.node
 }
 
-func (m mapelem) Process() pf.ProcessIf {
-	return m.process
+func (m mapelem) Process() (p pf.ProcessIf, ok bool) {
+	ok = m.process != nil
+	if ok {
+		p = m.process
+	}
+	return
 }
 
 func (m *mapelem) SetProcess(p pf.ProcessIf) {
 	m.process = p
+}
+
+func (m *mapelem) CreateXml() (buf []byte, err error) {
+	var pname string
+	p, ok := m.Process()
+	if ok {
+		pname = fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
+	}
+	if len(m.Node().InPorts()) > 0 && len(m.Node().OutPorts()) > 0 {
+		xmlm := freesp.CreateXmlNodeMap(m.Node().Name(), pname, m.Position())
+		buf, err = xmlm.Write()
+	} else {
+		xmlm := freesp.CreateXmlIOMap(m.Node().Name(), pname, m.Position())
+		buf, err = xmlm.Write()
+	}
+	return
 }
 

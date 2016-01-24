@@ -4,25 +4,27 @@ import (
 	"log"
 	"image"
 	"github.com/gotk3/gotk3/cairo"
-	interfaces "github.com/axel-freesp/sge/interface"
+	mp "github.com/axel-freesp/sge/interface/mapping"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type Arch struct {
 	Container
-	userObj interfaces.ArchObject
-	channelMap map[interfaces.ChannelObject]*ContainerPort
+	userObj pf.ArchIf
+	channelMap map[pf.ChannelIf]*ContainerPort
 	processes []ProcessIf
-	mode interfaces.PositionMode
-	mapping interfaces.MappingObject
+	mode gr.PositionMode
+	mapping mp.MappingIf
 }
 
 var _ ArchIf = (*Arch)(nil)
 
-func ArchNew(userObj interfaces.ArchObject) *Arch {
+func ArchNew(userObj pf.ArchIf) *Arch {
 	var processes []ProcessIf
 	var Children []ContainerChild
-	for _, up := range userObj.ProcessObjects() {
-		p := ProcessNew(up.ModePosition(interfaces.PositionModeNormal), up)
+	for _, up := range userObj.Processes() {
+		p := ProcessNew(up.ModePosition(gr.PositionModeNormal), up)
 		processes = append(processes, p)
 		Children = append(Children, p)
 	}
@@ -34,19 +36,19 @@ func ArchNew(userObj interfaces.ArchObject) *Arch {
 			image.Point{archPortOutBorder, archPortOutBorder}}
 	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
-		make(map[interfaces.ChannelObject]*ContainerPort), processes, interfaces.PositionModeNormal, nil}
+		make(map[pf.ChannelIf]*ContainerPort), processes, gr.PositionModeNormal, nil}
 	a.init()
 	a.initPorts()
 	return a
 }
 
-func ArchMappingNew(userObj interfaces.ArchObject, nodes []NodeIf, mapping interfaces.MappingObject) *Arch {
+func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Arch {
 	var processes []ProcessIf
 	var Children []ContainerChild
-	for _, up := range userObj.ProcessObjects() {
+	for _, up := range userObj.Processes() {
 		var mappedNodes []*Node
 		for _, n := range nodes {
-			m, ok := mapping.MappedObject(n.UserObj())
+			m, ok := mapping.Mapped(n.UserObj())
 			if ok && m == up {
 				mappedNodes = append(mappedNodes, n.(*Node))
 			}
@@ -63,10 +65,10 @@ func ArchMappingNew(userObj interfaces.ArchObject, nodes []NodeIf, mapping inter
 			image.Point{archPortOutBorder, archPortOutBorder}}
 	cconfig := ContainerConfig{archPortWidth, archPortHeight, archMinWidth, archMinHeight}
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
-		make(map[interfaces.ChannelObject]*ContainerPort), processes, interfaces.PositionModeMapping, mapping}
+		make(map[pf.ChannelIf]*ContainerPort), processes, gr.PositionModeMapping, mapping}
 	a.init()
 	for _, n := range nodes {
-		melem, ok := mapping.MapElemObject(n.UserObj())
+		melem, ok := mapping.MappedElement(n.UserObj())
 		if !ok {
 			log.Printf("ArchMappingNew warning: node %s not mapped.\n", n.Name())
 			continue
@@ -89,16 +91,16 @@ func (a *Arch) init() {
 
 func (a *Arch) initMappingPorts() {
 	idx := 0
-	for _, up := range a.userObj.ProcessObjects() {
-		for _, c := range up.InChannelObjects() {
+	for _, up := range a.userObj.Processes() {
+		for _, c := range up.InChannels() {
 			if a.channelIsExtern(c) {
-				a.addExternalPort(c, interfaces.PositionModeMapping, idx)
+				a.addExternalPort(c, gr.PositionModeMapping, idx)
 				idx++
 			}
 		}
-		for _, c := range up.OutChannelObjects() {
+		for _, c := range up.OutChannels() {
 			if a.channelIsExtern(c) {
-				a.addExternalPort(c, interfaces.PositionModeMapping, idx)
+				a.addExternalPort(c, gr.PositionModeMapping, idx)
 				idx++
 			}
 		}
@@ -108,16 +110,16 @@ func (a *Arch) initMappingPorts() {
 
 func (a *Arch) initPorts() {
 	idx := 0
-	for _, up := range a.userObj.ProcessObjects() {
-		for _, c := range up.InChannelObjects() {
+	for _, up := range a.userObj.Processes() {
+		for _, c := range up.InChannels() {
 			if a.channelIsExtern(c) {
-				a.addExternalPort(c, interfaces.PositionModeNormal, idx)
+				a.addExternalPort(c, gr.PositionModeNormal, idx)
 				idx++
 			}
 		}
-		for _, c := range up.OutChannelObjects() {
+		for _, c := range up.OutChannels() {
 			if a.channelIsExtern(c) {
-				a.addExternalPort(c, interfaces.PositionModeNormal, idx)
+				a.addExternalPort(c, gr.PositionModeNormal, idx)
 				idx++
 			}
 		}
@@ -125,7 +127,7 @@ func (a *Arch) initPorts() {
 	a.Layout()
 }
 
-func (a *Arch) addExternalPort(c interfaces.ChannelObject, mode interfaces.PositionMode, idx int) {
+func (a *Arch) addExternalPort(c pf.ChannelIf, mode gr.PositionMode, idx int) {
 	config := DrawConfig{ColorInit(ColorOption(NormalArchPort)),
 			ColorInit(ColorOption(HighlightArchPort)),
 			ColorInit(ColorOption(SelectArchPort)),
@@ -133,7 +135,11 @@ func (a *Arch) addExternalPort(c interfaces.ChannelObject, mode interfaces.Posit
 			Color{},
 			image.Point{}}
 	empty := image.Point{}
-	ap := c.ArchPortObject()
+	ap := c.ArchPort()
+	if ap == nil {
+		log.Printf("Arch.addExternalPort error: channel %v has no arch port\n", c)
+		return
+	}
 	pos := ap.ModePosition(mode)
 	if pos == empty {
 		pos = a.CalcPortPos(idx, a.numExtChannel())
@@ -146,7 +152,7 @@ func (a Arch) Processes() []ProcessIf {
 	return a.processes
 }
 
-func (a Arch) UserObj() interfaces.ArchObject {
+func (a Arch) UserObj() pf.ArchIf {
 	return a.userObj
 }
 
@@ -155,13 +161,13 @@ func (a Arch) IsLinked(name string) bool {
 		return true
 	}
 	for _, pr := range a.Children {
-		for _, c := range pr.(ProcessIf).UserObj().InChannelObjects() {
-			if c.LinkObject().ProcessObject().ArchObject().Name() == name {
+		for _, c := range pr.(ProcessIf).UserObj().InChannels() {
+			if c.Link().Process().Arch().Name() == name {
 				return true
 			}
 		}
-		for _, c := range pr.(ProcessIf).UserObj().OutChannelObjects() {
-			if c.LinkObject().ProcessObject().ArchObject().Name() == name {
+		for _, c := range pr.(ProcessIf).UserObj().OutChannels() {
+			if c.Link().Process().Arch().Name() == name {
 				return true
 			}
 		}
@@ -169,9 +175,9 @@ func (a Arch) IsLinked(name string) bool {
 	return false
 }
 
-func (a *Arch) ChannelPort(ch interfaces.ChannelObject) ArchPortIf {
+func (a *Arch) ChannelPort(ch pf.ChannelIf) ArchPortIf {
 	for _, p := range a.ports {
-		if p.UserObj2.(interfaces.ArchPortObject).Channel() == ch {
+		if p.UserObj2.(pf.ArchPortIf).Channel() == ch {
 			return p
 		}
 	}
@@ -180,7 +186,7 @@ func (a *Arch) ChannelPort(ch interfaces.ChannelObject) ArchPortIf {
 
 
 
-func (a *Arch) SelectProcess(pr interfaces.ProcessObject) (p ProcessIf) {
+func (a *Arch) SelectProcess(pr pf.ProcessIf) (p ProcessIf) {
 	for _, ch := range a.Children {
 		if pr == ch.(ProcessIf).UserObj() {
 			a.SelectChild(ch)
@@ -191,7 +197,7 @@ func (a *Arch) SelectProcess(pr interfaces.ProcessObject) (p ProcessIf) {
 	return
 }
 
-func (a Arch) GetSelectedProcess() (ok bool, pr interfaces.ProcessObject, p ProcessIf) {
+func (a Arch) GetSelectedProcess() (ok bool, pr pf.ProcessIf, p ProcessIf) {
 	var ch ContainerChild
 	ok, ch = a.GetSelectedChild()
 	if !ok {
@@ -202,13 +208,13 @@ func (a Arch) GetSelectedProcess() (ok bool, pr interfaces.ProcessObject, p Proc
 	return
 }
 
-func (a *Arch) SelectChannel(ch interfaces.ChannelObject) {
+func (a *Arch) SelectChannel(ch pf.ChannelIf) {
 	for _, p := range a.Children {
 		p.(ProcessIf).SelectChannel(ch)
 	}
 }
 
-func (a Arch) GetSelectedChannel() (ok bool, ch interfaces.ChannelObject) {
+func (a Arch) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
 	for _, p := range a.Children {
 		ok, ch = p.(ProcessIf).GetSelectedChannel()
 		if ok {
@@ -230,10 +236,10 @@ func (a *Arch) SetPosition(pos image.Point) {
 
 func archOnDraw(a *Arch, ctxt interface{}) {
 	for _, pr := range a.Children {
-		for _, c := range pr.(ProcessIf).UserObj().InChannelObjects() {
+		for _, c := range pr.(ProcessIf).UserObj().InChannels() {
 			a.drawLocalChannel(ctxt, c)
 		}
-		for _, c := range pr.(ProcessIf).UserObj().OutChannelObjects() {
+		for _, c := range pr.(ProcessIf).UserObj().OutChannels() {
 			a.drawLocalChannel(ctxt, c)
 		}
 	}
@@ -251,15 +257,15 @@ const (
 	archMinHeight = 30
 )
 
-func (a Arch) drawLocalChannel(ctxt interface{}, ch interfaces.ChannelObject) {
+func (a Arch) drawLocalChannel(ctxt interface{}, ch pf.ChannelIf) {
     switch ctxt.(type) {
     case *cairo.Context:
 		context := ctxt.(*cairo.Context)
-		link := ch.LinkObject()
-		if ch.ProcessObject().ArchObject().Name() != a.Name() {
+		link := ch.Link()
+		if ch.Process().Arch().Name() != a.Name() {
 			log.Fatal("Arch.drawLocalChannel: channel not in arch %s\n", a.Name())
 		}
-		if link.ProcessObject().ArchObject().Name() == a.Name() {
+		if link.Process().Arch().Name() == a.Name() {
 			var r, g, b float64
 			p1 := a.channelMap[ch]
 			p2 := a.channelMap[link]
@@ -273,7 +279,7 @@ func (a Arch) drawLocalChannel(ctxt interface{}, ch interfaces.ChannelObject) {
 			context.SetLineWidth(2)
 			context.SetSourceRGB(r, g, b)
 			var pos1, pos2 image.Point
-			if ch.Direction() == interfaces.InPort {
+			if ch.Direction() == gr.InPort {
 				pos1 = link.ModePosition(a.mode).Add(image.Point{procPortWidth, procPortHeight}.Div(2))
 				pos2 = ch.ModePosition(a.mode).Add(image.Point{procPortWidth, procPortHeight}.Div(2))
 			} else {
@@ -285,21 +291,21 @@ func (a Arch) drawLocalChannel(ctxt interface{}, ch interfaces.ChannelObject) {
 	}
 }
 
-func (a Arch) channelIsExtern(c interfaces.ChannelObject) bool {
-	link := c.LinkObject()
-	cp := link.ProcessObject()
-	ca := cp.ArchObject()
+func (a Arch) channelIsExtern(c pf.ChannelIf) bool {
+	link := c.Link()
+	cp := link.Process()
+	ca := cp.Arch()
 	return ca != a.userObj
 }
 
 func (a Arch) numExtChannel() (extCnt int) {
-	for _, up := range a.userObj.ProcessObjects() {
-		for _, c := range up.InChannelObjects() {
+	for _, up := range a.userObj.Processes() {
+		for _, c := range up.InChannels() {
 			if a.channelIsExtern(c) {
 				extCnt++
 			}
 		}
-		for _, c := range up.OutChannelObjects() {
+		for _, c := range up.OutChannels() {
 			if a.channelIsExtern(c) {
 				extCnt++
 			}

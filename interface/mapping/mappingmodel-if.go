@@ -1,10 +1,10 @@
 package mapping
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
 	"github.com/axel-freesp/sge/interface/behaviour"
 	"github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/interface/graph"
 )
 
 /*
@@ -13,21 +13,21 @@ import (
 
 type MappingIf interface {
 	tree.ToplevelTreeElement
-	MappingObject() interfaces.MappingObject
 	AddMapping(n behaviour.NodeIf, p platform.ProcessIf)
 	SetGraph(behaviour.SignalGraphIf)
 	Graph() behaviour.SignalGraphIf
 	SetPlatform(platform.PlatformIf)
 	Platform() platform.PlatformIf
 	Mapped(behaviour.NodeIf) (platform.ProcessIf, bool)
-	MappedElement(behaviour.NodeIf) MappedElementIf
+	MappedElement(behaviour.NodeIf) (MappedElementIf, bool)
 }
 
 type MappedElementIf interface {
 	tree.TreeElement
-	interfaces.Positioner
+	graph.Positioner
 	Mapping() MappingIf
 	Node() behaviour.NodeIf
-	Process() platform.ProcessIf
+	Process() (platform.ProcessIf, bool)
 	SetProcess(platform.ProcessIf)
 }
+

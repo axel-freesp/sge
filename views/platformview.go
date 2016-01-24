@@ -1,29 +1,31 @@
 package views
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/axel-freesp/sge/views/graph"
+	"image"
+	"log"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"image"
-	"log"
+	"github.com/axel-freesp/sge/views/graph"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	mp "github.com/axel-freesp/sge/interface/mapping"
 )
 
 type platformView struct {
 	parent         *ScaledView
 	area           DrawArea
-	p              interfaces.PlatformObject
-	context        interfaces.Context
+	p              pf.PlatformIf
+	context        Context
 	arch           []graph.ArchIf
 	dragOffs       image.Point
 	button1Pressed bool
 }
 
 var _ ScaledScene = (*platformView)(nil)
-var _ GraphView = (*platformView)(nil)
+var _ GraphViewIf = (*platformView)(nil)
 
-func PlatformViewNew(p interfaces.PlatformObject, context interfaces.Context) (viewer *platformView, err error) {
+func PlatformViewNew(p pf.PlatformIf, context Context) (viewer *platformView, err error) {
 	viewer = &platformView{nil, DrawArea{}, p, context, nil, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -33,7 +35,7 @@ func PlatformViewNew(p interfaces.PlatformObject, context interfaces.Context) (v
 	return
 }
 
-func PlatformViewDestroy(viewer GraphView) {
+func PlatformViewDestroy(viewer GraphViewIf) {
 	DrawAreaDestroy(viewer.(*platformView).area)
 }
 
@@ -56,23 +58,23 @@ func (v *platformView) init() (err error) {
 
 func (v *platformView) Sync() {
 	log.Printf("platformView.Sync()\n")
-	v.arch = make([]graph.ArchIf, len(v.p.ArchObjects()))
-	for i, a := range v.p.ArchObjects() {
+	v.arch = make([]graph.ArchIf, len(v.p.Arch()))
+	for i, a := range v.p.Arch() {
 		v.arch[i] = graph.ArchNew(a)
 	}
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
 }
 
-func (v platformView) IdentifyGraph(g interfaces.GraphObject) bool {
+func (v platformView) IdentifyGraph(g bh.SignalGraphIf) bool {
 	return false
 }
 
-func (v platformView) IdentifyPlatform(p interfaces.PlatformObject) bool {
+func (v platformView) IdentifyPlatform(p pf.PlatformIf) bool {
 	return p == v.p
 }
 
-func (v platformView) IdentifyMapping(g interfaces.MappingObject) bool {
+func (v platformView) IdentifyMapping(g mp.MappingIf) bool {
 	return false
 }
 
@@ -80,24 +82,24 @@ func (v platformView) IdentifyMapping(g interfaces.MappingObject) bool {
 //		Handle selection in treeview
 //
 
-func (v *platformView) Select(obj interfaces.GraphElement) {
+func (v *platformView) Select(obj interface{}) {
 	switch obj.(type) {
-	case interfaces.ArchObject:
-		arch := obj.(interfaces.ArchObject)
+	case pf.ArchIf:
+		arch := obj.(pf.ArchIf)
 		a, ok := v.focusArchFromUserObject(arch)
 		if ok {
 			v.selectArch(a)
 		}
-	case interfaces.ProcessObject:
-		pr := obj.(interfaces.ProcessObject)
-		a, ok := v.focusArchFromUserObject(pr.ArchObject())
+	case pf.ProcessIf:
+		pr := obj.(pf.ProcessIf)
+		a, ok := v.focusArchFromUserObject(pr.Arch())
 		if ok {
 			a.SelectProcess(pr)
 			v.repaintArch(a)
 		}
-	case interfaces.ChannelObject:
-		ch := obj.(interfaces.ChannelObject)
-		a, ok := v.focusArchFromUserObject(ch.ProcessObject().ArchObject())
+	case pf.ChannelIf:
+		ch := obj.(pf.ChannelIf)
+		a, ok := v.focusArchFromUserObject(ch.Process().Arch())
 		if ok {
 			a.SelectChannel(ch)
 			v.repaintArch(a)
@@ -117,7 +119,7 @@ func (v *platformView) selectArch(toSelect graph.ArchIf) {
 	}
 }
 
-func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret graph.ArchIf, ok bool) {
+func (v *platformView) focusArchFromUserObject(obj pf.ArchIf) (ret graph.ArchIf, ok bool) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
 		if obj.Name() == a.UserObj().Name() {
@@ -132,10 +134,10 @@ func (v *platformView) focusArchFromUserObject(obj interfaces.ArchObject) (ret g
 	return
 }
 
-func (v *platformView) Expand(obj interfaces.GraphElement) {
+func (v *platformView) Expand(obj interface{}) {
 }
 
-func (v *platformView) Collapse(obj interfaces.GraphElement) {
+func (v *platformView) Collapse(obj interface{}) {
 }
 
 //
@@ -187,8 +189,8 @@ func (v *platformView) handleArchSelect(pos image.Point) {
 			}
 			v.context.SelectArch(a.UserObj())
 			var ok bool
-			var pr interfaces.ProcessObject
-			var ch interfaces.ChannelObject
+			var pr pf.ProcessIf
+			var ch pf.ChannelIf
 			ok, pr, _ = a.GetSelectedProcess()
 			if ok {
 				v.context.SelectProcess(pr)
@@ -297,10 +299,10 @@ func (v *platformView) drawArch(context *cairo.Context, r image.Rectangle) {
 func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
 	for _, a := range v.arch {
 		for _, pr := range a.Processes() {
-			for _, c := range pr.UserObj().OutChannelObjects() {
-				link := c.LinkObject()
-				lpr := link.ProcessObject()
-				la := lpr.ArchObject()
+			for _, c := range pr.UserObj().OutChannels() {
+				link := c.Link()
+				lpr := link.Process()
+				la := lpr.Arch()
 				if la.Name() != a.Name() {
 					var a2 graph.ArchIf
 					for _, a2 = range v.arch {

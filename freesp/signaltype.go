@@ -19,7 +19,7 @@ type signalType struct {
  *  freesp.bh.SignalType API
  */
 
-var _ bh.SignalType = (*signalType)(nil)
+var _ bh.SignalTypeIf = (*signalType)(nil)
 
 func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode) (t *signalType, err error) {
 	newT := &signalType{name, ctype, msgid, scope, mode}
@@ -41,7 +41,7 @@ func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode) (t *
 	return
 }
 
-func SignalTypeDestroy(t bh.SignalType) {
+func SignalTypeDestroy(t bh.SignalTypeIf) {
 	registeredSignalTypes.Remove(t.TypeName())
 	delete(signalTypes, t.TypeName())
 }
@@ -87,6 +87,15 @@ func (t *signalType) SetMode(newMode bh.Mode) {
 	t.mode = newMode
 }
 
+func (t *signalType) CreateXml() (buf []byte, err error) {
+	if t != nil {
+		xmlsignaltype := CreateXmlSignalType(t)
+		buf, err = xmlsignaltype.Write()
+	}
+	return
+}
+
+
 /*
  *	fmt.Stringer API
  */
@@ -108,7 +117,7 @@ func (t *signalType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	switch parent.(type) {
 	case bh.LibraryIf:
 		prop = MayAddObject | MayEdit | MayRemove
-	case bh.Port, bh.PortType:
+	case bh.PortIf, bh.PortTypeIf:
 		prop = 0
 	default:
 		log.Fatalf("signalType.AddToTree error: invalid parent type %T\n", parent)
@@ -135,18 +144,18 @@ func (t *signalType) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []t
  */
 
 type signalTypeList struct {
-	signalTypes []bh.SignalType
+	signalTypes []bh.SignalTypeIf
 }
 
 func signalTypeListInit() signalTypeList {
 	return signalTypeList{nil}
 }
 
-func (l *signalTypeList) Append(st bh.SignalType) {
+func (l *signalTypeList) Append(st bh.SignalTypeIf) {
 	l.signalTypes = append(l.signalTypes, st)
 }
 
-func (l *signalTypeList) Remove(st bh.SignalType) {
+func (l *signalTypeList) Remove(st bh.SignalTypeIf) {
 	var i int
 	for i = range l.signalTypes {
 		if st == l.signalTypes[i] {
@@ -165,6 +174,6 @@ func (l *signalTypeList) Remove(st bh.SignalType) {
 	l.signalTypes = l.signalTypes[:len(l.signalTypes)-1]
 }
 
-func (l *signalTypeList) SignalTypes() []bh.SignalType {
+func (l *signalTypeList) SignalTypes() []bh.SignalTypeIf {
 	return l.signalTypes
 }

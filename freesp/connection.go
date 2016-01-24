@@ -2,36 +2,33 @@ package freesp
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 )
 
 type connection struct {
-	from, to bh.Port
+	from, to bh.PortIf
 }
 
-var _ interfaces.ConnectionObject = (*connection)(nil)
+var _ bh.ConnectionIf = (*connection)(nil)
 
-func ConnectionNew(from, to bh.Port) *connection {
+func ConnectionNew(from, to bh.PortIf) *connection {
 	return &connection{from, to}
 }
 
-func (c *connection) From() bh.Port {
+func (c *connection) From() bh.PortIf {
 	return c.from
 }
 
-func (c *connection) To() bh.Port {
+func (c *connection) To() bh.PortIf {
 	return c.to
 }
 
-func (c *connection) FromObject() interfaces.PortObject {
-	return c.from.(*port)
-}
-
-func (c *connection) ToObject() interfaces.PortObject {
-	return c.to.(*port)
+func (c *connection) CreateXml() (buf []byte, err error) {
+	xmlconn := CreateXmlConnection(c)
+	buf, err = xmlconn.Write()
+	return
 }
 
 //

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/axel-freesp/sge/freesp"
+	//"github.com/axel-freesp/sge/freesp"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
@@ -133,7 +134,7 @@ func editCopy(fts *models.FilesTreeStore, clp *gtk.Clipboard) {
 		log.Printf("editCopy error: %s\n", err)
 		return
 	}
-	buf, err = freesp.CreateXML(obj)
+	buf, err = obj.(gr.XmlCreator).CreateXml()
 	if err != nil {
 		log.Printf("editCopy error: %s\n", err)
 		return

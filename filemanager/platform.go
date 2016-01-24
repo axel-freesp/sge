@@ -38,8 +38,8 @@ func (f *fileManagerPF) New() (pl tr.ToplevelTreeElement, err error) {
 		return
 	}
 	f.context.FTV().SelectId(newId)
-	var pv views.GraphView
-	pv, err = views.PlatformViewNew(pl.(pf.PlatformIf).PlatformObject(), f.context)
+	var pv views.GraphViewIf
+	pv, err = views.PlatformViewNew(pl.(pf.PlatformIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.New: %s", err)
 		return
@@ -66,7 +66,7 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerPF.Access: platform file %s not found", name)
 		return
 	}
-	pv, err := views.PlatformViewNew(pl.(pf.PlatformIf).PlatformObject(), f.context)
+	pv, err := views.PlatformViewNew(pl.(pf.PlatformIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: Could not create platform view.")
 		return
@@ -99,7 +99,7 @@ func (f *fileManagerPF) Remove(name string) {
 	delete(f.platformMap, name)
 	id, _ := f.context.FTS().GetToplevelId(pl)
 	f.context.FTS().RemoveToplevel(id)
-	f.context.GVC().RemovePlatformView(pl.PlatformObject())
+	f.context.GVC().RemovePlatformView(pl)
 }
 
 func (f *fileManagerPF) Rename(oldName, newName string) (err error) {

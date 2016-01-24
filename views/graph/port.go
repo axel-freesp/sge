@@ -2,17 +2,18 @@ package graph
 
 import (
 	"image"
-	interfaces "github.com/axel-freesp/sge/interface"
+	gr "github.com/axel-freesp/sge/interface/graph"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 )
 
 type Port struct {
 	SelectableBox
-	userObj interfaces.PortObject
+	userObj bh.PortIf
 }
 
-func PortNew(box image.Rectangle, userObj interfaces.PortObject) *Port {
+func PortNew(box image.Rectangle, userObj bh.PortIf) *Port {
 	var config DrawConfig
-	if userObj.Direction() == interfaces.InPort {
+	if userObj.Direction() == gr.InPort {
 		config = DrawConfig{ColorInit(ColorOption(InputPort)),
 			ColorInit(ColorOption(HighlightInPort)),
 			ColorInit(ColorOption(SelectInPort)),
@@ -32,7 +33,7 @@ func PortNew(box image.Rectangle, userObj interfaces.PortObject) *Port {
 
 var _ PortIf = (*Port)(nil)
 
-func (p Port) UserObj() interfaces.PortObject {
+func (p Port) UserObj() bh.PortIf {
 	return p.userObj
 }
 

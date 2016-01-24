@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	pf "github.com/axel-freesp/sge/interface/platform"
-	tr "github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/models"
 	"image"
 	"log"
 	"strings"
+	"github.com/axel-freesp/sge/freesp"
+	"github.com/axel-freesp/sge/models"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type NewElementJob struct {
@@ -90,7 +90,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		case bh.NodeTypeIf:
 			context = parentObject.(bh.NodeTypeIf).DefinedAt()
 			j.parentId = getParentId(j.parentId)
-		case bh.SignalType:
+		case bh.SignalTypeIf:
 			j.parentId = getParentId(j.parentId)
 			parentObject, err = fts.GetObjectById(j.parentId)
 			context = parentObject.(bh.LibraryIf).Filename()
@@ -103,14 +103,14 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 
 	case eConnection:
 		switch parentObject.(type) {
-		case bh.Port:
+		case bh.PortIf:
 		case bh.SignalGraphTypeIf:
 			fromTo := strings.Split(j.extra, "/")
 			var n bh.NodeIf
 			for _, n = range parentObject.(bh.SignalGraphTypeIf).Nodes() {
 				if n.Name() == fromTo[0] {
 					for _, parentObject = range n.OutPorts() {
-						if parentObject.(bh.Port).Name() == fromTo[1] {
+						if parentObject.(bh.PortIf).Name() == fromTo[1] {
 							break
 						}
 					}
@@ -120,14 +120,14 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			if parentObject == nil {
 				log.Fatalf("NewElementJob.CreateObject(eNodeType) error: no valid FROM port for edge job %v\n", j)
 			}
-			_ = parentObject.(bh.Port)
+			_ = parentObject.(bh.PortIf)
 		case bh.ImplementationIf:
 			fromTo := strings.Split(j.extra, "/")
 			var n bh.NodeIf
 			for _, n = range parentObject.(bh.ImplementationIf).Graph().Nodes() {
 				if n.Name() == fromTo[0] {
 					for _, parentObject = range n.OutPorts() {
-						if parentObject.(bh.Port).Name() == fromTo[1] {
+						if parentObject.(bh.PortIf).Name() == fromTo[1] {
 							break
 						}
 					}
@@ -137,7 +137,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			if parentObject == nil {
 				log.Fatalf("NewElementJob.CreateObject(eNodeType) error: no valid FROM port for edge job %v\n", j)
 			}
-			_ = parentObject.(bh.Port)
+			_ = parentObject.(bh.PortIf)
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eConnection) error: referenced parentObject wrong type %T\n", parentObject)
 		}
@@ -145,13 +145,13 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		for _, p := range ports {
 			s := fmt.Sprintf("%s/%s", p.Node().Name(), p.Name())
 			if j.input[iPortSelect] == s {
-				var from, to bh.Port
-				if p.Direction() == interfaces.InPort {
-					from = parentObject.(bh.Port)
+				var from, to bh.PortIf
+				if p.Direction() == gr.InPort {
+					from = parentObject.(bh.PortIf)
 					to = p
 				} else {
 					from = p
-					to = parentObject.(bh.Port)
+					to = parentObject.(bh.PortIf)
 				}
 				ret = freesp.ConnectionNew(from, to)
 				break
@@ -160,7 +160,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 
 	case ePortType:
 		switch parentObject.(type) {
-		case bh.PortType:
+		case bh.PortTypeIf:
 			j.parentId = getParentId(j.parentId)
 		case bh.NodeTypeIf:
 		default:
@@ -175,7 +175,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 
 	case eSignalType:
 		switch parentObject.(type) {
-		case bh.SignalType:
+		case bh.SignalTypeIf:
 			j.parentId = getParentId(j.parentId)
 		case bh.NodeTypeIf:
 			j.parentId = getParentId(j.parentId)
@@ -227,7 +227,7 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eIOType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
-		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], interfaces.IOMode(j.input[iIOModeSelect]), p)
+		ret, err = freesp.IOTypeNew(j.input[iIOTypeName], gr.IOMode(j.input[iIOModeSelect]), p)
 
 	case eProcess:
 		switch parentObject.(type) {

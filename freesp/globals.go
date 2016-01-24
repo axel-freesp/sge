@@ -33,7 +33,7 @@ func RemoveRegisteredNodeType(nt bh.NodeTypeIf) {
 	}
 }
 
-func RemoveRegisteredSignalType(st bh.SignalType) {
+func RemoveRegisteredSignalType(st bh.SignalTypeIf) {
 	name := st.TypeName()
 	delete(signalTypes, name)
 	_, ok := registeredSignalTypes.Find(name)

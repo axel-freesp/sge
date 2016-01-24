@@ -1,7 +1,7 @@
 package platform
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/interface/tree"
 )
 
@@ -15,26 +15,31 @@ type PlatformIf interface {
 	SetPlatformId(string)
 	ProcessByName(string) (ProcessIf, bool)
 	Arch() []ArchIf
-	PlatformObject() interfaces.PlatformObject
 }
 
 type ArchIf interface {
 	tree.NamedTreeElementIf
-	interfaces.ModePositioner
+	graph.ModePositioner
 	Platform() PlatformIf
 	IOTypes() []IOTypeIf
 	Processes() []ProcessIf
+	ArchPorts() []ArchPortIf
+}
+
+type ArchPortIf interface {
+	graph.ModePositioner
+	Channel() ChannelIf
 }
 
 type IOTypeIf interface {
 	tree.NamedTreeElementIf
-	interfaces.IOModer
+	graph.IOModer
 	Platform() PlatformIf
 }
 
 type ProcessIf interface {
 	tree.NamedTreeElementIf
-	interfaces.ModePositioner
+	graph.ModePositioner
 	Arch() ArchIf
 	InChannels() []ChannelIf
 	OutChannels() []ChannelIf
@@ -42,10 +47,11 @@ type ProcessIf interface {
 
 type ChannelIf interface {
 	tree.NamedTreeElementIf
-	interfaces.Directioner
-	interfaces.ModePositioner
+	graph.Directioner
+	graph.ModePositioner
 	Process() ProcessIf
 	IOType() IOTypeIf
 	SetIOType(IOTypeIf)
 	Link() ChannelIf
+	ArchPort() ArchPortIf
 }

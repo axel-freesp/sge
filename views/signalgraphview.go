@@ -1,14 +1,15 @@
 package views
 
 import (
-	//	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/axel-freesp/sge/views/graph"
+	"image"
+	"log"
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-	"image"
-	"log"
+	"github.com/axel-freesp/sge/views/graph"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	mp "github.com/axel-freesp/sge/interface/mapping"
 )
 
 type signalGraphView struct {
@@ -16,17 +17,27 @@ type signalGraphView struct {
 	area        DrawArea
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
-	sgType      interfaces.GraphObject
-	context     interfaces.Context
+	sgType      bh.SignalGraphTypeIf
+	context     Context
 
 	dragOffs       image.Point
 	button1Pressed bool
 }
 
 var _ ScaledScene = (*signalGraphView)(nil)
-var _ GraphView = (*signalGraphView)(nil)
+var _ GraphViewIf = (*signalGraphView)(nil)
 
-func SignalGraphViewNew(g interfaces.GraphObject, context interfaces.Context) (viewer *signalGraphView, err error) {
+func SignalGraphViewNew(g bh.SignalGraphIf, context Context) (viewer *signalGraphView, err error) {
+	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g.ItsType(), context, image.Point{}, false}
+	err = viewer.init()
+	if err != nil {
+		return
+	}
+	viewer.Sync()
+	return
+}
+
+func SignalGraphViewNewFromType(g bh.SignalGraphTypeIf, context Context) (viewer *signalGraphView, err error) {
 	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -36,7 +47,7 @@ func SignalGraphViewNew(g interfaces.GraphObject, context interfaces.Context) (v
 	return
 }
 
-func SignalGraphViewDestroy(viewer GraphView) {
+func SignalGraphViewDestroy(viewer GraphViewIf) {
 	DrawAreaDestroy(viewer.(*signalGraphView).area)
 }
 
@@ -59,26 +70,26 @@ func (v *signalGraphView) init() (err error) {
 
 func (v *signalGraphView) Sync() {
 	g := v.sgType
-	v.nodes = make([]graph.NodeIf, len(g.NodeObjects()))
+	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 
 	var numberOfConnections = 0
-	for _, n := range g.NodeObjects() {
-		for _, p := range n.GetOutPorts() {
-			numberOfConnections += len(p.ConnectionObjects())
+	for _, n := range g.Nodes() {
+		for _, p := range n.OutPorts() {
+			numberOfConnections += len(p.Connections())
 		}
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
-	for i, n := range g.NodeObjects() {
+	for i, n := range g.Nodes() {
 		v.nodes[i] = graph.NodeNew(n.Position(), n)
 	}
 	var index = 0
-	for _, n := range g.NodeObjects() {
+	for _, n := range g.Nodes() {
 		from := v.findNode(n.Name())
-		for _, p := range n.GetOutPorts() {
+		for _, p := range n.OutPorts() {
 			fromId := from.OutPortIndex(p.Name())
-			for _, c := range p.ConnectionObjects() {
-				to := v.findNode(c.NodeObject().Name())
+			for _, c := range p.Connections() {
+				to := v.findNode(c.Node().Name())
 				toId := to.InPortIndex(c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
@@ -89,15 +100,15 @@ func (v *signalGraphView) Sync() {
 	v.drawAll()
 }
 
-func (v signalGraphView) IdentifyGraph(g interfaces.GraphObject) bool {
-	return g == v.sgType
+func (v signalGraphView) IdentifyGraph(g bh.SignalGraphIf) bool {
+	return g.ItsType() == v.sgType
 }
 
-func (v signalGraphView) IdentifyPlatform(g interfaces.PlatformObject) bool {
+func (v signalGraphView) IdentifyPlatform(g pf.PlatformIf) bool {
 	return false
 }
 
-func (v signalGraphView) IdentifyMapping(g interfaces.MappingObject) bool {
+func (v signalGraphView) IdentifyMapping(g mp.MappingIf) bool {
 	return false
 }
 
@@ -105,25 +116,25 @@ func (v signalGraphView) IdentifyMapping(g interfaces.MappingObject) bool {
 //		Handle selection in treeview
 //
 
-func (v *signalGraphView) Select(obj interfaces.GraphElement) {
+func (v *signalGraphView) Select(obj interface{}) {
 	switch obj.(type) {
-	case interfaces.NodeObject:
+	case bh.NodeIf:
 		v.deselectConnects()
-		v.selectNode(obj.(interfaces.NodeObject))
-	case interfaces.PortObject:
+		v.selectNode(obj.(bh.NodeIf))
+	case bh.PortIf:
 		v.deselectConnects()
-		n, ok := v.selectNode(obj.(interfaces.PortObject).NodeObject())
+		n, ok := v.selectNode(obj.(bh.PortIf).Node())
 		if ok {
-			n.(*graph.Node).SelectPort(obj.(interfaces.PortObject))
+			n.(*graph.Node).SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
 		}
-	case interfaces.ConnectionObject:
+	case bh.ConnectionIf:
 		v.deselectNodes()
-		v.selectConnect(obj.(interfaces.ConnectionObject))
+		v.selectConnect(obj.(bh.ConnectionIf))
 	}
 }
 
-func (v *signalGraphView) selectNode(obj interfaces.NodeObject) (ret graph.NodeIf, ok bool) {
+func (v *signalGraphView) selectNode(obj bh.NodeIf) (ret graph.NodeIf, ok bool) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
 		if obj == n.UserObj() {
@@ -150,13 +161,13 @@ func (v *signalGraphView) deselectNodes() {
 	}
 }
 
-func (v *signalGraphView) selectConnect(conn interfaces.ConnectionObject) {
-	n1 := v.findNode(conn.FromObject().NodeObject().Name())
-	n2 := v.findNode(conn.ToObject().NodeObject().Name())
+func (v *signalGraphView) selectConnect(conn bh.ConnectionIf) {
+	n1 := v.findNode(conn.From().Node().Name())
+	n2 := v.findNode(conn.To().Node().Name())
 	for _, c := range v.connections {
 		if n1 == c.From() && n2 == c.To() &&
-			n1.GetOutPorts()[c.FromId()] == conn.FromObject() &&
-			n2.GetInPorts()[c.ToId()] == conn.ToObject() {
+			n1.OutPorts()[c.FromId()] == conn.From() &&
+			n2.InPorts()[c.ToId()] == conn.To() {
 			if !c.Select() {
 				v.repaintConnection(c)
 			}
@@ -176,10 +187,10 @@ func (v *signalGraphView) deselectConnects() {
 	}
 }
 
-func (v *signalGraphView) Expand(obj interfaces.GraphElement) {
+func (v *signalGraphView) Expand(obj interface{}) {
 	switch obj.(type) {
-	case interfaces.NodeObject:
-		n := v.findNode(obj.(interfaces.NodeObject).Name())
+	case bh.NodeIf:
+		n := v.findNode(obj.(bh.NodeIf).Name())
 		if n != nil {
 			n.Expand()
 		}
@@ -187,10 +198,10 @@ func (v *signalGraphView) Expand(obj interfaces.GraphElement) {
 	}
 }
 
-func (v *signalGraphView) Collapse(obj interfaces.GraphElement) {
+func (v *signalGraphView) Collapse(obj interface{}) {
 	switch obj.(type) {
-	case interfaces.NodeObject:
-		n := v.findNode(obj.(interfaces.NodeObject).Name())
+	case bh.NodeIf:
+		n := v.findNode(obj.(bh.NodeIf).Name())
 		if n != nil {
 			n.Collapse()
 		}
@@ -271,10 +282,10 @@ func (v *signalGraphView) handleConnectSelect(pos image.Point) {
 		if hit {
 			c.Select()
 			n1 := c.From()
-			p1 := n1.GetOutPorts()[c.FromId()]
+			p1 := n1.OutPorts()[c.FromId()]
 			n2 := c.To()
-			p2 := n2.GetInPorts()[c.ToId()]
-			v.context.SelectConnect(p1.ConnectionObject(p2))
+			p2 := n2.InPorts()[c.ToId()]
+			v.context.SelectConnect(p1.Connection(p2))
 			v.repaintConnection(c)
 		} else {
 			if c.Deselect() {

@@ -2,36 +2,15 @@ package views
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
-	"github.com/gotk3/gotk3/gtk"
 	"log"
+	"github.com/gotk3/gotk3/gtk"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	pf "github.com/axel-freesp/sge/interface/platform"
+	mp "github.com/axel-freesp/sge/interface/mapping"
 )
 
-type GraphView interface {
-	Widget() *gtk.Widget
-	Sync()
-	Select(obj interfaces.GraphElement)
-	Expand(obj interfaces.GraphElement)
-	Collapse(obj interfaces.GraphElement)
-	IdentifyGraph(interfaces.GraphObject) bool
-	IdentifyPlatform(interfaces.PlatformObject) bool
-	IdentifyMapping(interfaces.MappingObject) bool
-}
-
-type GraphViewCollectionIf interface {
-	Add(gv GraphView, title string)
-	RemoveGraphView(g interfaces.GraphObject)
-	RemovePlatformView(p interfaces.PlatformObject)
-	RemoveMappingView(m interfaces.MappingObject)
-	Rename(old, new string)
-	Widget() *gtk.Widget
-	XmlTextView() *XmlTextView
-	Sync()
-	Select(obj interfaces.GraphElement)
-}
-
 type graphViewCollection struct {
-	graphview []GraphView
+	graphview []GraphViewIf
 	xmlview   *XmlTextView
 	box       *gtk.Box
 	header    *gtk.HeaderBar
@@ -77,11 +56,11 @@ func GraphViewCollectionNew(width, height int) (gvc *graphViewCollection, err er
 	return
 }
 
-func (gvc graphViewCollection) XmlTextView() *XmlTextView {
+func (gvc graphViewCollection) XmlTextView() XmlTextViewIf {
 	return gvc.xmlview
 }
 
-func (gvc *graphViewCollection) Add(gv GraphView, title string) {
+func (gvc *graphViewCollection) Add(gv GraphViewIf, title string) {
 	gvc.graphview = append(gvc.graphview, gv)
 	gvc.stack.AddTitled(gv.Widget(), title, title)
 	gv.Widget().ShowAll()
@@ -104,8 +83,8 @@ func (gvc *graphViewCollection) Rename(old, new string) {
 	}
 }
 
-func (gvc *graphViewCollection) RemoveGraphView(g interfaces.GraphObject) {
-	var tmp []GraphView
+func (gvc *graphViewCollection) RemoveGraphView(g bh.SignalGraphIf) {
+	var tmp []GraphViewIf
 	for _, v := range gvc.graphview {
 		if v.IdentifyGraph(g) {
 			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
@@ -118,8 +97,8 @@ func (gvc *graphViewCollection) RemoveGraphView(g interfaces.GraphObject) {
 	gvc.graphview = tmp
 }
 
-func (gvc *graphViewCollection) RemovePlatformView(p interfaces.PlatformObject) {
-	var tmp []GraphView
+func (gvc *graphViewCollection) RemovePlatformView(p pf.PlatformIf) {
+	var tmp []GraphViewIf
 	for _, v := range gvc.graphview {
 		if v.IdentifyPlatform(p) {
 			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
@@ -132,8 +111,8 @@ func (gvc *graphViewCollection) RemovePlatformView(p interfaces.PlatformObject) 
 	gvc.graphview = tmp
 }
 
-func (gvc *graphViewCollection) RemoveMappingView(m interfaces.MappingObject) {
-	var tmp []GraphView
+func (gvc *graphViewCollection) RemoveMappingView(m mp.MappingIf) {
+	var tmp []GraphViewIf
 	for _, v := range gvc.graphview {
 		if v.IdentifyMapping(m) {
 			gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
@@ -156,7 +135,7 @@ func (gvc *graphViewCollection) Sync() {
 	}
 }
 
-func (gvc *graphViewCollection) Select(obj interfaces.GraphElement) {
+func (gvc *graphViewCollection) Select(obj interface{}) {
 	for _, v := range gvc.graphview {
 		v.Select(obj)
 	}

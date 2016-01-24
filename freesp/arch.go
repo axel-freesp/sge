@@ -3,7 +3,7 @@ package freesp
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	interfaces "github.com/axel-freesp/sge/interface"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
@@ -15,16 +15,15 @@ type arch struct {
 	iotypes   ioTypeList
 	processes processList
 	platform  pf.PlatformIf
-	position  map[interfaces.PositionMode]image.Point
-	archPorts []interfaces.ArchPortObject
+	position  map[gr.PositionMode]image.Point
+	archports []pf.ArchPortIf
 }
 
 var _ pf.ArchIf = (*arch)(nil)
-var _ interfaces.ArchObject = (*arch)(nil)
 
 func ArchNew(name string, platform pf.PlatformIf) *arch {
 	return &arch{name, ioTypeListInit(), processListInit(), platform,
-		make(map[interfaces.PositionMode]image.Point), nil}
+		make(map[gr.PositionMode]image.Point), nil}
 }
 
 func createArchFromXml(xmla backend.XmlArch, platform pf.PlatformIf) (a *arch, err error) {
@@ -64,29 +63,28 @@ func (a *arch) IOTypes() []pf.IOTypeIf {
 	return a.iotypes.IoTypes()
 }
 
-func (a *arch) IOTypeObjects() []interfaces.IOTypeObject {
-	return a.iotypes.Exports()
-}
-
 func (a *arch) Processes() []pf.ProcessIf {
 	return a.processes.Processes()
 }
 
-func (a *arch) ProcessObjects() []interfaces.ProcessObject {
-	return a.processes.Exports()
+func (a *arch) ArchPorts() []pf.ArchPortIf {
+	return a.archports
 }
 
-func (a *arch) PortObjects() []interfaces.ArchPortObject {
-	return a.archPorts
-}
-
-func (a *arch) AddArchPort(ch interfaces.ChannelObject) (p *archPort) {
+func (a *arch) AddArchPort(ch pf.ChannelIf) (p *archPort) {
 	// TODO: Do all the checks...
 	p = archPortNew(ch)
-	a.archPorts = append(a.archPorts, p)
-	ch.(*channel).archPort = p
+	a.archports = append(a.archports, p)
+	ch.(*channel).archport = p
 	return
 }
+
+func (a *arch) CreateXml() (buf []byte, err error) {
+	xmla := CreateXmlArch(a)
+	buf, err = xmla.Write()
+	return
+}
+
 
 //
 //  Namer API
@@ -104,12 +102,12 @@ func (a *arch) SetName(newName string) {
 //      ModePositioner API
 //
 
-func (a *arch) ModePosition(mode interfaces.PositionMode) (p image.Point) {
+func (a *arch) ModePosition(mode gr.PositionMode) (p image.Point) {
 	p = a.position[mode]
 	return
 }
 
-func (a *arch) SetModePosition(mode interfaces.PositionMode, p image.Point) {
+func (a *arch) SetModePosition(mode gr.PositionMode, p image.Point) {
 	a.position[mode] = p
 }
 
@@ -257,16 +255,14 @@ func (a *arch) Identify(te tr.TreeElement) bool {
 
 type archList struct {
 	archs   []pf.ArchIf
-	exports []interfaces.ArchObject
 }
 
 func archListInit() archList {
-	return archList{nil, nil}
+	return archList{nil}
 }
 
 func (l *archList) Append(a *arch) {
 	l.archs = append(l.archs, a)
-	l.exports = append(l.exports, a)
 }
 
 func (l *archList) Remove(a pf.ArchIf) {
@@ -284,18 +280,12 @@ func (l *archList) Remove(a pf.ArchIf) {
 	}
 	for i++; i < len(l.archs); i++ {
 		l.archs[i-1] = l.archs[i]
-		l.exports[i-1] = l.exports[i]
 	}
 	l.archs = l.archs[:len(l.archs)-1]
-	l.exports = l.exports[:len(l.exports)-1]
 }
 
 func (l *archList) Archs() []pf.ArchIf {
 	return l.archs
-}
-
-func (l *archList) Exports() []interfaces.ArchObject {
-	return l.exports
 }
 
 func (l *archList) Find(name string) (a pf.ArchIf, ok bool) {

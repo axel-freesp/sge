@@ -3,14 +3,14 @@ package graph
 import (
     "image"
 	"github.com/gotk3/gotk3/cairo"
-	interfaces "github.com/axel-freesp/sge/interface"
+	"github.com/axel-freesp/sge/interface/graph"
 )
 
 type NamerObject struct {
-    namer interfaces.Namer
+    namer graph.Namer
 }
 
-func NamerObjectInit(namer interfaces.Namer) NamerObject {
+func NamerObjectInit(namer graph.Namer) NamerObject {
 	return NamerObject{namer}
 }
 
@@ -29,7 +29,7 @@ type NamedBoxObject struct {
 
 var _ NamedBox = (*NamedBoxObject)(nil)
 
-func NamedBoxObjectInit(box image.Rectangle, config DrawConfig, namer interfaces.Namer) NamedBoxObject {
+func NamedBoxObjectInit(box image.Rectangle, config DrawConfig, namer graph.Namer) NamedBoxObject {
     return NamedBoxObject{SelectableBoxInit(box, config), NamerObjectInit(namer)}
 }
 

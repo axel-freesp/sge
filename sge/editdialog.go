@@ -1,16 +1,14 @@
 package main
 
 import (
-	//"fmt"
+	"log"
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/freesp"
-	//tr "github.com/axel-freesp/sge/interface/tree"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
-	"github.com/axel-freesp/sge/models"
-	"github.com/gotk3/gotk3/gtk"
-	"log"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type EditDialog struct {
@@ -83,20 +81,20 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		}
 	case bh.NodeTypeIf:
 		dialog.typeNameEntry.SetText(obj.(bh.NodeTypeIf).TypeName())
-	case bh.PortType:
-		dialog.portNameEntry.SetText(obj.(bh.PortType).Name())
-		if obj.(bh.PortType).Direction() == interfaces.OutPort {
+	case bh.PortTypeIf:
+		dialog.portNameEntry.SetText(obj.(bh.PortTypeIf).Name())
+		if obj.(bh.PortTypeIf).Direction() == gr.OutPort {
 			dialog.directionSelector.SetActive(1)
 		}
 		for i, t = range freesp.GetRegisteredSignalTypes() {
-			if obj.(bh.PortType).SignalType().TypeName() == t {
+			if obj.(bh.PortTypeIf).SignalType().TypeName() == t {
 				break
 			}
 		}
 		dialog.signalTypeSelector.SetActive(i)
 		dialog.directionSelector.SetSensitive(false)
-	case bh.SignalType:
-		st := obj.(bh.SignalType)
+	case bh.SignalTypeIf:
+		st := obj.(bh.SignalTypeIf)
 		dialog.signalTypeNameEntry.SetText(st.TypeName())
 		dialog.cTypeEntry.SetText(st.CType())
 		dialog.channelIdEntry.SetText(st.ChannelId())
@@ -117,7 +115,7 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		}
 		dialog.ioModeSelector.SetActive(i)
 	case pf.ChannelIf:
-		if obj.(pf.ChannelIf).Direction() == interfaces.OutPort {
+		if obj.(pf.ChannelIf).Direction() == gr.OutPort {
 			dialog.channelDirectionSelector.SetActive(1)
 		}
 		dialog.channelDirectionSelector.SetSensitive(false)
@@ -137,7 +135,7 @@ func (dialog *EditDialog) setCurrentValues(context string) {
 		dialog.processSelector.SetActive(i)
 		dialog.processSelector.SetSensitive(false)
 	case mp.MappedElementIf:
-		pr := obj.(mp.MappedElementIf).Process()
+		pr, _ := obj.(mp.MappedElementIf).Process()
 		i := 0
 		for _, a := range obj.(mp.MappedElementIf).Mapping().Platform().Arch() {
 			for _, p := range a.Processes() {
@@ -180,14 +178,14 @@ func (dialog *EditDialog) getActiveElementType() (context string, e elementType)
 		}
 	case bh.NodeTypeIf:
 		e = eNodeType
-	case bh.Port:
+	case bh.PortIf:
 		e = ePort
-	case bh.PortType:
+	case bh.PortTypeIf:
 		e = ePortType
-	case bh.Connection:
+	case bh.ConnectionIf:
 		e = eConnection
 		log.Fatalf("editdialog.go: getActiveElementType error: Connection is read-only\n")
-	case bh.SignalType:
+	case bh.SignalTypeIf:
 		e = eSignalType
 	case bh.LibraryIf:
 		e = eLibrary

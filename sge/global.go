@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/filemanager"
 	"github.com/axel-freesp/sge/freesp"
-	interfaces "github.com/axel-freesp/sge/interface"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	mod "github.com/axel-freesp/sge/interface/model"
@@ -16,6 +15,12 @@ import (
 	"log"
 )
 
+type Context interface {
+	SelectMapElement(mp.MappedElementIf)
+}
+
+
+
 const (
 	width  = 800
 	height = 600
@@ -26,18 +31,18 @@ type Global struct {
 	jl                                      *jobList
 	fts                                     *models.FilesTreeStore
 	ftv                                     *views.FilesTreeView
-	graphviewMap                            map[bh.ImplementationIf]views.GraphView
+	graphviewMap                            map[bh.ImplementationIf]views.GraphViewIf
 	clp                                     *gtk.Clipboard
 	signalGraphMgr, libraryMgr, platformMgr mod.FileManagerIf
 	mappingMgr                              mod.FileManagerMappingIf
 }
 
-var _ interfaces.Context = (*Global)(nil)
+var _ views.Context = (*Global)(nil)
 var _ mod.ModelContextIf = (*Global)(nil)
 var _ filemanager.FilemanagerContextIf = (*Global)(nil)
 
 func GlobalInit(g *Global) {
-	g.graphviewMap = make(map[bh.ImplementationIf]views.GraphView)
+	g.graphviewMap = make(map[bh.ImplementationIf]views.GraphViewIf)
 	g.signalGraphMgr = filemanager.FileManagerSGNew(g)
 	g.libraryMgr = filemanager.FileManagerLibNew(g)
 	g.platformMgr = filemanager.FileManagerPFNew(g)
@@ -161,7 +166,7 @@ func (g *Global) CleanupNodeType(nt bh.NodeTypeIf) {
 	freesp.RemoveRegisteredNodeType(nt)
 }
 
-func (g *Global) SignalTypeIsInUse(st bh.SignalType) bool {
+func (g *Global) SignalTypeIsInUse(st bh.SignalTypeIf) bool {
 	var te tr.TreeElement
 	var err error
 	for i := 0; err == nil; i++ {
@@ -181,15 +186,15 @@ func (g *Global) SignalTypeIsInUse(st bh.SignalType) bool {
 	return false
 }
 
-func (g *Global) CleanupSignalType(st bh.SignalType) {
+func (g *Global) CleanupSignalType(st bh.SignalTypeIf) {
 	freesp.RemoveRegisteredSignalType(st)
 }
 
 //
-//		interfaces.Context interface
+//		views.Context interface
 //
 
-func (g *Global) SelectNode(node interfaces.NodeObject) {
+func (g *Global) SelectNode(node bh.NodeIf) {
 	n := node.(bh.NodeIf)
 	cursor := g.fts.Cursor(n)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
@@ -197,12 +202,12 @@ func (g *Global) SelectNode(node interfaces.NodeObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) EditNode(node interfaces.NodeObject) {
+func (g *Global) EditNode(node bh.NodeIf) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 
-func (g *Global) SelectPort(port interfaces.PortObject) {
-	p := port.(bh.Port)
+func (g *Global) SelectPort(port bh.PortIf) {
+	p := port.(bh.PortIf)
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
 	pCursor := g.fts.CursorAt(cursor, p)
@@ -211,8 +216,8 @@ func (g *Global) SelectPort(port interfaces.PortObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
-	c := conn.(bh.Connection)
+func (g *Global) SelectConnect(conn bh.ConnectionIf) {
+	c := conn.(bh.ConnectionIf)
 	p := c.From()
 	n := p.Node()
 	cursor := g.fts.Cursor(n)
@@ -223,7 +228,7 @@ func (g *Global) SelectConnect(conn interfaces.ConnectionObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectArch(obj interfaces.ArchObject) {
+func (g *Global) SelectArch(obj pf.ArchIf) {
 	a := obj.(pf.ArchIf)
 	cursor := g.fts.Cursor(a)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
@@ -231,7 +236,7 @@ func (g *Global) SelectArch(obj interfaces.ArchObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectProcess(obj interfaces.ProcessObject) {
+func (g *Global) SelectProcess(obj pf.ProcessIf) {
 	p := obj.(pf.ProcessIf)
 	a := p.Arch()
 	aCursor := g.fts.Cursor(a)
@@ -241,7 +246,7 @@ func (g *Global) SelectProcess(obj interfaces.ProcessObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
+func (g *Global) SelectChannel(obj pf.ChannelIf) {
 	c := obj.(pf.ChannelIf)
 	pr := c.Process()
 	a := pr.Arch()
@@ -253,8 +258,7 @@ func (g *Global) SelectChannel(obj interfaces.ChannelObject) {
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) SelectMapElement(obj interfaces.MapElemObject) {
-	melem := obj.(mp.MappedElementIf)
+func (g *Global) SelectMapElement(melem mp.MappedElementIf) {
 	cursor := g.fts.Cursor(melem)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)

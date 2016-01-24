@@ -1,22 +1,23 @@
 package freesp
 
 import (
-	interfaces "github.com/axel-freesp/sge/interface"
 	"image"
+	"github.com/axel-freesp/sge/interface/graph"
+	pf "github.com/axel-freesp/sge/interface/platform"
 )
 
 type archPort struct {
-	channel  interfaces.ChannelObject
-	position map[interfaces.PositionMode]image.Point
+	channel  pf.ChannelIf
+	position map[graph.PositionMode]image.Point
 }
 
-var _ interfaces.ArchPortObject = (*archPort)(nil)
+var _ pf.ArchPortIf = (*archPort)(nil)
 
-func archPortNew(ch interfaces.ChannelObject) *archPort {
-	return &archPort{ch, make(map[interfaces.PositionMode]image.Point)}
+func archPortNew(ch pf.ChannelIf) *archPort {
+	return &archPort{ch, make(map[graph.PositionMode]image.Point)}
 }
 
-func (p *archPort) Channel() interfaces.ChannelObject {
+func (p *archPort) Channel() pf.ChannelIf {
 	return p.channel
 }
 
@@ -24,11 +25,11 @@ func (p *archPort) Channel() interfaces.ChannelObject {
  *      ModePositioner API
  */
 
-func (p archPort) ModePosition(mode interfaces.PositionMode) (pt image.Point) {
+func (p archPort) ModePosition(mode graph.PositionMode) (pt image.Point) {
 	pt = p.position[mode]
 	return
 }
 
-func (p *archPort) SetModePosition(mode interfaces.PositionMode, pt image.Point) {
+func (p *archPort) SetModePosition(mode graph.PositionMode, pt image.Point) {
 	p.position[mode] = pt
 }

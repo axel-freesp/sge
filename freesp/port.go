@@ -2,44 +2,44 @@ package freesp
 
 import (
 	"fmt"
-	interfaces "github.com/axel-freesp/sge/interface"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
-	tr "github.com/axel-freesp/sge/interface/tree"
 	"log"
 	"unsafe"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
+	tr "github.com/axel-freesp/sge/interface/tree"
+	gr "github.com/axel-freesp/sge/interface/graph"
 )
 
 type port struct {
-	itsType   bh.PortType
+	itsType   bh.PortTypeIf
 	connected portList
-	conn      []bh.Connection
+	conn      []bh.ConnectionIf
 	node      bh.NodeIf
 }
 
-var _ interfaces.PortObject = (*port)(nil)
+var _ bh.PortIf = (*port)(nil)
 
 // TODO: Create namedPortType object first and hand it here?
-func newPort(pt bh.PortType, n bh.NodeIf) *port {
+func newPort(pt bh.PortTypeIf, n bh.NodeIf) *port {
 	return &port{pt, portListInit(), nil, n}
 }
 
 /*
- *  freesp.bh.Port API
+ *  freesp.bh.PortIf API
  *
- *  type bh.Port interface {
+ *  type bh.PortIf interface {
  *  	Name() string
- *  	ItsType() bh.PortType
+ *  	ItsType() bh.PortTypeIf
  *  	Direction() PortDirection
- *  	Connections() []bh.Port
+ *  	Connections() []bh.PortIf
  *  	bh.NodeIf() bh.NodeIf
- *      bh.Connection(c *port) bh.Connection
- *  	AddConnection(bh.Port) error
- *  	RemoveConnection(c bh.Port)
+ *      bh.ConnectionIf(c *port) bh.ConnectionIf
+ *  	AddConnection(bh.PortIf) error
+ *  	RemoveConnection(c bh.PortIf)
  *  }
  *
- *  func PortConnect(port1, port2 bh.Port) error
+ *  func PortConnect(port1, port2 bh.PortIf) error
  */
-var _ bh.Port = (*port)(nil)
+var _ bh.PortIf = (*port)(nil)
 
 func (p *port) Name() string {
 	return p.itsType.Name()
@@ -49,42 +49,34 @@ func (p *port) SetName(newName string) {
 	log.Panicf("port.SetName: not allowed.\n")
 }
 
-func (p *port) SignalType() bh.SignalType {
+func (p *port) SignalType() bh.SignalTypeIf {
 	return p.itsType.SignalType()
 }
 
-func (p *port) Direction() interfaces.PortDirection {
+func (p *port) Direction() gr.PortDirection {
 	return p.itsType.Direction()
 }
 
-func (p *port) SetDirection(interfaces.PortDirection) {
+func (p *port) SetDirection(gr.PortDirection) {
 	log.Panicf("port.SetDirection() is not allowed!\n")
 }
 
-func (p *port) Connections() []bh.Port {
+func (p *port) Connections() []bh.PortIf {
 	return p.connected.Ports()
-}
-
-func (p *port) ConnectionObjects() []interfaces.PortObject {
-	return p.connected.Exports()
 }
 
 func (p *port) Node() bh.NodeIf {
 	return p.node
 }
 
-func (p *port) NodeObject() interfaces.NodeObject {
-	return p.node
-}
-
-func (p *port) AddConnection(c bh.Connection) error {
+func (p *port) AddConnection(c bh.ConnectionIf) error {
 	return portConnect(p, c.(*connection))
 }
 
-func (p *port) RemoveConnection(c bh.Port) {
+func (p *port) RemoveConnection(c bh.PortIf) {
 	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
 	if !ok {
-		log.Fatalf("port.bh.Connection error: port %v not in connected list of port %v\n", c, p)
+		log.Fatalf("port.bh.ConnectionIf error: port %v not in connected list of port %v\n", c, p)
 	}
 	p.connected.Remove(c)
 	for index++; index < len(p.conn); index++ {
@@ -93,17 +85,17 @@ func (p *port) RemoveConnection(c bh.Port) {
 	p.conn = p.conn[:len(p.conn)-1]
 }
 
-func (p *port) Connection(c bh.Port) bh.Connection {
+func (p *port) Connection(c bh.PortIf) bh.ConnectionIf {
 	_, ok, index := p.connected.Find(c.Node().Name(), c.Name())
 	if !ok {
-		log.Fatalf("port.bh.Connection error: port %v not in connected list of port %v\n", c, p)
+		log.Fatalf("port.bh.ConnectionIf error: port %v not in connected list of port %v\n", c, p)
 	}
 	return p.conn[index]
 }
 
-func portConnect(port1 bh.Port, c *connection) error {
+func portConnect(port1 bh.PortIf, c *connection) error {
 	p1 := port1.(*port)
-	var port2 bh.Port
+	var port2 bh.PortIf
 	var p2 *port
 	if c.from.(*port) == p1 {
 		port2 = c.to
@@ -124,8 +116,15 @@ func portConnect(port1 bh.Port, c *connection) error {
 	return nil
 }
 
-func (p *port) ConnectionObject(c interfaces.PortObject) interfaces.ConnectionObject {
-	return p.Connection(c.(*port)).(*connection)
+func (p *port) CreateXml() (buf []byte, err error) {
+	if p.Direction() == gr.OutPort {
+		xmlport := CreateXmlOutPort(p)
+		buf, err = xmlport.Write()
+	} else {
+		xmlport := CreateXmlInPort(p)
+		buf, err = xmlport.Write()
+	}
+	return
 }
 
 /*
@@ -154,7 +153,7 @@ func (p *port) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 		prop = MayAddObject
 	}
 	var kind tr.Symbol
-	if p.Direction() == interfaces.InPort {
+	if p.Direction() == gr.InPort {
 		kind = tr.SymbolInputPort
 	} else {
 		kind = tr.SymbolOutputPort
@@ -173,7 +172,7 @@ func (p *port) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	return
 }
 
-func (p *port) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connection, otherPort bh.Port) (newCursor tr.Cursor) {
+func (p *port) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.ConnectionIf, otherPort bh.PortIf) (newCursor tr.Cursor) {
 	newCursor = tree.Insert(cursor)
 	conn.AddToTree(tree, newCursor)
 	contextCursor := tree.Parent(tree.Parent(cursor))
@@ -185,10 +184,10 @@ func (p *port) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connec
 
 func (p *port) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
-	case bh.Connection:
-		conn := obj.(bh.Connection)
-		var thisPort, otherPort bh.Port
-		if p.Direction() == interfaces.InPort {
+	case bh.ConnectionIf:
+		conn := obj.(bh.ConnectionIf)
+		var thisPort, otherPort bh.PortIf
+		if p.Direction() == gr.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
 		} else {
@@ -234,7 +233,7 @@ func (p *port) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement
 	return
 }
 
-func (p *port) treeRemoveObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connection, otherPort bh.Port) (removed []tr.IdWithObject) {
+func (p *port) treeRemoveObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.ConnectionIf, otherPort bh.PortIf) (removed []tr.IdWithObject) {
 	contextCursor := tree.Parent(tree.Parent(tree.Parent(cursor)))
 	pCursor := tree.CursorAt(contextCursor, otherPort)
 	otherCursor := tree.CursorAt(pCursor, conn)
@@ -251,10 +250,10 @@ func (p *port) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 	}
 	obj := tree.Object(cursor)
 	switch obj.(type) {
-	case bh.Connection:
-		conn := obj.(bh.Connection)
-		var thisPort, otherPort bh.Port
-		if p.Direction() == interfaces.InPort {
+	case bh.ConnectionIf:
+		conn := obj.(bh.ConnectionIf)
+		var thisPort, otherPort bh.PortIf
+		if p.Direction() == gr.InPort {
 			otherPort = conn.From()
 			thisPort = conn.To()
 			if p != thisPort {
@@ -290,7 +289,7 @@ func (p *port) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 		otherPort.RemoveConnection(p)
 
 	default:
-		log.Fatalf("bh.Port.RemoveObject error: invalid type %T: %v\n", obj, obj)
+		log.Fatalf("bh.PortIf.RemoveObject error: invalid type %T: %v\n", obj, obj)
 	}
 	return
 }
@@ -298,7 +297,7 @@ func (p *port) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 /*
  *  freesp private functions
  */
-func findPort(list []bh.Port, prt *port) bool {
+func findPort(list []bh.PortIf, prt *port) bool {
 	for _, p := range list {
 		if unsafe.Pointer(p.(*port)) == unsafe.Pointer(prt) {
 			return true
@@ -313,20 +312,18 @@ func findPort(list []bh.Port, prt *port) bool {
  */
 
 type portList struct {
-	ports    []bh.Port
-	exported []interfaces.PortObject
+	ports    []bh.PortIf
 }
 
 func portListInit() portList {
-	return portList{nil, nil}
+	return portList{nil}
 }
 
 func (l *portList) Append(p *port) {
 	l.ports = append(l.ports, p)
-	l.exported = append(l.exported, p)
 }
 
-func (l *portList) Remove(p bh.Port) {
+func (l *portList) Remove(p bh.PortIf) {
 	var i int
 	for i = range l.ports {
 		if p.Node().Name() == l.ports[i].Node().Name() && p.Name() == l.ports[i].Name() {
@@ -335,27 +332,21 @@ func (l *portList) Remove(p bh.Port) {
 	}
 	if i >= len(l.ports) {
 		for _, v := range l.ports {
-			log.Printf("portList.RemovePort have bh.Port %v\n", v)
+			log.Printf("portList.RemovePort have bh.PortIf %v\n", v)
 		}
-		log.Fatalf("portList.RemovePort error: bh.Port %v not in this list\n", p)
+		log.Fatalf("portList.RemovePort error: bh.PortIf %v not in this list\n", p)
 	}
 	for i++; i < len(l.ports); i++ {
 		l.ports[i-1] = l.ports[i]
-		l.exported[i-1] = l.exported[i]
 	}
 	l.ports = l.ports[:len(l.ports)-1]
-	l.exported = l.exported[:len(l.exported)-1]
 }
 
-func (l *portList) Ports() []bh.Port {
+func (l *portList) Ports() []bh.PortIf {
 	return l.ports
 }
 
-func (l *portList) Exports() []interfaces.PortObject {
-	return l.exported
-}
-
-func (l *portList) Find(nodeName, portName string) (p bh.Port, ok bool, index int) {
+func (l *portList) Find(nodeName, portName string) (p bh.PortIf, ok bool, index int) {
 	ok = false
 	for index, p = range l.ports {
 		if p.Node().Name() == nodeName && p.Name() == portName {
@@ -365,3 +356,5 @@ func (l *portList) Find(nodeName, portName string) (p bh.Port, ok bool, index in
 	}
 	return
 }
+
+

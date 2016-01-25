@@ -229,7 +229,8 @@ func parseNodeType(text, context string) (job *PasteJob, ok bool) {
 					return
 				}
 				nj.input[iNodeTypeSelect] = n.NType
-				nj.extra = fmt.Sprintf("%d|%d", n.Hint.X, n.Hint.Y)
+				//nj.extra = fmt.Sprintf("%d|%d", n.Hint.X, n.Hint.Y)
+				// TODO: SetModePosition ...
 				//fmt.Printf("parseNodeType: fill hint of implementation graph node: %s\n", nj.extra)
 				njob := PasteJobNew()
 				njob.newElements = append(njob.newElements, nj)

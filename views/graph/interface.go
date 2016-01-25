@@ -17,6 +17,10 @@ type NodeIf interface {
 	UserObj() bh.NodeIf
 	Expand()
 	Collapse()
+	InPort(int) BBoxer
+	OutPort(int) BBoxer
+	SelectPort(port bh.PortIf)
+	GetSelectedPort() (ok bool, port bh.PortIf)
 }
 
 type Porter interface {
@@ -69,31 +73,9 @@ type ProcessIf interface {
  * 	Basic items
  */
 
-type BBoxer interface {
-	gr.Positioner
-	gr.Shaper
-	BBox() image.Rectangle
-}
-
-type OnSelectionFunc func()
-
-type Selecter interface {
-	Select() bool
-	Deselect() bool
-	IsSelected() bool
-	RegisterOnSelect(inSelect, onDeselect OnSelectionFunc)
-}
-
-type OnHighlightFunc func(hit bool, pos image.Point) (modified bool)
-
-type Highlighter interface {
-	IsHighlighted() bool
-	RegisterOnHighlight(onHighlight OnHighlightFunc)
-	DoHighlight(state bool, pos image.Point) (modified bool)
-}
-
-type Drawer interface {
-	Draw(context interface{})
+type NamedBox interface {
+	gr.Namer
+	BoxedSelecter
 }
 
 type BoxedSelecter interface {
@@ -104,7 +86,27 @@ type BoxedSelecter interface {
 	CheckHit(image.Point) (hit, modified bool)
 }
 
-type NamedBox interface {
-	gr.Namer
-	BoxedSelecter
+type BBoxer interface {
+	gr.Positioner
+	gr.Shaper
+	BBox() image.Rectangle
 }
+
+type Drawer interface {
+	Draw(context interface{})
+}
+
+type Selecter interface {
+	Select() bool
+	Deselect() bool
+	IsSelected() bool
+	RegisterOnSelect(inSelect, onDeselect OnSelectionFunc)
+}
+type OnSelectionFunc func()
+
+type Highlighter interface {
+	IsHighlighted() bool
+	RegisterOnHighlight(onHighlight OnHighlightFunc)
+	DoHighlight(state bool, pos image.Point) (modified bool)
+}
+type OnHighlightFunc func(hit bool, pos image.Point) (modified bool)

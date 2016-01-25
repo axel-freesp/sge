@@ -6,6 +6,7 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"image"
 	"log"
 )
 
@@ -15,6 +16,7 @@ type portType struct {
 	signalType bh.SignalTypeIf
 	name       string
 	direction  gr.PortDirection
+	position   map[gr.PositionMode]image.Point
 }
 
 var _ bh.PortTypeIf = (*portType)(nil)
@@ -24,7 +26,7 @@ func PortTypeNew(name string, pTypeName string, dir gr.PortDirection) *portType 
 	if !ok {
 		log.Fatalf("NamedPortTypeNew error: FIXME: signal type '%s' not defined\n", pTypeName)
 	}
-	return &portType{st, name, dir}
+	return &portType{st, name, dir, make(map[gr.PositionMode]image.Point)}
 }
 
 func (t *portType) Name() string {
@@ -54,6 +56,19 @@ func (t *portType) SetDirection(newDir gr.PortDirection) {
 func (t *portType) String() (s string) {
 	s = fmt.Sprintf("bh.PortTypeIf(%s, %s, %s)", t.name, t.direction, t.SignalType())
 	return
+}
+
+/*
+ *      ModePositioner API
+ */
+
+func (t *portType) ModePosition(mode gr.PositionMode) (p image.Point) {
+	p = t.position[mode]
+	return
+}
+
+func (t *portType) SetModePosition(mode gr.PositionMode, p image.Point) {
+	t.position[mode] = p
 }
 
 func (t *portType) CreateXml() (buf []byte, err error) {

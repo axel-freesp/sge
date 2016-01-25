@@ -13,7 +13,7 @@ import (
  */
 
 type FilemanagerContextIf interface {
-	views.Context
+	views.ContextIf
 	mod.ModelContextIf
 	ShowAll()
 	FTS() tr.TreeMgrIf

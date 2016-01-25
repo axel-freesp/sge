@@ -8,6 +8,7 @@ import (
 type XmlPort struct {
 	PName string `xml:"port,attr"`
 	PType string `xml:"type,attr"`
+	XmlModeHint
 }
 
 type XmlInPort struct {
@@ -15,9 +16,10 @@ type XmlInPort struct {
 	XmlPort
 }
 
-func XmlInPortNew(pName, pType string) *XmlInPort {
-	return &XmlInPort{xml.Name{freespNamespace, "intype"},
-		XmlPort{pName, pType}}
+func XmlInPortNew(pName, pType string) (xmlp *XmlInPort) {
+	xmlp = &XmlInPort{xml.Name{freespNamespace, "intype"},
+		XmlPort{pName, pType, XmlModeHint{}}}
+	return
 }
 
 type XmlOutPort struct {
@@ -25,9 +27,10 @@ type XmlOutPort struct {
 	XmlPort
 }
 
-func XmlOutPortNew(pName, pType string) *XmlOutPort {
-	return &XmlOutPort{xml.Name{freespNamespace, "outtype"},
-		XmlPort{pName, pType}}
+func XmlOutPortNew(pName, pType string) (xmlp *XmlOutPort) {
+	xmlp = &XmlOutPort{xml.Name{freespNamespace, "outtype"},
+		XmlPort{pName, pType, XmlModeHint{}}}
+	return
 }
 
 func (p *XmlPort) Read(data []byte) (cnt int, err error) {

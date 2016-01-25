@@ -17,7 +17,8 @@ type node struct {
 	inPort   portList
 	outPort  portList
 	portlink bh.PortTypeIf
-	position image.Point
+	position map[gr.PositionMode]image.Point
+	expanded bool
 }
 
 /*
@@ -36,7 +37,7 @@ func NodeNew(name string, ntype bh.NodeTypeIf, context bh.SignalGraphTypeIf) (re
 		err = fmt.Errorf("NodeNew error: type '%s' has no ports.", ntype.TypeName())
 		return
 	}
-	ret = &node{context, name, ntype, portListInit(), portListInit(), nil, image.Point{}}
+	ret = &node{context, name, ntype, portListInit(), portListInit(), nil, make(map[gr.PositionMode]image.Point), false}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p)
 	}
@@ -93,6 +94,14 @@ func (n *node) OutPorts() []bh.PortIf {
 
 func (n *node) Context() bh.SignalGraphTypeIf {
 	return n.context
+}
+
+func (n *node) Expanded() bool {
+	return n.expanded
+}
+
+func (n *node) SetExpanded(xp bool) {
+	n.expanded = xp
 }
 
 func (n *node) CreateXml() (buf []byte, err error) {
@@ -284,19 +293,17 @@ func IsProcessingNode(n bh.NodeIf) bool {
 }
 
 /*
- *      Positioner API
+ *      ModePositioner API
  */
 
-func (n *node) Position() (p image.Point) {
-	p = n.position
+func (n *node) ModePosition(mode gr.PositionMode) (pos image.Point) {
+	pos = n.position[mode]
 	return
 }
 
-func (n *node) SetPosition(p image.Point) {
-	n.position = p
+func (n *node) SetModePosition(mode gr.PositionMode, pos image.Point) {
+	n.position[mode] = pos
 }
-
-var _ gr.Positioner = (*node)(nil)
 
 /*
  *      Namer API

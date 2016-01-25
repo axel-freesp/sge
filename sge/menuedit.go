@@ -22,6 +22,11 @@ func MenuEditInit(menu *GoAppMenu) {
 	menu.editDelete.Connect("activate", func() { editDelete(menu, fts, jl, ftv) })
 	menu.editCopy.Connect("activate", func() { editCopy(fts, clp) })
 	menu.editPaste.Connect("activate", func() { editPaste(menu, fts, jl, ftv, clp) })
+	menu.editUndo.SetSensitive(false)
+	menu.editRedo.SetSensitive(false)
+	menu.editNew.SetSensitive(false)
+	menu.editDelete.SetSensitive(false)
+	menu.editEdit.SetSensitive(false)
 }
 
 func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {

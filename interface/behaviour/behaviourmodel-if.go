@@ -71,13 +71,15 @@ const (
 
 type NodeIf interface {
 	tree.NamedTreeElementIf
-	graph.Positioner
+	graph.ModePositioner
 	ItsType() NodeTypeIf
 	InPorts() []PortIf
 	OutPorts() []PortIf
 	InPortIndex(portname string) int
 	OutPortIndex(portname string) int
 	Context() SignalGraphTypeIf
+	Expanded() bool
+	SetExpanded(bool)
 }
 
 type SignalTypeIf interface {
@@ -110,6 +112,7 @@ const (
 type PortTypeIf interface {
 	tree.NamedTreeElementIf
 	graph.Directioner
+	graph.ModePositioner
 	SignalType() SignalTypeIf
 	SetSignalType(SignalTypeIf)
 }
@@ -117,6 +120,7 @@ type PortTypeIf interface {
 type PortIf interface {
 	tree.TreeElement
 	graph.Directioner
+	graph.ModePositioner
 	Name() string
 	SignalType() SignalTypeIf
 	Connections() []PortIf

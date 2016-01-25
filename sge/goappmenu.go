@@ -7,31 +7,35 @@ import (
 )
 
 type GoAppMenu struct {
-	menubar     *gtk.MenuBar
-	menuFile    *gtk.Menu
-	filemenu    *gtk.MenuItem
-	fileNewSg   *gtk.MenuItem
-	fileNewLib  *gtk.MenuItem
-	fileNewPlat *gtk.MenuItem
-	fileNewMap  *gtk.MenuItem
-	fileOpen    *gtk.MenuItem
-	fileSave    *gtk.MenuItem
-	fileSaveAs  *gtk.MenuItem
-	fileClose   *gtk.MenuItem
-	fileQuit    *gtk.MenuItem
-	menuEdit    *gtk.Menu
-	editmenu    *gtk.MenuItem
-	editUndo    *gtk.MenuItem
-	editRedo    *gtk.MenuItem
-	editNew     *gtk.MenuItem
-	editEdit    *gtk.MenuItem
-	editDelete  *gtk.MenuItem
-	editCopy    *gtk.MenuItem
-	editPaste   *gtk.MenuItem
-	menuAbout   *gtk.Menu
-	aboutmenu   *gtk.MenuItem
-	aboutAbout  *gtk.MenuItem
-	aboutHelp   *gtk.MenuItem
+	menubar      *gtk.MenuBar
+	menuFile     *gtk.Menu
+	filemenu     *gtk.MenuItem
+	fileNewSg    *gtk.MenuItem
+	fileNewLib   *gtk.MenuItem
+	fileNewPlat  *gtk.MenuItem
+	fileNewMap   *gtk.MenuItem
+	fileOpen     *gtk.MenuItem
+	fileSave     *gtk.MenuItem
+	fileSaveAs   *gtk.MenuItem
+	fileClose    *gtk.MenuItem
+	fileQuit     *gtk.MenuItem
+	menuEdit     *gtk.Menu
+	editmenu     *gtk.MenuItem
+	editUndo     *gtk.MenuItem
+	editRedo     *gtk.MenuItem
+	editNew      *gtk.MenuItem
+	editEdit     *gtk.MenuItem
+	editDelete   *gtk.MenuItem
+	editCopy     *gtk.MenuItem
+	editPaste    *gtk.MenuItem
+	menuView     *gtk.Menu
+	viewmenu     *gtk.MenuItem
+	viewExpand   *gtk.MenuItem
+	viewCollapse *gtk.MenuItem
+	menuAbout    *gtk.Menu
+	aboutmenu    *gtk.MenuItem
+	aboutAbout   *gtk.MenuItem
+	aboutHelp    *gtk.MenuItem
 
 	aboutdialog *gtk.AboutDialog
 }
@@ -124,31 +128,31 @@ func (m *GoAppMenu) Init() {
 	}
 	m.editUndo, err = gtk.MenuItemNewWithMnemonic("_Undo")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editUndo:", err)
 	}
 	m.editRedo, err = gtk.MenuItemNewWithMnemonic("_Redo")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editRedo:", err)
 	}
 	m.editNew, err = gtk.MenuItemNewWithMnemonic("_New Element")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editNew:", err)
 	}
 	m.editEdit, err = gtk.MenuItemNewWithMnemonic("_Edit")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editEdit:", err)
 	}
 	m.editCopy, err = gtk.MenuItemNewWithMnemonic("_Copy")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editCopy:", err)
 	}
 	m.editDelete, err = gtk.MenuItemNewWithMnemonic("_Delete")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editDelete:", err)
 	}
 	m.editPaste, err = gtk.MenuItemNewWithMnemonic("_Paste")
 	if err != nil {
-		log.Fatal("Unable to create editmenu:", err)
+		log.Fatal("Unable to create editPaste:", err)
 	}
 	m.menuEdit.Append(m.editUndo)
 	m.menuEdit.Append(m.editRedo)
@@ -163,6 +167,27 @@ func (m *GoAppMenu) Init() {
 	m.menuEdit.Append(m.editPaste)
 	m.editmenu.SetSubmenu(m.menuEdit)
 	m.menubar.Append(m.editmenu)
+
+	m.menuView, err = gtk.MenuNew()
+	if err != nil {
+		log.Fatal("Unable to create menuView:", err)
+	}
+	m.viewmenu, err = gtk.MenuItemNewWithMnemonic("_View")
+	if err != nil {
+		log.Fatal("Unable to create viewmenu:", err)
+	}
+	m.viewExpand, err = gtk.MenuItemNewWithMnemonic("E_xpand")
+	if err != nil {
+		log.Fatal("Unable to create viewExpand:", err)
+	}
+	m.viewCollapse, err = gtk.MenuItemNewWithMnemonic("Co_llapse")
+	if err != nil {
+		log.Fatal("Unable to create viewCollapse:", err)
+	}
+	m.menuView.Append(m.viewExpand)
+	m.menuView.Append(m.viewCollapse)
+	m.viewmenu.SetSubmenu(m.menuView)
+	m.menubar.Append(m.viewmenu)
 
 	m.menuAbout, err = gtk.MenuNew()
 	if err != nil {

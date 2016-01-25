@@ -2,6 +2,7 @@ package views
 
 import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/axel-freesp/sge/views/graph"
@@ -18,7 +19,7 @@ type signalGraphView struct {
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	sgType      bh.SignalGraphTypeIf
-	context     Context
+	context     ContextIf
 
 	dragOffs       image.Point
 	button1Pressed bool
@@ -27,7 +28,7 @@ type signalGraphView struct {
 var _ ScaledScene = (*signalGraphView)(nil)
 var _ GraphViewIf = (*signalGraphView)(nil)
 
-func SignalGraphViewNew(g bh.SignalGraphIf, context Context) (viewer *signalGraphView, err error) {
+func SignalGraphViewNew(g bh.SignalGraphIf, context ContextIf) (viewer *signalGraphView, err error) {
 	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g.ItsType(), context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -37,7 +38,7 @@ func SignalGraphViewNew(g bh.SignalGraphIf, context Context) (viewer *signalGrap
 	return
 }
 
-func SignalGraphViewNewFromType(g bh.SignalGraphTypeIf, context Context) (viewer *signalGraphView, err error) {
+func SignalGraphViewNewFromType(g bh.SignalGraphTypeIf, context ContextIf) (viewer *signalGraphView, err error) {
 	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -81,7 +82,11 @@ func (v *signalGraphView) Sync() {
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
 	for i, n := range g.Nodes() {
-		v.nodes[i] = graph.NodeNew(n.Position(), n)
+		if n.Expanded() {
+			v.nodes[i] = graph.ExpandedNodeNew(n.ModePosition(gr.PositionModeExpanded), n)
+		} else {
+			v.nodes[i] = graph.NodeNew(n.ModePosition(gr.PositionModeNormal), n)
+		}
 	}
 	var index = 0
 	for _, n := range g.Nodes() {
@@ -125,7 +130,7 @@ func (v *signalGraphView) Select(obj interface{}) {
 		v.deselectConnects()
 		n, ok := v.selectNode(obj.(bh.PortIf).Node())
 		if ok {
-			n.(*graph.Node).SelectPort(obj.(bh.PortIf))
+			n.(graph.NodeIf).SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
 		}
 	case bh.ConnectionIf:
@@ -190,10 +195,13 @@ func (v *signalGraphView) deselectConnects() {
 func (v *signalGraphView) Expand(obj interface{}) {
 	switch obj.(type) {
 	case bh.NodeIf:
-		n := v.findNode(obj.(bh.NodeIf).Name())
-		if n != nil {
-			n.Expand()
+		log.Printf("signalGraphView.Expand\n")
+		if obj.(bh.NodeIf).Expanded() {
+			log.Printf("signalGraphView.Expand: nothing to do\n")
+			return
 		}
+		obj.(bh.NodeIf).SetExpanded(true)
+		v.Sync()
 	default:
 	}
 }
@@ -201,10 +209,13 @@ func (v *signalGraphView) Expand(obj interface{}) {
 func (v *signalGraphView) Collapse(obj interface{}) {
 	switch obj.(type) {
 	case bh.NodeIf:
-		n := v.findNode(obj.(bh.NodeIf).Name())
-		if n != nil {
-			n.Collapse()
+		log.Printf("signalGraphView.Collapse\n")
+		if !obj.(bh.NodeIf).Expanded() {
+			log.Printf("signalGraphView.Collapse: nothing to do\n")
+			return
 		}
+		obj.(bh.NodeIf).SetExpanded(false)
+		v.Sync()
 	default:
 	}
 }
@@ -264,7 +275,7 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 				v.repaintNode(n)
 			}
 			v.context.SelectNode(n.UserObj())
-			ok, port := n.(*graph.Node).GetSelectedPort()
+			ok, port := n.(graph.NodeIf).GetSelectedPort()
 			if ok {
 				v.context.SelectPort(port)
 			}
@@ -376,10 +387,10 @@ func (v *signalGraphView) drawNodes(context *cairo.Context, r image.Rectangle) {
 //		Private functions
 //
 
-func (v *signalGraphView) findNode(name string) *graph.Node {
+func (v *signalGraphView) findNode(name string) graph.NodeIf {
 	for _, d := range v.nodes {
 		if d.Name() == name {
-			return d.(*graph.Node)
+			return d
 		}
 	}
 	return nil

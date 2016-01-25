@@ -7,6 +7,7 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"image"
 	"log"
 )
 
@@ -184,23 +185,33 @@ func (t *nodeType) doResolvePort(name string, dir gr.PortDirection) *portType {
 	return nil
 }
 
-func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context mod.ModelContextIf) *nodeType {
-	nt := NodeTypeNew(n.TypeName, filename)
-	for _, p := range n.InPort {
-		pType, ok := freesp.GetSignalTypeByName(p.PType)
+func createNodeTypeFromXml(xmlnt backend.XmlNodeType, filename string, context mod.ModelContextIf) *nodeType {
+	nt := NodeTypeNew(xmlnt.TypeName, filename)
+	for _, xmlp := range xmlnt.InPort {
+		pType, ok := freesp.GetSignalTypeByName(xmlp.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", xmlp.PType)
 		}
-		nt.addInPort(p.PName, pType)
+		pt := PortTypeNew(xmlp.PName, pType.TypeName(), gr.InPort)
+		for _, xmlmp := range xmlp.Entry {
+			pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
+		}
+		nt.inPorts.Append(pt)
+		//nt.addInPort(xmlp.PName, pType)
 	}
-	for _, p := range n.OutPort {
-		pType, ok := freesp.GetSignalTypeByName(p.PType)
+	for _, xmlp := range xmlnt.OutPort {
+		pType, ok := freesp.GetSignalTypeByName(xmlp.PType)
 		if !ok {
-			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", p.PType)
+			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", xmlp.PType)
 		}
-		nt.addOutPort(p.PName, pType)
+		pt := PortTypeNew(xmlp.PName, pType.TypeName(), gr.OutPort)
+		for _, xmlmp := range xmlp.Entry {
+			pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
+		}
+		nt.outPorts.Append(pt)
+		//nt.addOutPort(xmlp.PName, pType)
 	}
-	for _, i := range n.Implementation {
+	for _, i := range xmlnt.Implementation {
 		var iType bh.ImplementationType
 		if len(i.SignalGraph) == 1 {
 			iType = bh.NodeTypeGraph
@@ -217,7 +228,7 @@ func createNodeTypeFromXml(n backend.XmlNodeType, filename string, context mod.M
 			var resolvePort = func(name string, dir gr.PortDirection) *portType {
 				return nt.doResolvePort(name, dir)
 			}
-			impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], n.TypeName, context, resolvePort)
+			impl.graph, err = createSignalGraphTypeFromXml(&i.SignalGraph[0], xmlnt.TypeName, context, resolvePort)
 			if err != nil {
 				log.Fatal(err)
 			}

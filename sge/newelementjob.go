@@ -10,7 +10,7 @@ import (
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
-	"image"
+	//"image"
 	"log"
 	"strings"
 )
@@ -81,9 +81,10 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 			var x, y int
 			fmt.Sscanf(coords[0], "%d", &x)
 			fmt.Sscanf(coords[1], "%d", &y)
-			pos := image.Point{x, y}
+			//pos := image.Point{x, y}
 			//log.Printf("NewElementJob.CreateObject(eNode) setting position %s: %v\n", j.extra, pos)
-			ret.(bh.NodeIf).SetPosition(pos)
+			//ret.(bh.NodeIf).SetPosition(pos)
+			// TODO: SetModePosition...
 		}
 
 	case eNodeType:

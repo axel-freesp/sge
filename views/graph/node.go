@@ -7,15 +7,7 @@ import (
 	"github.com/axel-freesp/sge/tool"
 	"github.com/gotk3/gotk3/cairo"
 	"image"
-)
-
-type ColorMode int
-
-const (
-	NormalMode ColorMode = iota
-	HighlightMode
-	SelectedMode
-	NumColorMode
+	"log"
 )
 
 type Node struct {
@@ -122,6 +114,22 @@ func (n Node) OutPortIndex(portName string) int {
 	return n.userObj.OutPortIndex(portName)
 }
 
+func (n Node) InPort(idx int) (p BBoxer) {
+	if idx >= n.NumInPorts() {
+		log.Panicf("FIXME: Node.InPort(%d): index out of range.\n")
+	}
+	p = n.ports[idx]
+	return
+}
+
+func (n Node) OutPort(idx int) (p BBoxer) {
+	if idx >= n.NumOutPorts() {
+		log.Panicf("FIXME: Node.OutPort(%d): index out of range.\n")
+	}
+	p = n.ports[idx+n.NumInPorts()]
+	return
+}
+
 func (n *Node) Expand() {
 }
 
@@ -145,7 +153,7 @@ var _ gr.Positioner = (*Port)(nil)
 // (overwrite BBoxObject default implementation)
 func (n *Node) SetPosition(pos image.Point) {
 	shift := pos.Sub(n.Position())
-	n.userObj.SetPosition(pos)
+	n.userObj.SetModePosition(gr.PositionModeNormal, pos)
 	n.BBoxDefaultSetPosition(pos)
 	for _, p := range n.ports {
 		p.SetPosition(p.Position().Add(shift))

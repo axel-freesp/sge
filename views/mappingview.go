@@ -21,7 +21,7 @@ type mappingView struct {
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	arch        []graph.ArchIf
-	context     Context
+	context     ContextIf
 	unmapped    graph.ProcessIf
 	unmappedObj pf.ProcessIf
 
@@ -32,7 +32,7 @@ type mappingView struct {
 var _ ScaledScene = (*mappingView)(nil)
 var _ GraphViewIf = (*mappingView)(nil)
 
-func MappingViewNew(m mp.MappingIf, context Context) (viewer *mappingView, err error) {
+func MappingViewNew(m mp.MappingIf, context ContextIf) (viewer *mappingView, err error) {
 	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, &unmappedProcess{}, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
@@ -75,7 +75,7 @@ func (v *mappingView) Sync() {
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 	for i, n := range g.Nodes() {
-		v.nodes[i] = graph.NodeNew(n.Position(), n)
+		v.nodes[i] = graph.NodeNew(n.ModePosition(gr.PositionModeMapping), n)
 	}
 	var index = 0
 	for _, n := range g.Nodes() {

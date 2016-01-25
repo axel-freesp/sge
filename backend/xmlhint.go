@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+type XmlNodeHint struct {
+	XmlModeHint
+	Expanded bool `xml:"expanded,attr"`
+}
+
 type XmlHint struct {
 	X int `xml:"x,attr"`
 	Y int `xml:"y,attr"`

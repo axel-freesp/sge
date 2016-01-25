@@ -2,25 +2,35 @@ package behaviour
 
 import (
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
+	"log"
 	"strings"
 )
 
-func CreateXmlInPort(p bh.PortIf) *backend.XmlInPort {
-	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+func CreateXmlInPort(p bh.PortIf) (xmlp *backend.XmlInPort) {
+	xmlp = backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	return
 }
 
-func CreateXmlOutPort(p bh.PortIf) *backend.XmlOutPort {
-	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+func CreateXmlOutPort(p bh.PortIf) (xmlp *backend.XmlOutPort) {
+	xmlp = backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	return
 }
 
-func CreateXmlNamedInPort(p bh.PortTypeIf) *backend.XmlInPort {
-	return backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+func CreateXmlNamedInPort(p bh.PortTypeIf) (xmlp *backend.XmlInPort) {
+	xmlp = backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
+	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	return
 }
 
-func CreateXmlNamedOutPort(p bh.PortTypeIf) *backend.XmlOutPort {
-	return backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+func CreateXmlNamedOutPort(p bh.PortTypeIf) (xmlp *backend.XmlOutPort) {
+	xmlp = backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
+	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	return
 }
 
 func CreateXmlInputNode(n bh.NodeIf) *backend.XmlInputNode {
@@ -28,8 +38,8 @@ func CreateXmlInputNode(n bh.NodeIf) *backend.XmlInputNode {
 	if strings.HasPrefix(tName, "autoInputNodeType-") {
 		tName = ""
 	}
-	pos := n.Position()
-	ret := backend.XmlInputNodeNew(n.Name(), tName, pos.X, pos.Y)
+	ret := backend.XmlInputNodeNew(n.Name(), tName)
+	ret.Entry = freesp.CreateXmlModePosition(n).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -44,8 +54,8 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 	if strings.HasPrefix(tName, "autoOutputNodeType-") {
 		tName = ""
 	}
-	pos := n.Position()
-	ret := backend.XmlOutputNodeNew(n.Name(), tName, pos.X, pos.Y)
+	ret := backend.XmlOutputNodeNew(n.Name(), tName)
+	ret.Entry = freesp.CreateXmlModePosition(n).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -56,16 +66,16 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 }
 
 func CreateXmlProcessingNode(n bh.NodeIf) *backend.XmlProcessingNode {
-	pos := n.Position()
-	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), pos.X, pos.Y)
-	if len(n.ItsType().DefinedAt()) == 0 {
-		for _, p := range n.InPorts() {
-			ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
-		}
-		for _, p := range n.OutPorts() {
-			ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
-		}
+	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), n.Expanded())
+	ret.Entry = freesp.CreateXmlModePosition(n).Entry
+	//if len(n.ItsType().DefinedAt()) == 0 {
+	for _, p := range n.InPorts() {
+		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
 	}
+	for _, p := range n.OutPorts() {
+		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
+	}
+	//}
 	return ret
 }
 
@@ -133,6 +143,7 @@ func CreateXmlSignalGraph(g bh.SignalGraphIf) *backend.XmlSignalGraph {
 func CreateXmlSignalGraphType(t bh.SignalGraphTypeIf) *backend.XmlSignalGraph {
 	ret := backend.XmlSignalGraphNew()
 	for _, l := range t.Libraries() {
+		log.Printf("CreateXmlSignalGraphType: l=%v\n", l)
 		ret.Libraries = append(ret.Libraries, *CreateXmlLibraryRef(l))
 	}
 	for _, n := range t.InputNodes() {

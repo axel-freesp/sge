@@ -16,10 +16,6 @@ import (
 	"log"
 )
 
-type Context interface {
-	SelectMapElement(mp.MappedElementIf)
-}
-
 const (
 	width  = 800
 	height = 600
@@ -36,7 +32,7 @@ type Global struct {
 	mappingMgr                              mod.FileManagerMappingIf
 }
 
-var _ views.Context = (*Global)(nil)
+var _ views.ContextIf = (*Global)(nil)
 var _ mod.ModelContextIf = (*Global)(nil)
 var _ filemanager.FilemanagerContextIf = (*Global)(nil)
 

@@ -10,7 +10,7 @@ type XmlNode struct {
 	NType   string       `xml:"type,attr"`
 	InPort  []XmlInPort  `xml:"intype"`
 	OutPort []XmlOutPort `xml:"outtype"`
-	Hint    XmlHint      `xml:"hint"`
+	XmlNodeHint
 }
 
 type XmlInputNode struct {
@@ -47,8 +47,8 @@ func (n *XmlInputNode) Write() (data []byte, err error) {
 	return
 }
 
-func XmlInputNodeNew(nName, nType string, x, y int) *XmlInputNode {
-	return &XmlInputNode{xml.Name{freespNamespace, "input"}, "", XmlNode{nName, nType, nil, nil, XmlHint{x, y}}}
+func XmlInputNodeNew(nName, nType string) *XmlInputNode {
+	return &XmlInputNode{xml.Name{freespNamespace, "input"}, "", XmlNode{nName, nType, nil, nil, XmlNodeHint{XmlModeHint{}, false}}}
 }
 
 func (n *XmlOutputNode) Write() (data []byte, err error) {
@@ -59,8 +59,8 @@ func (n *XmlOutputNode) Write() (data []byte, err error) {
 	return
 }
 
-func XmlOutputNodeNew(nName, nType string, x, y int) *XmlOutputNode {
-	return &XmlOutputNode{xml.Name{freespNamespace, "output"}, "", XmlNode{nName, nType, nil, nil, XmlHint{x, y}}}
+func XmlOutputNodeNew(nName, nType string) *XmlOutputNode {
+	return &XmlOutputNode{xml.Name{freespNamespace, "output"}, "", XmlNode{nName, nType, nil, nil, XmlNodeHint{XmlModeHint{}, false}}}
 }
 
 func (n *XmlProcessingNode) Write() (data []byte, err error) {
@@ -71,6 +71,6 @@ func (n *XmlProcessingNode) Write() (data []byte, err error) {
 	return
 }
 
-func XmlProcessingNodeNew(nName, nType string, x, y int) *XmlProcessingNode {
-	return &XmlProcessingNode{xml.Name{freespNamespace, "processing-node"}, XmlNode{nName, nType, nil, nil, XmlHint{x, y}}}
+func XmlProcessingNodeNew(nName, nType string, expanded bool) *XmlProcessingNode {
+	return &XmlProcessingNode{xml.Name{freespNamespace, "processing-node"}, XmlNode{nName, nType, nil, nil, XmlNodeHint{XmlModeHint{}, expanded}}}
 }

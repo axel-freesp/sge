@@ -32,6 +32,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 			}
 		}
 		MenuEditCurrent(menu, treeStore, global.jl)
+		MenuViewCurrent(menu, &global)
 		global.win.graphViews.XmlTextView().Set(obj)
 		switch obj.(type) {
 		case bh.ImplementationIf:
@@ -126,6 +127,7 @@ func main() {
 
 	MenuFileInit(menu)
 	MenuEditInit(menu)
+	MenuViewInit(menu, &global)
 	MenuAboutInit(menu)
 
 	// Handle command line arguments: treat each as a filename:

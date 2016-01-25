@@ -89,7 +89,9 @@ func (c *Connection) BBox() image.Rectangle {
 //
 
 func connectionPoints(from, to NodeIf, fromPort, toPort int) (p1, p2 image.Point) {
-	p1 = from.BBox().Min.Add(conOut.Add(portDY.Mul(fromPort)))
-	p2 = to.BBox().Min.Add(conIn.Add(portDY.Mul(toPort)))
+	port1 := from.OutPort(fromPort)
+	port2 := to.InPort(toPort)
+	p1 = port1.Position().Add(port1.BBox().Size().Div(2))
+	p2 = port2.Position().Add(port2.BBox().Size().Div(2))
 	return
 }

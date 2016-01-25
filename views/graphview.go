@@ -11,6 +11,7 @@ import (
 
 type graphViewCollection struct {
 	graphview []GraphViewIf
+	gmap      map[string]GraphViewIf
 	xmlview   *XmlTextView
 	box       *gtk.Box
 	header    *gtk.HeaderBar
@@ -22,6 +23,7 @@ var _ GraphViewCollectionIf = (*graphViewCollection)(nil)
 
 func GraphViewCollectionNew(width, height int) (gvc *graphViewCollection, err error) {
 	gvc = &graphViewCollection{}
+	gvc.gmap = make(map[string]GraphViewIf)
 	gvc.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		err = fmt.Errorf("GraphViewCollectionNew: Unable to create box:", err)
@@ -61,18 +63,25 @@ func (gvc graphViewCollection) XmlTextView() XmlTextViewIf {
 }
 
 func (gvc *graphViewCollection) Add(gv GraphViewIf, title string) {
+	gvc.gmap[title] = gv
 	gvc.graphview = append(gvc.graphview, gv)
 	gvc.stack.AddTitled(gv.Widget(), title, title)
 	gv.Widget().ShowAll()
 }
 
 func (gvc *graphViewCollection) Rename(old, new string) {
+	v, ok := gvc.gmap[old]
+	if !ok {
+		log.Printf("graphViewCollection.Rename warning: old %s not found\n", old)
+		return
+	}
 	widget, err := gvc.stack.GetChildByName(old)
 	if err != nil {
 		log.Printf("graphViewCollection.Rename warning: stack child %s not found\n", old)
 		return
 	}
-	if widget == gvc.stack.GetVisibleChild() {
+	// TODO ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	if old == gvc.stack.GetVisibleChildName() {
 		gvc.stack.SetVisibleChild(gvc.xmlview.Widget())
 		gvc.stack.Remove(widget)
 		gvc.stack.AddTitled(widget, new, new)
@@ -81,6 +90,8 @@ func (gvc *graphViewCollection) Rename(old, new string) {
 		gvc.stack.Remove(widget)
 		gvc.stack.AddTitled(widget, new, new)
 	}
+	delete(gvc.gmap, old)
+	gvc.gmap[new] = v
 }
 
 func (gvc *graphViewCollection) RemoveGraphView(g bh.SignalGraphIf) {
@@ -139,4 +150,14 @@ func (gvc *graphViewCollection) Select(obj interface{}) {
 	for _, v := range gvc.graphview {
 		v.Select(obj)
 	}
+}
+
+func (gvc *graphViewCollection) CurrentView() (v GraphViewIf) {
+	name := gvc.stack.GetVisibleChildName()
+	var ok bool
+	v, ok = gvc.gmap[name]
+	if !ok {
+		log.Fatalf("FIXME: graphViewCollection.CurrentView: no visible child\n")
+	}
+	return
 }

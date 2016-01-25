@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	bh "github.com/axel-freesp/sge/interface/behaviour"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -40,7 +39,6 @@ type Element struct {
 type FilesTreeStore struct {
 	treestore        *gtk.TreeStore
 	lookup           map[string]Element
-	libs             map[string]bh.LibraryIf
 	currentSelection *gtk.TreeIter
 }
 
@@ -57,9 +55,7 @@ func FilesTreeStoreNew() (ret *FilesTreeStore, err error) {
 		ret = nil
 		return
 	}
-	ret = &FilesTreeStore{ts, make(map[string]Element),
-		make(map[string]bh.LibraryIf),
-		nil}
+	ret = &FilesTreeStore{ts, make(map[string]Element), nil}
 	err = nil
 	return
 }

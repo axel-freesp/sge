@@ -26,8 +26,9 @@ type ModePositioner interface {
 type PositionMode string
 
 const (
-	PositionModeNormal  PositionMode = "normal"
-	PositionModeMapping PositionMode = "mapping"
+	PositionModeNormal   PositionMode = "normal"
+	PositionModeMapping  PositionMode = "mapping"
+	PositionModeExpanded PositionMode = "expanded"
 )
 
 type Shaper interface {

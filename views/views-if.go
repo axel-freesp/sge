@@ -8,7 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type Context interface {
+type ContextIf interface {
 	SelectNode(bh.NodeIf)          // single click selection
 	EditNode(bh.NodeIf)            // double click selection
 	SelectPort(bh.PortIf)          // single click selection
@@ -17,6 +17,19 @@ type Context interface {
 	SelectProcess(pf.ProcessIf)
 	SelectChannel(pf.ChannelIf)
 	SelectMapElement(mp.MappedElementIf)
+}
+
+type GraphViewCollectionIf interface {
+	Add(gv GraphViewIf, title string)
+	RemoveGraphView(bh.SignalGraphIf)
+	RemovePlatformView(pf.PlatformIf)
+	RemoveMappingView(mp.MappingIf)
+	Rename(old, new string)
+	Widget() *gtk.Widget
+	XmlTextView() XmlTextViewIf
+	Sync()
+	Select(obj interface{})
+	CurrentView() GraphViewIf
 }
 
 type GraphViewIf interface {
@@ -32,16 +45,4 @@ type GraphViewIf interface {
 
 type XmlTextViewIf interface {
 	Set(gr.XmlCreator) error
-}
-
-type GraphViewCollectionIf interface {
-	Add(gv GraphViewIf, title string)
-	RemoveGraphView(bh.SignalGraphIf)
-	RemovePlatformView(pf.PlatformIf)
-	RemoveMappingView(mp.MappingIf)
-	Rename(old, new string)
-	Widget() *gtk.Widget
-	XmlTextView() XmlTextViewIf
-	Sync()
-	Select(obj interface{})
 }

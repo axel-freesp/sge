@@ -16,7 +16,7 @@ type platformView struct {
 	parent         *ScaledView
 	area           DrawArea
 	p              pf.PlatformIf
-	context        Context
+	context        ContextIf
 	arch           []graph.ArchIf
 	dragOffs       image.Point
 	button1Pressed bool
@@ -25,7 +25,7 @@ type platformView struct {
 var _ ScaledScene = (*platformView)(nil)
 var _ GraphViewIf = (*platformView)(nil)
 
-func PlatformViewNew(p pf.PlatformIf, context Context) (viewer *platformView, err error) {
+func PlatformViewNew(p pf.PlatformIf, context ContextIf) (viewer *platformView, err error) {
 	viewer = &platformView{nil, DrawArea{}, p, context, nil, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {

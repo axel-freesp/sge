@@ -29,11 +29,15 @@ func LineObjectInit(p1, p2 image.Point) LineObject {
 }
 
 func (l *LineObject) CheckHit(pos image.Point) (hit, modified bool) {
+    return l.LineDefaultCheckHit(pos)
+}
+
+func (l *LineObject) LineDefaultCheckHit(pos image.Point) (hit, modified bool) {
 	f, r := l.Transformation()
 	p := f(pos)
 	px := math.Abs(float64(p.X))
 	py := math.Abs(float64(p.Y))
-	hit = (px <= r && py <= 4.0)
+	hit = (px <= r && py <= 3.0)
 	modified = l.DoHighlight(hit, pos)
 	return
 }

@@ -14,19 +14,41 @@ type ExpandedNode struct {
 }
 
 var _ NodeIf = (*ExpandedNode)(nil)
+const (
+	expandedPortWidth = 10
+	expandedPortHeight = 10
+)
 
 func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf) (ret *ExpandedNode) {
-	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
-		ColorInit(ColorOption(ProcessHighlight)),
-		ColorInit(ColorOption(ProcessSelected)),
+	config := DrawConfig{ColorInit(ColorOption(NormalExpandedNode)),
+		ColorInit(ColorOption(HighlightExpandedNode)),
+		ColorInit(ColorOption(SelectExpandedNode)),
 		ColorInit(ColorOption(BoxFrame)),
 		ColorInit(ColorOption(Text)),
-		image.Point{procPortWidth, procPortHeight}}
-	cconfig := ContainerConfig{global.portW, global.portH, 120, 80}
-	ret = &ExpandedNode{ContainerInit(nil, config, userObj, cconfig), userObj}
-	dy := NumericOption(PortDY)
-	shape := image.Point{global.nodeWidth, global.nodeHeight + numPorts(userObj)*dy}
-	ret.box = image.Rectangle{pos, pos.Add(shape)}
+		image.Point{global.padX, global.padY}}
+	cconfig := ContainerConfig{expandedPortWidth, expandedPortHeight, 120, 80}
+	// Add children
+	var g bh.SignalGraphTypeIf
+	nt := userObj.ItsType()
+	for _, impl := range nt.Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			g = impl.Graph()
+			break
+		}
+	}
+	var children []ContainerChild
+	if g != nil {
+		for _, n := range g.ProcessingNodes() {
+			var ch ContainerChild
+			if n.Expanded() {
+				ch = ExpandedNodeNew(n.ModePosition(gr.PositionModeExpanded), n)
+			} else {
+				ch = NodeNew(n.ModePosition(gr.PositionModeNormal), n)
+			}
+			children = append(children, ch)
+		}
+	}
+	ret = &ExpandedNode{ContainerInit(children, config, userObj, cconfig), userObj}
 	ret.ContainerInit()
 	empty := image.Point{}
 	config = DrawConfig{ColorInit(ColorOption(InputPort)),
@@ -69,6 +91,25 @@ func (n ExpandedNode) CalcOutPortPos(index int) (pos image.Point) {
 	for i := 0; i < index; i++ {
 		pos = pos.Add(shift)
 	}
+	return
+}
+
+func (n *ExpandedNode) SelectNode(un bh.NodeIf) {
+	for _, ch := range n.Children {
+		if un == ch.(NodeIf).UserObj() {
+			n.SelectChild(ch)
+			return
+		}
+	}
+}
+
+func (n ExpandedNode) GetSelectedNode() (ok bool, nd NodeIf) {
+	var ch ContainerChild
+	ok, ch = n.GetSelectedChild()
+	if !ok {
+		return
+	}
+	nd = ch.(NodeIf)
 	return
 }
 
@@ -130,4 +171,7 @@ func (n ExpandedNode) GetSelectedPort() (ok bool, port bh.PortIf) {
 func (n *ExpandedNode) SetPosition(pos image.Point) {
 	n.ContainerDefaultSetPosition(pos)
 	n.userObj.SetModePosition(gr.PositionModeExpanded, pos)
+	for _, ch := range n.Children {
+		ch.(*Node).userObj.SetModePosition(gr.PositionModeExpanded, ch.Position())
+	}
 }

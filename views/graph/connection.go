@@ -46,6 +46,11 @@ func (c Connection) ToId() int {
 	return c.toPort
 }
 
+func (c *Connection) CheckHit(pos image.Point) (hit, modified bool) {
+    c.p1, c.p2 = connectionPoints(c.from, c.to, c.fromPort, c.toPort)
+    return c.LineDefaultCheckHit(pos)
+}
+
 //
 //	Drawer interface
 //

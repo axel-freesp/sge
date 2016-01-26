@@ -335,6 +335,25 @@ func (t *signalGraphType) createNodeFromXml(xmln backend.XmlNode) (nd *node) {
 			}
 		}
 	}
+	if nd.expanded {
+		for _, impl := range nt.Implementation() {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
+				for i, chn := range impl.Graph().ProcessingNodes() {
+					xmlch := xmln.Children[i]
+					for _, xmlh := range xmlch.Entry {
+						mode, ok := freesp.ModeFromString[xmlh.Mode]
+						if !ok {
+							log.Printf("signalGraphType.createNodeFromXml Warning: hint mode %s not defined\n",
+								xmlh.Mode)
+							continue
+						}
+						chn.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+					}
+				}
+				break
+			}
+		} 
+	}
 	return
 }
 

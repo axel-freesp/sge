@@ -323,13 +323,13 @@ func (v *signalGraphView) handleDrag(pos image.Point) {
 	for _, n := range v.nodes {
 		if n.IsSelected() {
 			box := n.BBox()
-			if !overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
+			//if !overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
 				v.repaintNode(n)
 				box = box.Add(pos.Sub(v.dragOffs))
 				v.dragOffs = pos
 				n.SetPosition(box.Min)
 				v.repaintNode(n)
-			}
+			//}
 		}
 	}
 }

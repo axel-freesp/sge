@@ -65,17 +65,33 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 	return ret
 }
 
+func CreateXmlProcessingNodeHint(n bh.NodeIf) (xmlh *backend.XmlNodeHint) {
+	xmlh = backend.XmlNodeHintNew(n.Expanded())
+	xmlh.Entry = freesp.CreateXmlModePosition(n).Entry
+	if n.Expanded() {
+		nt := n.ItsType()
+		for _, impl := range nt.Implementation() {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
+				g := impl.Graph()
+				for _, chn := range g.ProcessingNodes() {
+					xmlh.Children = append(xmlh.Children, *CreateXmlProcessingNodeHint(chn))
+				}
+				break
+			}
+		}
+	}
+	return
+}
+
 func CreateXmlProcessingNode(n bh.NodeIf) *backend.XmlProcessingNode {
-	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName(), n.Expanded())
-	ret.Entry = freesp.CreateXmlModePosition(n).Entry
-	//if len(n.ItsType().DefinedAt()) == 0 {
+	ret := backend.XmlProcessingNodeNew(n.Name(), n.ItsType().TypeName())
 	for _, p := range n.InPorts() {
 		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
 	}
 	for _, p := range n.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
 	}
-	//}
+	ret.XmlNodeHint = *CreateXmlProcessingNodeHint(n)
 	return ret
 }
 

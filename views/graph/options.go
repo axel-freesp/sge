@@ -82,6 +82,9 @@ const (
 	SelectChannelLine
 	HighlightChannelLine
 	NormalChannelLine
+	SelectExpandedNode
+	HighlightExpandedNode
+	NormalExpandedNode
 )
 
 func ColorOption(index int) (r, g, b float64) {
@@ -172,6 +175,9 @@ var defaultOptions = gOptions{
 		{"SelectChannelLine", color.RGBA{190, 0, 0, 0xff}},
 		{"HighlightChannelLine", color.RGBA{255, 255, 180, 0xff}},
 		{"NormalChannelLine", color.RGBA{0, 0, 0, 0xff}},
+		{"SelectExpandedNode", color.RGBA{220, 255, 255, 0x80}},
+		{"HighlightExpandedNode", color.RGBA{255, 255, 220, 0x80}},
+		{"NormalExpandedNode", color.RGBA{255, 255, 255, 0x80}},
 	},
 	[]optionString{ // actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},

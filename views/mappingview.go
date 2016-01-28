@@ -75,7 +75,7 @@ func (v *mappingView) Sync() {
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 	for i, n := range g.Nodes() {
-		v.nodes[i] = graph.NodeNew(n.ModePosition(gr.PositionModeMapping), n)
+		v.nodes[i] = graph.NodeNew(n.PathModePosition("", gr.PositionModeMapping), n, "")
 	}
 	var index = 0
 	for _, n := range g.Nodes() {

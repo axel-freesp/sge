@@ -1,6 +1,7 @@
 package behaviour
 
 import (
+	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
@@ -9,6 +10,7 @@ import (
 	tr "github.com/axel-freesp/sge/interface/tree"
 	"image"
 	"log"
+	//"strings"
 )
 
 type nodeType struct {
@@ -171,14 +173,28 @@ func (t *nodeType) addOutPort(name string, pType bh.SignalTypeIf) {
 
 func (t *nodeType) doResolvePort(name string, dir gr.PortDirection) *portType {
 	var list portTypeList
-	switch dir {
-	case gr.InPort:
+	var prefix string
+	if dir == gr.InPort {
+		prefix = "in"
 		list = t.inPorts
-	default:
+	} else {
+		prefix = "out"
 		list = t.outPorts
 	}
 	for _, p := range list.PortTypes() {
 		if name == p.Name() {
+			return p.(*portType)
+		}
+		if fmt.Sprintf("%s-%s", prefix, name) == p.Name() {
+			return p.(*portType)
+		}
+		if fmt.Sprintf("%s-%s", prefix, p.Name()) == name {
+			return p.(*portType)
+		}
+		if fmt.Sprintf("%s-%s", name, prefix) == p.Name() {
+			return p.(*portType)
+		}
+		if fmt.Sprintf("%s-%s", p.Name(), prefix) == name {
 			return p.(*portType)
 		}
 	}

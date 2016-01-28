@@ -1,6 +1,8 @@
 package behaviour
 
 import (
+	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	"testing"
 )
 
@@ -18,8 +20,8 @@ type SignalType interface {
 func TestSignalType(t *testing.T) {
 	case1 := []struct {
 		remove, name, ctype, msgid string
-		scope                      Scope
-		mode                       Mode
+		scope                      bh.Scope
+		mode                       bh.Mode
 		isLegal                    bool
 	}{
 		/*
@@ -48,13 +50,12 @@ func TestSignalType(t *testing.T) {
 		{"s3", "", "", "", 0, 0, false},       // remove non-existing
 		{"", "s1", "int", "", 0, 0, true},     // new (after removal)
 	}
-	Init()
+	freesp.Init()
 	for i, c := range case1 {
 		if len(c.remove) > 0 {
-			s := signalTypes[c.remove]
-			success := (s != nil)
+			s, success := freesp.GetSignalTypeByName(c.remove)
 			if success != c.isLegal {
-				t.Errorf("TestSignalType testcase %d failed, could not find %s\n", c.remove)
+				t.Errorf("TestSignalType testcase %d failed, could not find %s\n", i, c.remove)
 			} else if success {
 				SignalTypeDestroy(s)
 			}

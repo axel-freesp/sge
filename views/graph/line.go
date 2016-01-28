@@ -29,7 +29,7 @@ func LineObjectInit(p1, p2 image.Point) LineObject {
 }
 
 func (l *LineObject) CheckHit(pos image.Point) (hit, modified bool) {
-    return l.LineDefaultCheckHit(pos)
+	return l.LineDefaultCheckHit(pos)
 }
 
 func (l *LineObject) LineDefaultCheckHit(pos image.Point) (hit, modified bool) {

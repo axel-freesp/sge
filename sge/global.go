@@ -189,15 +189,26 @@ func (g *Global) CleanupSignalType(st bh.SignalTypeIf) {
 //		views.Context interface
 //
 
-func (g *Global) SelectNode(node bh.NodeIf) {
-	n := node.(bh.NodeIf)
-	cursor := g.fts.Cursor(n)
+func (g *Global) SelectNode(n bh.NodeIf, id bh.NodeIdIf) {
+	log.Printf("Global.SelectNode: n=%s, id=%s\n", n.Name(), id)
+	subn, ok := n.SubNode(behaviour.NodeIdFromString(n.Name()), id)
+	if !ok {
+		log.Printf("Global.SelectNode: strange: no subnode for id=%s\n", id)
+		return
+	}
+	var cursor tr.Cursor
+	if id.String() == n.Name() {
+		cursor = g.fts.Cursor(n)
+	} else {
+		nCursor := g.fts.Cursor(n)
+		cursor = g.fts.CursorAt(nCursor, subn)
+	}
 	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 
-func (g *Global) EditNode(node bh.NodeIf) {
+func (g *Global) EditNode(node bh.NodeIf, id bh.NodeIdIf) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 

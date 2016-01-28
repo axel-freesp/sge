@@ -23,6 +23,12 @@ type ModePositioner interface {
 	SetModePosition(PositionMode, image.Point)
 }
 
+type PathModePositioner interface {
+	PathModePosition(string, PositionMode) image.Point
+	SetPathModePosition(string, PositionMode, image.Point)
+	PathList() []string
+}
+
 type PositionMode string
 
 const (

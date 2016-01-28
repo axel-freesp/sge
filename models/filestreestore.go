@@ -290,6 +290,7 @@ func (s *FilesTreeStore) Remove(c tr.Cursor) (prefix string, index int) {
 	}
 	_, ok := s.lookup[c.Path]
 	if !ok {
+		log.Printf("FilesTreeStore.Remove: c.Path=%s not found, decreasing\n", c.Path)
 		index--
 		suffix = fmt.Sprintf("%d", index)
 		if len(prefix) > 0 {
@@ -297,6 +298,7 @@ func (s *FilesTreeStore) Remove(c tr.Cursor) (prefix string, index int) {
 		} else {
 			c.Path = fmt.Sprintf("%d", index)
 		}
+		log.Printf("FilesTreeStore.Remove: new c.Path=%s\n", c.Path)
 		_, ok = s.lookup[c.Path]
 		if !ok {
 			s.currentSelection = nil

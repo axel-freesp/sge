@@ -1,6 +1,7 @@
 package views
 
 import (
+	freesp "github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
@@ -83,9 +84,9 @@ func (v *signalGraphView) Sync() {
 
 	for i, n := range g.Nodes() {
 		if n.Expanded() {
-			v.nodes[i] = graph.ExpandedNodeNew(n.ModePosition(gr.PositionModeExpanded), n)
+			v.nodes[i] = graph.ExpandedNodeNew(n.PathModePosition("", gr.PositionModeExpanded), n, "")
 		} else {
-			v.nodes[i] = graph.NodeNew(n.ModePosition(gr.PositionModeNormal), n)
+			v.nodes[i] = graph.NodeNew(n.PathModePosition("", gr.PositionModeNormal), n, "")
 		}
 	}
 	var index = 0
@@ -255,8 +256,9 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 	case gdk.EVENT_2BUTTON_PRESS:
 		log.Println("areaButtonCallback 2BUTTON_PRESS")
 		for _, n := range v.nodes {
-			if n.IsSelected() {
-				v.context.EditNode(n.UserObj())
+			selected, ok := n.GetSelectedNode(freesp.NodeIdNew(freesp.EmptyNodeId, n.Name()))
+			if ok {
+				v.context.EditNode(n.UserObj(), selected)
 				break
 			}
 		}
@@ -274,7 +276,12 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 			if !n.Select() {
 				v.repaintNode(n)
 			}
-			v.context.SelectNode(n.UserObj())
+			selected, ok := n.GetSelectedNode(freesp.NodeIdFromString(n.Name()))
+			if !ok {
+				log.Printf("signalGraphView.handleNodeSelect: FIXME: hit=true, GetSelectedNode() is not ok\n")
+				return
+			}
+			v.context.SelectNode(n.UserObj(), selected)
 			ok, port := n.(graph.NodeIf).GetSelectedPort()
 			if ok {
 				v.context.SelectPort(port)
@@ -324,11 +331,11 @@ func (v *signalGraphView) handleDrag(pos image.Point) {
 		if n.IsSelected() {
 			box := n.BBox()
 			//if !overlaps(v.nodes, box.Min.Add(pos.Sub(v.dragOffs))) {
-				v.repaintNode(n)
-				box = box.Add(pos.Sub(v.dragOffs))
-				v.dragOffs = pos
-				n.SetPosition(box.Min)
-				v.repaintNode(n)
+			v.repaintNode(n)
+			box = box.Add(pos.Sub(v.dragOffs))
+			v.dragOffs = pos
+			n.SetPosition(box.Min)
+			v.repaintNode(n)
 			//}
 		}
 	}

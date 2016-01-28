@@ -1,25 +1,67 @@
 package graph
 
 import (
+	"fmt"
+	freesp "github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
-	//"github.com/gotk3/gotk3/cairo"
+	"github.com/gotk3/gotk3/cairo"
 	"image"
 	"log"
 )
 
+type PortConnector struct {
+	LineObject
+	port1, port2 BoxedSelecter
+}
+
+func PortConnectorNew(port1, port2 BoxedSelecter) *PortConnector {
+	b1, b2 := port1.BBox(), port2.BBox()
+	p1, p2 := b1.Min.Add(b1.Size().Div(2)), b2.Min.Add(b2.Size().Div(2))
+	return &PortConnector{LineObjectInit(p1, p2), port1, port2}
+}
+
+func (p *PortConnector) Points() (p1, p2 image.Point) {
+	b1, b2 := p.port1.BBox(), p.port2.BBox()
+	p.p1, p.p2 = b1.Min.Add(b1.Size().Div(2)), b2.Min.Add(b2.Size().Div(2))
+	p1, p2 = p.p1, p.p2
+	return
+}
+
+func (p PortConnector) Draw(ctxt interface{}) {
+	switch ctxt.(type) {
+	case *cairo.Context:
+		context := ctxt.(*cairo.Context)
+		var color Color
+		if p.IsSelected() {
+			color = ColorInit(ColorOption(SelectLine))
+		} else if p.IsHighlighted() {
+			color = ColorInit(ColorOption(HighlightLine))
+		} else {
+			color = ColorInit(ColorOption(NormalLine))
+		}
+		p1, p2 := p.Points()
+		context.SetSourceRGB(color.r, color.g, color.b)
+		DrawArrow(context, p1, p2)
+	}
+}
+
 type ExpandedNode struct {
 	Container
-	userObj bh.NodeIf
+	userObj     bh.NodeIf
+	path        string
+	connections []ConnectIf
+	portconn    []*PortConnector
 }
 
 var _ NodeIf = (*ExpandedNode)(nil)
+
 const (
-	expandedPortWidth = 10
+	expandedPortWidth  = 10
 	expandedPortHeight = 10
 )
 
-func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf) (ret *ExpandedNode) {
+func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *ExpandedNode) {
 	config := DrawConfig{ColorInit(ColorOption(NormalExpandedNode)),
 		ColorInit(ColorOption(HighlightExpandedNode)),
 		ColorInit(ColorOption(SelectExpandedNode)),
@@ -38,17 +80,37 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf) (ret *ExpandedNode) {
 	}
 	var children []ContainerChild
 	if g != nil {
-		for _, n := range g.ProcessingNodes() {
+		empty := image.Point{}
+		first := image.Point{16, 32}
+		shift := image.Point{16, 16}
+		for i, n := range g.ProcessingNodes() {
 			var ch ContainerChild
-			if n.Expanded() {
-				ch = ExpandedNodeNew(n.ModePosition(gr.PositionModeExpanded), n)
+			var nPath string
+			var mode gr.PositionMode
+			if len(path) > 0 {
+				nPath = fmt.Sprintf("%s/%s", path, userObj.Name())
 			} else {
-				ch = NodeNew(n.ModePosition(gr.PositionModeNormal), n)
+				nPath = userObj.Name()
+			}
+			if n.Expanded() {
+				mode = gr.PositionModeExpanded
+			} else {
+				mode = gr.PositionModeNormal
+			}
+			chpos := n.PathModePosition(nPath, mode)
+			if chpos == empty {
+				chpos = pos.Add(first.Add(shift.Mul(i)))
+			}
+			if n.Expanded() {
+				ch = ExpandedNodeNew(chpos, n, nPath)
+			} else {
+				ch = NodeNew(chpos, n, nPath)
 			}
 			children = append(children, ch)
 		}
 	}
-	ret = &ExpandedNode{ContainerInit(children, config, userObj, cconfig), userObj}
+	ret = &ExpandedNode{ContainerInit(children, config, userObj, cconfig),
+		userObj, path, nil, nil}
 	ret.ContainerInit()
 	empty := image.Point{}
 	config = DrawConfig{ColorInit(ColorOption(InputPort)),
@@ -71,6 +133,81 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf) (ret *ExpandedNode) {
 		}
 		ret.AddModePort(ret.portClipPos(pos), config, p, gr.PositionModeExpanded)
 	}
+	for _, n := range g.ProcessingNodes() {
+		from, ok := ret.ChildByName(n.Name())
+		if !ok {
+			log.Printf("ExpandedNodeNew error: node %s not found\n", n.Name())
+			continue
+		}
+		for _, p := range n.OutPorts() {
+			fromId := from.OutPortIndex(p.Name())
+			for _, c := range p.Connections() {
+				to, ok := ret.ChildByName(c.Node().Name())
+				if ok {
+					toId := to.InPortIndex(c.Name())
+					ret.connections = append(ret.connections, ConnectionNew(from, to, fromId, toId))
+				} else {
+					portname, ok := c.Node().PortLink()
+					if !ok {
+						log.Printf("ExpandedNodeNew error: output node %s not linked\n", c.Node().Name())
+						continue
+					}
+					ownPort, ok := ret.OutPortByName(portname)
+					if !ok {
+						log.Printf("ExpandedNodeNew error: linked port %s of output node %s not found\n", portname, c.Node().Name())
+						continue
+					}
+					nodePort, ok := from.OutPortByName(p.Name())
+					if !ok {
+						log.Printf("ExpandedNodeNew error: port %s of output node %s not found\n", p.Name(), from.Name())
+						continue
+					}
+					ret.portconn = append(ret.portconn, PortConnectorNew(nodePort, ownPort))
+				}
+			}
+		}
+	}
+	for _, n := range g.InputNodes() {
+		for _, p := range n.OutPorts() {
+			fromlink, ok := p.Node().PortLink()
+			if !ok {
+				log.Printf("ExpandedNodeNew error: input node %s not linked\n", p.Node().Name())
+				continue
+			}
+			fromPort, ok := ret.InPortByName(fromlink)
+			if !ok {
+				log.Printf("ExpandedNodeNew error: linked port %s of input node %s not found\n", fromlink, n.Name())
+				continue
+			}
+			for _, c := range p.Connections() {
+				to, ok := ret.ChildByName(c.Node().Name())
+				if ok {
+					// TODO: connect with node
+					toPort, ok := to.InPortByName(c.Name())
+					if !ok {
+						log.Printf("ExpandedNodeNew error: port %s of node %s not found\n", c.Name(), to.Name())
+						continue
+					}
+					ret.portconn = append(ret.portconn, PortConnectorNew(fromPort, toPort))
+				} else {
+					tolink, ok := c.Node().PortLink()
+					if !ok {
+						log.Printf("ExpandedNodeNew error: output node %s not linked\n", c.Node().Name())
+						continue
+					}
+					toPort, ok := ret.OutPortByName(tolink)
+					if !ok {
+						log.Printf("ExpandedNodeNew error: linked port %s of output node %s not found\n", tolink, c.Node().Name())
+						continue
+					}
+					ret.portconn = append(ret.portconn, PortConnectorNew(fromPort, toPort))
+				}
+			}
+		}
+	}
+	ret.RegisterOnDraw(func(ctxt interface{}) {
+		expandedNodeOnDraw(ret, ctxt)
+	})
 	return
 }
 
@@ -91,25 +228,6 @@ func (n ExpandedNode) CalcOutPortPos(index int) (pos image.Point) {
 	for i := 0; i < index; i++ {
 		pos = pos.Add(shift)
 	}
-	return
-}
-
-func (n *ExpandedNode) SelectNode(un bh.NodeIf) {
-	for _, ch := range n.Children {
-		if un == ch.(NodeIf).UserObj() {
-			n.SelectChild(ch)
-			return
-		}
-	}
-}
-
-func (n ExpandedNode) GetSelectedNode() (ok bool, nd NodeIf) {
-	var ch ContainerChild
-	ok, ch = n.GetSelectedChild()
-	if !ok {
-		return
-	}
-	nd = ch.(NodeIf)
 	return
 }
 
@@ -170,8 +288,82 @@ func (n ExpandedNode) GetSelectedPort() (ok bool, port bh.PortIf) {
 
 func (n *ExpandedNode) SetPosition(pos image.Point) {
 	n.ContainerDefaultSetPosition(pos)
-	n.userObj.SetModePosition(gr.PositionModeExpanded, pos)
+	n.userObj.SetPathModePosition(n.path, gr.PositionModeExpanded, pos)
+}
+
+func (n ExpandedNode) InPortByName(name string) (ret BoxedSelecter, ok bool) {
+	for i := 0; i < len(n.UserObj().InPorts()); i++ {
+		p := n.ports[i]
+		if p.UserObj2.(bh.PortIf).Name() == name {
+			ok = true
+			ret = p
+			return
+		}
+	}
+	return
+}
+
+func (n ExpandedNode) OutPortByName(name string) (ret BoxedSelecter, ok bool) {
+	for i := 0; i < len(n.UserObj().OutPorts()); i++ {
+		p := n.ports[i+len(n.UserObj().InPorts())]
+		if p.UserObj2.(bh.PortIf).Name() == name {
+			ok = true
+			ret = p
+			return
+		}
+	}
+	return
+}
+
+func (n ExpandedNode) ChildByName(name string) (chn NodeIf, ok bool) {
 	for _, ch := range n.Children {
-		ch.(*Node).userObj.SetModePosition(gr.PositionModeExpanded, ch.Position())
+		if ch.(NodeIf).Name() == name {
+			chn = ch.(NodeIf)
+			ok = true
+			return
+		}
+	}
+	return
+}
+
+func (n *ExpandedNode) SelectNode(ownId, selectId bh.NodeIdIf) {
+	if !ownId.IsAncestor(selectId) {
+		return
+	}
+	n.Select()
+	if ownId == selectId {
+		return
+	}
+	for _, ch := range n.Children {
+		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
+		ch.(NodeIf).SelectNode(chId, selectId)
+	}
+}
+
+func (n ExpandedNode) GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool) {
+	if !n.IsSelected() {
+		return
+	}
+	for _, ch := range n.Children {
+		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
+		selectId, ok = ch.(NodeIf).GetSelectedNode(chId)
+		if ok {
+			return
+		}
+	}
+	selectId, ok = ownId, true
+	return
+}
+
+//
+//	Drawer interface
+//
+
+func expandedNodeOnDraw(n *ExpandedNode, ctxt interface{}) {
+	for _, conn := range n.connections {
+		conn.Draw(ctxt)
+	}
+	for _, conn := range n.portconn {
+		conn.Draw(ctxt)
 	}
 }

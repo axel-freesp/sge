@@ -13,6 +13,7 @@ import (
 type Node struct {
 	NamedBoxObject
 	userObj      bh.NodeIf
+	path         string
 	ports        []*Port
 	selectedPort int
 }
@@ -20,7 +21,7 @@ type Node struct {
 var _ NodeIf = (*Node)(nil)
 var _ ContainerChild = (*Node)(nil)
 
-func NodeNew(pos image.Point, n bh.NodeIf) (ret *Node) {
+func NodeNew(pos image.Point, n bh.NodeIf, path string) (ret *Node) {
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X+global.nodeWidth, pos.Y+global.nodeHeight+numPorts(n)*dy)
 	config := DrawConfig{ColorInit(ColorOption(NodeNormal)),
@@ -29,7 +30,7 @@ func NodeNew(pos image.Point, n bh.NodeIf) (ret *Node) {
 		ColorInit(ColorOption(BoxFrame)),
 		ColorInit(ColorOption(Text)),
 		image.Point{global.padX, global.padY}}
-	ret = &Node{NamedBoxObjectInit(box, config, n), n, nil, -1}
+	ret = &Node{NamedBoxObjectInit(box, config, n), n, path, nil, -1}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
@@ -130,10 +131,47 @@ func (n Node) OutPort(idx int) (p BBoxer) {
 	return
 }
 
+func (n Node) InPortByName(name string) (ret BoxedSelecter, ok bool) {
+	for i := 0; i < len(n.UserObj().InPorts()); i++ {
+		p := n.ports[i]
+		if p.UserObj().Name() == name {
+			ok = true
+			ret = p
+			return
+		}
+	}
+	return
+}
+
+func (n Node) OutPortByName(name string) (ret BoxedSelecter, ok bool) {
+	for i := 0; i < len(n.UserObj().OutPorts()); i++ {
+		p := n.ports[i+len(n.UserObj().InPorts())]
+		if p.UserObj().Name() == name {
+			ok = true
+			ret = p
+			return
+		}
+	}
+	return
+}
+
 func (n *Node) Expand() {
 }
 
 func (n *Node) Collapse() {
+}
+
+func (n *Node) SelectNode(ownId, selectId bh.NodeIdIf) {
+	if ownId == selectId {
+		n.Select()
+	}
+}
+
+func (n *Node) GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool) {
+	if n.IsSelected() {
+		selectId, ok = ownId, true
+	}
+	return
 }
 
 //
@@ -153,7 +191,8 @@ var _ gr.Positioner = (*Port)(nil)
 // (overwrite BBoxObject default implementation)
 func (n *Node) SetPosition(pos image.Point) {
 	shift := pos.Sub(n.Position())
-	n.userObj.SetModePosition(gr.PositionModeNormal, pos)
+	//log.Printf("Node.SetPosition: path=%s, mode=%v, pos=%v\n", n.path, gr.PositionModeNormal, pos)
+	n.userObj.SetPathModePosition(n.path, gr.PositionModeNormal, pos)
 	n.BBoxDefaultSetPosition(pos)
 	for _, p := range n.ports {
 		p.SetPosition(p.Position().Add(shift))

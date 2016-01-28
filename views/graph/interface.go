@@ -21,6 +21,10 @@ type NodeIf interface {
 	OutPort(int) BBoxer
 	SelectPort(port bh.PortIf)
 	GetSelectedPort() (ok bool, port bh.PortIf)
+	InPortByName(name string) (BoxedSelecter, bool)
+	OutPortByName(name string) (BoxedSelecter, bool)
+	SelectNode(ownId, selectId bh.NodeIdIf)
+	GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 }
 
 type Porter interface {

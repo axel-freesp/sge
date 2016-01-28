@@ -6,6 +6,7 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/tool"
 	"image"
 	"log"
 )
@@ -17,8 +18,9 @@ type node struct {
 	inPort   portList
 	outPort  portList
 	portlink bh.PortTypeIf
-	position map[gr.PositionMode]image.Point
+	position map[string]image.Point
 	expanded bool
+	pathlist tool.StringList
 }
 
 /*
@@ -37,7 +39,8 @@ func NodeNew(name string, ntype bh.NodeTypeIf, context bh.SignalGraphTypeIf) (re
 		err = fmt.Errorf("NodeNew error: type '%s' has no ports.", ntype.TypeName())
 		return
 	}
-	ret = &node{context, name, ntype, portListInit(), portListInit(), nil, make(map[gr.PositionMode]image.Point), false}
+	ret = &node{context, name, ntype, portListInit(), portListInit(), nil,
+		make(map[string]image.Point), false, tool.StringListInit()}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p)
 	}
@@ -102,6 +105,57 @@ func (n *node) Expanded() bool {
 
 func (n *node) SetExpanded(xp bool) {
 	n.expanded = xp
+}
+
+func (n *node) SubNode(ownId, childId bh.NodeIdIf) (ret bh.NodeIf, ok bool) {
+	log.Printf("node.SubNode(%s, %s)\n", ownId, childId)
+	if ownId.String() == childId.String() {
+		ret, ok = n, true
+		return
+	}
+	if !ownId.IsAncestor(childId) {
+		return
+	}
+	for _, chn := range n.children() {
+		ret, ok = chn.SubNode(NodeIdNew(ownId, chn.Name()), childId)
+		if ok {
+			return
+		}
+	}
+	return
+}
+
+func (n node) Children(ownId bh.NodeIdIf) (ch []bh.NodeIdIf) {
+	for _, chn := range n.children() {
+		ch = append(ch, NodeIdNew(ownId, chn.Name()))
+	}
+	return
+}
+
+func (n node) children() (ch []bh.NodeIf) {
+	nt := n.ItsType()
+	var impl bh.ImplementationIf
+	haveImpl := false
+	for _, impl = range nt.Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			haveImpl = true
+			break
+		}
+	}
+	if !haveImpl {
+		return
+	}
+	g := impl.Graph()
+	ch = g.ProcessingNodes()
+	return
+}
+
+func (n node) PortLink() (linkname string, ok bool) {
+	ok = n.portlink != nil
+	if ok {
+		linkname = n.portlink.Name()
+	}
+	return
 }
 
 func (n *node) CreateXml() (buf []byte, err error) {
@@ -293,16 +347,29 @@ func IsProcessingNode(n bh.NodeIf) bool {
 }
 
 /*
- *      ModePositioner API
+ *      PathModePositioner API
  */
 
-func (n *node) ModePosition(mode gr.PositionMode) (pos image.Point) {
-	pos = n.position[mode]
+func (n node) PathModePosition(path string, mode gr.PositionMode) (pos image.Point) {
+	_, ok := n.pathlist.Find(path)
+	if !ok {
+		return
+	}
+	pos = n.position[gr.CreatePathMode(path, mode)]
 	return
 }
 
-func (n *node) SetModePosition(mode gr.PositionMode, pos image.Point) {
-	n.position[mode] = pos
+func (n *node) SetPathModePosition(path string, mode gr.PositionMode, pos image.Point) {
+	_, ok := n.pathlist.Find(path)
+	if !ok {
+		n.pathlist.Append(path)
+	}
+	//log.Printf("node.SetPathModePosition(%s): position[%v] = %v\n", n.Name(), gr.CreatePathMode(path, mode), pos)
+	n.position[gr.CreatePathMode(path, mode)] = pos
+}
+
+func (n node) PathList() []string {
+	return n.pathlist.Strings()
 }
 
 /*

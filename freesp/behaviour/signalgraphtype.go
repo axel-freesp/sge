@@ -199,7 +199,6 @@ func createSignalGraphTypeFromXml(g *backend.XmlSignalGraph, name string, contex
 			freesp.RegisterLibrary(l)
 			fmt.Println("createSignalGraphTypeFromXml: library", ref.Name, "successfully loaded")
 		}
-		log.Printf("createSignalGraphTypeFromXml: ok=%v, l=%v\n", ok, l)
 		t.libraries = append(t.libraries, l)
 	}
 	for _, n := range g.InputNodes {
@@ -304,13 +303,14 @@ func (t *signalGraphType) createNodeFromXml(xmln backend.XmlNode) (nd *node) {
 		log.Fatal("signalGraphType.createNodeFromXml: TODO: error handling")
 	}
 	for _, xmlh := range xmln.Entry {
-		mode, ok := freesp.ModeFromString[xmlh.Mode]
+		path, modestring := gr.SeparatePathMode(xmlh.Mode)
+		mode, ok := freesp.ModeFromString[string(modestring)]
 		if !ok {
 			log.Printf("signalGraphType.createNodeFromXml Warning: hint mode %s not defined\n",
 				xmlh.Mode)
 			continue
 		}
-		nd.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		nd.SetPathModePosition(path, mode, image.Point{xmlh.X, xmlh.Y})
 	}
 	nd.expanded = xmln.Expanded
 	for _, p := range nd.InPorts() {
@@ -335,24 +335,27 @@ func (t *signalGraphType) createNodeFromXml(xmln backend.XmlNode) (nd *node) {
 			}
 		}
 	}
-	if nd.expanded {
-		for _, impl := range nt.Implementation() {
-			if impl.ImplementationType() == bh.NodeTypeGraph {
-				for i, chn := range impl.Graph().ProcessingNodes() {
+	for _, impl := range nt.Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			for i, chn := range impl.Graph().ProcessingNodes() {
+				if len(xmln.Children) > i {
 					xmlch := xmln.Children[i]
 					for _, xmlh := range xmlch.Entry {
-						mode, ok := freesp.ModeFromString[xmlh.Mode]
+						path, modestring := gr.SeparatePathMode(xmlh.Mode)
+						mode, ok := freesp.ModeFromString[string(modestring)]
 						if !ok {
 							log.Printf("signalGraphType.createNodeFromXml Warning: hint mode %s not defined\n",
 								xmlh.Mode)
 							continue
 						}
-						chn.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+						pos := image.Point{xmlh.X, xmlh.Y}
+						log.Printf("signalGraphType.createNodeFromXml(node=%s, child=%s): path=%v, mode=%v, pos=%v\n", nd.Name(), chn.Name(), path, mode, pos)
+						chn.SetPathModePosition(path, mode, pos)
 					}
 				}
-				break
 			}
-		} 
+			break
+		}
 	}
 	return
 }
@@ -368,8 +371,13 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
 		return
 	}
 	pt := resolvePort(n.NPort, gr.InPort)
+	if pt == nil {
+		pt = resolvePort(nName, gr.InPort)
+	}
 	if pt != nil {
 		ret.portlink = pt
+	} else {
+		log.Printf("signalGraphType.createNodeFromXml Warning: input node %s not linked\n", nName)
 	}
 	for _, xmlh := range n.Entry {
 		mode, ok := freesp.ModeFromString[xmlh.Mode]
@@ -378,7 +386,7 @@ func (t *signalGraphType) createInputNodeFromXml(n backend.XmlInputNode,
 				xmlh.Mode)
 			continue
 		}
-		ret.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		ret.SetPathModePosition("", mode, image.Point{xmlh.X, xmlh.Y})
 	}
 	return
 }
@@ -394,8 +402,13 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 		return
 	}
 	pt := resolvePort(n.NPort, gr.OutPort) // matches also empty names
+	if pt == nil {
+		pt = resolvePort(nName, gr.OutPort)
+	}
 	if pt != nil {
 		ret.portlink = pt
+	} else {
+		log.Printf("signalGraphType.createNodeFromXml Warning: output node %s not linked\n", nName)
 	}
 	for _, xmlh := range n.Entry {
 		mode, ok := freesp.ModeFromString[xmlh.Mode]
@@ -404,7 +417,7 @@ func (t *signalGraphType) createOutputNodeFromXml(n backend.XmlOutputNode,
 				xmlh.Mode)
 			continue
 		}
-		ret.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
+		ret.SetPathModePosition("", mode, image.Point{xmlh.X, xmlh.Y})
 	}
 	return
 }

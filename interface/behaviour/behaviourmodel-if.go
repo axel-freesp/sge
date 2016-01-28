@@ -1,6 +1,7 @@
 package behaviour
 
 import (
+	"fmt"
 	"github.com/axel-freesp/sge/interface/graph"
 	"github.com/axel-freesp/sge/interface/model"
 	"github.com/axel-freesp/sge/interface/tree"
@@ -71,15 +72,24 @@ const (
 
 type NodeIf interface {
 	tree.NamedTreeElementIf
-	graph.ModePositioner
+	graph.PathModePositioner
 	ItsType() NodeTypeIf
 	InPorts() []PortIf
 	OutPorts() []PortIf
 	InPortIndex(portname string) int
 	OutPortIndex(portname string) int
 	Context() SignalGraphTypeIf
+	PortLink() (string, bool)
 	Expanded() bool
 	SetExpanded(bool)
+	SubNode(ownId, childId NodeIdIf) (NodeIf, bool)
+	Children(ownId NodeIdIf) []NodeIdIf
+}
+
+type NodeIdIf interface {
+	fmt.Stringer
+	Parent() NodeIdIf
+	IsAncestor(NodeIdIf) bool
 }
 
 type SignalTypeIf interface {

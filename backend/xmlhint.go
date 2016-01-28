@@ -7,7 +7,7 @@ import (
 
 type XmlNodeHint struct {
 	XmlModeHint
-	Expanded bool `xml:"expanded,attr"`
+	Expanded bool          `xml:"expanded,attr"`
 	Children []XmlNodeHint `xml:"children"`
 }
 
@@ -27,7 +27,7 @@ func XmlHintNew(x, y int) *XmlHint {
 func (h *XmlHint) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlHint.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -36,7 +36,7 @@ func (h *XmlHint) Read(data []byte) (cnt int, err error) {
 func (h *XmlHint) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlHint.Write error: %v", err)
 	}
 	return
 }
@@ -53,7 +53,7 @@ func XmlShapeNew(w, h int) *XmlShape {
 func (h *XmlShape) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlShape.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -62,7 +62,7 @@ func (h *XmlShape) Read(data []byte) (cnt int, err error) {
 func (h *XmlShape) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlShape.Write error: %v", err)
 	}
 	return
 }
@@ -79,7 +79,7 @@ func XmlRectangleNew(x, y, w, h int) *XmlRectangle {
 func (h *XmlRectangle) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlRectangle.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -88,7 +88,7 @@ func (h *XmlRectangle) Read(data []byte) (cnt int, err error) {
 func (h *XmlRectangle) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlRectangle.Write error: %v", err)
 	}
 	return
 }
@@ -104,7 +104,7 @@ func XmlModeHintNew() *XmlModeHint {
 func (h *XmlModeHint) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlModeHint.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -113,7 +113,7 @@ func (h *XmlModeHint) Read(data []byte) (cnt int, err error) {
 func (h *XmlModeHint) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlModeHint.Write error: %v", err)
 	}
 	return
 }
@@ -129,7 +129,7 @@ func XmlModeRectNew() *XmlModeRectangle {
 func (h *XmlModeRectangle) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlModeRectangle.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -138,7 +138,7 @@ func (h *XmlModeRectangle) Read(data []byte) (cnt int, err error) {
 func (h *XmlModeRectangle) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlModeRectangle.Write error: %v", err)
 	}
 	return
 }
@@ -155,7 +155,7 @@ func XmlModeHintEntryNew(mode string, x, y int) *XmlModeHintEntry {
 func (h *XmlModeHintEntry) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlModeHintEntry.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -164,7 +164,7 @@ func (h *XmlModeHintEntry) Read(data []byte) (cnt int, err error) {
 func (h *XmlModeHintEntry) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlModeHintEntry.Write error: %v", err)
 	}
 	return
 }
@@ -182,7 +182,7 @@ func XmlModeRectEntryNew(mode string, x, y, w, h int) *XmlModeRectEntry {
 func (h *XmlModeRectEntry) Read(data []byte) (cnt int, err error) {
 	err = xml.Unmarshal(data, h)
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Read error: %v", err)
+		err = fmt.Errorf("XmlModeRectEntry.Read error: %v", err)
 	}
 	cnt = len(data)
 	return
@@ -191,7 +191,7 @@ func (h *XmlModeRectEntry) Read(data []byte) (cnt int, err error) {
 func (h *XmlModeRectEntry) Write() (data []byte, err error) {
 	data, err = xml.MarshalIndent(h, "", "   ")
 	if err != nil {
-		err = fmt.Errorf("XmlConnect.Write error: %v", err)
+		err = fmt.Errorf("XmlModeRectEntry.Write error: %v", err)
 	}
 	return
 }

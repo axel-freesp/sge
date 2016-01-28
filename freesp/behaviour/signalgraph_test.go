@@ -1,6 +1,8 @@
 package behaviour
 
 import (
+	"github.com/axel-freesp/sge/freesp"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	"testing"
 )
 
@@ -36,22 +38,22 @@ func TestGraph(t *testing.T) {
 	}
 
 	for i, c := range case1 {
-		Init()
-		var l LibraryIf = LibraryNew("test.alml", nil)
+		freesp.Init()
+		var l bh.LibraryIf = LibraryNew("test.alml", nil)
 		buf := copyBuf(c.library)
-		err := l.Read(buf)
+		_, err := l.Read(buf)
 		if err != nil {
 			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
 			return
 		}
-		var sg SignalGraphIf = SignalGraphNew("test.sml", nil)
+		var sg bh.SignalGraphIf = SignalGraphNew("test.sml", nil)
 		buf = copyBuf(c.graph)
-		err = sg.Read(buf)
+		_, err = sg.Read(buf)
 		if err != nil {
 			t.Errorf("Testcase %d: Failed to read from buffer: %v", i, err)
 			return
 		}
-		var st SignalGraphTypeIf = sg.ItsType()
+		var st bh.SignalGraphTypeIf = sg.ItsType()
 		if len(st.Nodes()) != c.nodes {
 			t.Errorf("Testcase %d: NodeIf count mismatch", i)
 			return

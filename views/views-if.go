@@ -9,10 +9,10 @@ import (
 )
 
 type ContextIf interface {
-	SelectNode(bh.NodeIf)          // single click selection
-	EditNode(bh.NodeIf)            // double click selection
-	SelectPort(bh.PortIf)          // single click selection
-	SelectConnect(bh.ConnectionIf) // single click selection
+	SelectNode(bh.NodeIf, bh.NodeIdIf) // single click selection
+	EditNode(bh.NodeIf, bh.NodeIdIf)   // double click selection
+	SelectPort(bh.PortIf)              // single click selection
+	SelectConnect(bh.ConnectionIf)     // single click selection
 	SelectArch(pf.ArchIf)
 	SelectProcess(pf.ProcessIf)
 	SelectChannel(pf.ChannelIf)

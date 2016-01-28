@@ -5,7 +5,8 @@ import (
 	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
-	"log"
+	//"log"
+	"image"
 	"strings"
 )
 
@@ -39,7 +40,8 @@ func CreateXmlInputNode(n bh.NodeIf) *backend.XmlInputNode {
 		tName = ""
 	}
 	ret := backend.XmlInputNodeNew(n.Name(), tName)
-	ret.Entry = freesp.CreateXmlModePosition(n).Entry
+	converter := gr.CreateModePositioner("", n)
+	ret.Entry = freesp.CreateXmlModePosition(converter).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -55,7 +57,8 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 		tName = ""
 	}
 	ret := backend.XmlOutputNodeNew(n.Name(), tName)
-	ret.Entry = freesp.CreateXmlModePosition(n).Entry
+	converter := gr.CreateModePositioner("", n)
+	ret.Entry = freesp.CreateXmlModePosition(converter).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -66,18 +69,26 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 }
 
 func CreateXmlProcessingNodeHint(n bh.NodeIf) (xmlh *backend.XmlNodeHint) {
+	//log.Printf("CreateXmlProcessingNodeHint(%s): pathlist = %v, position = %v\n", n.Name(), n.PathList(), n.(*node).position)
 	xmlh = backend.XmlNodeHintNew(n.Expanded())
-	xmlh.Entry = freesp.CreateXmlModePosition(n).Entry
-	if n.Expanded() {
-		nt := n.ItsType()
-		for _, impl := range nt.Implementation() {
-			if impl.ImplementationType() == bh.NodeTypeGraph {
-				g := impl.Graph()
-				for _, chn := range g.ProcessingNodes() {
-					xmlh.Children = append(xmlh.Children, *CreateXmlProcessingNodeHint(chn))
-				}
-				break
+	empty := image.Point{}
+	for _, p := range n.PathList() {
+		for _, m := range freesp.ValidModes {
+			xmlp := gr.CreatePathMode(p, m)
+			pos := n.PathModePosition(p, m)
+			if pos != empty {
+				xmlh.Entry = append(xmlh.Entry, *backend.XmlModeHintEntryNew(xmlp, pos.X, pos.Y))
 			}
+		}
+	}
+	nt := n.ItsType()
+	for _, impl := range nt.Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			g := impl.Graph()
+			for _, chn := range g.ProcessingNodes() {
+				xmlh.Children = append(xmlh.Children, *CreateXmlProcessingNodeHint(chn))
+			}
+			break
 		}
 	}
 	return
@@ -159,7 +170,7 @@ func CreateXmlSignalGraph(g bh.SignalGraphIf) *backend.XmlSignalGraph {
 func CreateXmlSignalGraphType(t bh.SignalGraphTypeIf) *backend.XmlSignalGraph {
 	ret := backend.XmlSignalGraphNew()
 	for _, l := range t.Libraries() {
-		log.Printf("CreateXmlSignalGraphType: l=%v\n", l)
+		//log.Printf("CreateXmlSignalGraphType: l=%v\n", l)
 		ret.Libraries = append(ret.Libraries, *CreateXmlLibraryRef(l))
 	}
 	for _, n := range t.InputNodes() {

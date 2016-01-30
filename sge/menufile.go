@@ -25,7 +25,7 @@ type DirectoryMgrIf interface {
 	// SetCurrent(): The actual directory chosen by dialog
 	SetCurrent(ft FileType, dirname string)
 	// What is stored as obj.Filename()
-	FilenameToShow(string) string
+	FilenameToShow(string) (prefix, filename string)
 }
 
 type FileType string
@@ -128,9 +128,11 @@ func (d *DirectoryMgr) SetCurrent(ft FileType, newCurrent string) {
 	log.Printf("DirectoryMgr.SetCurrent(%s, %s): %s\n", string(ft), newCurrent, d.Current(ft))
 }
 
-func (d *DirectoryMgr) FilenameToShow(filepath string) (filename string) {
+func (d *DirectoryMgr) FilenameToShow(filepath string) (prefix, filename string) {
+	// TODO: evaluate FREESP_SEARCH_PATH
 	if tool.IsSubPath(d.xmlRoot, filepath) {
 		filename = tool.RelPath(d.xmlRoot, filepath)
+		prefix = d.xmlRoot
 	} else {
 		filename = filepath
 	}
@@ -208,17 +210,21 @@ func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	var f tr.ToplevelTreeElement
 	var err error
-	f, err = global.SignalGraphMgr().Access(dirMgr.FilenameToShow(sgname))
+	prefix, fname := dirMgr.FilenameToShow(sgname)
+	f, err = global.SignalGraphMgr().Access(fname)
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
+	f.SetPathPrefix(prefix)
 	global.MappingMgr().SetGraphForNew(f.(bh.SignalGraphIf))
-	f, err = global.PlatformMgr().Access(dirMgr.FilenameToShow(pfname))
+	prefix, fname = dirMgr.FilenameToShow(pfname)
+	f, err = global.PlatformMgr().Access(fname)
 	if err != nil {
 		log.Printf("fileNewMap: %s\n", err)
 		return
 	}
+	f.SetPathPrefix(prefix)
 	global.MappingMgr().SetPlatformForNew(f.(pf.PlatformIf))
 	_, err = global.MappingMgr().New()
 	if err != nil {
@@ -249,17 +255,18 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	if !ok {
 		return
 	}
-	filename = dirMgr.FilenameToShow(filename)
+	prefix, fname := dirMgr.FilenameToShow(filename)
 	var err error
 	var obj tr.ToplevelTreeElement
 	var fileMgr mod.FileManagerIf
-	fileMgr, err = getFileMgr(FileType(tool.Suffix(filename)))
-	obj, err = fileMgr.Access(filename)
+	fileMgr, err = getFileMgr(FileType(tool.Suffix(fname)))
+	obj, err = fileMgr.Access(fname)
 	if err != nil {
 		log.Printf("fileOpen error: %s\n", err)
 		return
 	}
-	dirMgr.SetCurrent(fileType(obj), tool.Dirname(filename))
+	obj.SetPathPrefix(prefix)
+	dirMgr.SetCurrent(fileType(obj), tool.Dirname(fname))
 }
 
 func fileSaveAs(fts *models.FilesTreeStore) {
@@ -269,20 +276,20 @@ func fileSaveAs(fts *models.FilesTreeStore) {
 		return
 	}
 	obj := getCurrentTopObject(fts)
-	dirMgr.SetCurrent(fileType(obj), tool.Dirname(filename))
 	oldName := obj.Filename()
-	filename = dirMgr.FilenameToShow(filename)
-	err := global.FileMgr(obj).Rename(oldName, filename)
+	prefix, fname := dirMgr.FilenameToShow(filename)
+	err := global.FileMgr(obj).Rename(oldName, fname)
 	if err != nil {
 		log.Printf("fileSaveAs: %s\n", err)
 		return
 	}
-	err = doSave(fts, filename, obj)
+	obj.SetPathPrefix(prefix)
+	err = global.FileMgr(obj).Store(fname)
 	if err != nil {
 		log.Printf("fileSaveAs: %s\n", err)
 		return
 	}
-	dirMgr.SetCurrent(fileType(obj), tool.Dirname(filename))
+	dirMgr.SetCurrent(fileType(obj), tool.Dirname(fname))
 }
 
 func isGeneratedFilename(filename string) bool {
@@ -301,16 +308,16 @@ func fileSave(fts *models.FilesTreeStore) {
 			return
 		}
 		dirMgr.SetCurrent(fileType(obj), tool.Dirname(filename))
-		err := global.FileMgr(obj).Rename(oldName, dirMgr.FilenameToShow(filename))
+		prefix, fname := dirMgr.FilenameToShow(filename)
+		err := global.FileMgr(obj).Rename(oldName, fname)
 		if err != nil {
 			log.Printf("fileSave: %s\n", err)
 			return
 		}
-	} else if !tool.IsSubPath("/", filename) {
-		filename = fmt.Sprintf("%s/%s", backend.XmlRoot(), filename)
+		obj.SetPathPrefix(prefix)
 	}
 	dirMgr.SetCurrent(fileType(obj), tool.Dirname(filename))
-	err := doSave(fts, filename, obj)
+	err := global.FileMgr(obj).Store(obj.Filename())
 	if err != nil {
 		log.Println(err)
 	}
@@ -380,11 +387,6 @@ func runFileDialog(fTypes []FileType, toSave bool, announce string) (filename st
 	ok = (gtk.ResponseType(response) == gtk.RESPONSE_OK)
 	filename = dialog.GetFilename()
 	dialog.Destroy()
-	return
-}
-
-func doSave(fts *models.FilesTreeStore, filename string, obj tr.ToplevelTreeElement) (err error) {
-	err = obj.WriteFile(filename)
 	return
 }
 

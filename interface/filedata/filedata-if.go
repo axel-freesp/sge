@@ -15,4 +15,6 @@ type FileDataIf interface {
 type Filenamer interface {
 	Filename() string
 	SetFilename(string)
+	PathPrefix() string
+	SetPathPrefix(string)
 }

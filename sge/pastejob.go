@@ -50,7 +50,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseNode(text, context, parent.(bh.SignalGraphIf).ItsType())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
+			//log.Printf("NewElementJob.ParseText: successfully parsed SignalGraphIf\n")
 			return
 		}
 
@@ -58,7 +58,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseNode(text, context, parent.(bh.SignalGraphTypeIf))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
+			//log.Printf("NewElementJob.ParseText: successfully parsed SignalGraphTypeIf\n")
 			return
 		}
 
@@ -66,7 +66,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseNode(text, getParentId(context), parent.(bh.NodeIf).Context())
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
+			//log.Printf("NewElementJob.ParseText: successfully parsed NodeIf\n")
 			return
 		}
 
@@ -74,7 +74,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseNodeType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed NodeTypeIf\n")
+			//log.Printf("NewElementJob.ParseText: successfully parsed NodeTypeIf\n")
 			return
 		}
 
@@ -88,7 +88,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseSignalType(text, getParentId(context))
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed SignalType\n")
+			//log.Printf("NewElementJob.ParseText: successfully parsed SignalTypeIf\n")
 			return
 		}
 
@@ -102,7 +102,7 @@ func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err err
 		j, ok = parseSignalType(text, context)
 		if ok {
 			job = EditorJobNew(JobPaste, j)
-			log.Printf("NewElementJob.ParseText: successfully parsed SignalType\n")
+			log.Printf("NewElementJob.ParseText: successfully parsed SignalTypeIf\n")
 			return
 		}
 

@@ -131,3 +131,11 @@ func Suffix(path string) string {
 	}
 	return path[idx+1:]
 }
+
+func Prefix(path string) string {
+	idx := strings.LastIndex(path, ".")
+	if idx < 0 {
+		return path
+	}
+	return path[:idx]
+}

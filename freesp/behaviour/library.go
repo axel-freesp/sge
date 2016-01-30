@@ -12,6 +12,7 @@ import (
 
 type library struct {
 	filename    string
+	pathPrefix  string
 	signalTypes signalTypeList
 	nodeTypes   nodeTypeList
 	context     mod.ModelContextIf
@@ -20,7 +21,7 @@ type library struct {
 var _ bh.LibraryIf = (*library)(nil)
 
 func LibraryNew(filename string, context mod.ModelContextIf) *library {
-	ret := &library{filename, signalTypeListInit(), nodeTypeListInit(), context}
+	ret := &library{filename, "", signalTypeListInit(), nodeTypeListInit(), context}
 	freesp.RegisterLibrary(ret)
 	return ret
 }
@@ -73,6 +74,14 @@ func (l *library) SetFilename(filename string) {
 	freesp.RegisterLibrary(l)
 }
 
+func (l library) PathPrefix() string {
+	return l.pathPrefix
+}
+
+func (l *library) SetPathPrefix(newP string) {
+	l.pathPrefix = newP
+}
+
 func (l library) SignalTypes() []bh.SignalTypeIf {
 	return l.signalTypes.SignalTypes()
 }
@@ -82,6 +91,13 @@ func (l library) NodeTypes() []bh.NodeTypeIf {
 }
 
 func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
+	libMgr := l.context.LibraryMgr()
+	for _, ref := range xmlLib.Libraries {
+		_, err := libMgr.Access(ref.Name)
+		if err != nil {
+			log.Println("library.Read warning:", err)
+		}
+	}
 	for _, st := range xmlLib.SignalTypes {
 		var scope bh.Scope
 		var mode bh.Mode
@@ -97,7 +113,7 @@ func (l *library) createLibFromXml(xmlLib *backend.XmlLibrary) error {
 		default:
 			mode = bh.Asynchronous
 		}
-		sType, err := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode)
+		sType, err := SignalTypeNew(st.Name, st.Ctype, st.Msgid, scope, mode, l.Filename())
 		if err != nil {
 			return err
 		}

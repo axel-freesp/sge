@@ -8,11 +8,12 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"image"
 	"log"
 )
 
 func SignalGraphNew(filename string, context mod.ModelContextIf) *signalGraph {
-	return &signalGraph{filename, SignalGraphTypeNew(context)}
+	return &signalGraph{filename, "", SignalGraphTypeNew(context)}
 }
 
 func SignalGraphUsesNodeType(s bh.SignalGraphIf, nt bh.NodeTypeIf) bool {
@@ -23,9 +24,105 @@ func SignalGraphUsesSignalType(s bh.SignalGraphIf, st bh.SignalTypeIf) bool {
 	return SignalGraphTypeUsesSignalType(s.ItsType(), st)
 }
 
+func SignalGraphApplyHints(s bh.SignalGraphIf, xmlhints *backend.XmlGraphHint) (err error) {
+	if s.Filename() != xmlhints.Ref {
+		err = fmt.Errorf("SignalGraphApplyHints error: filename mismatch\n")
+		return
+	}
+	g := s.ItsType()
+	for _, xmln := range xmlhints.InputNode {
+		n, ok := g.NodeByName(xmln.Name)
+		if ok {
+			n.SetExpanded(false)
+			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+		}
+	}
+	for _, xmln := range xmlhints.OutputNode {
+		n, ok := g.NodeByName(xmln.Name)
+		if ok {
+			n.SetExpanded(false)
+			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+		}
+	}
+	NodesApplyHints("", g, xmlhints.ProcessingNode)
+	return
+}
+
+func PathModePositionerApplyHints(pmp gr.PathModePositioner, xmln backend.XmlModeHint) {
+	for _, m := range xmln.Entry {
+		path, modestring := gr.SeparatePathMode(m.Mode)
+		mode, ok := freesp.ModeFromString[string(modestring)]
+		if !ok {
+			log.Printf("PathModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
+			continue
+		}
+		pos := image.Point{m.X, m.Y}
+		pmp.SetPathModePosition(path, mode, pos)
+	}
+}
+
+func ModePositionerApplyHints(mp gr.ModePositioner, xmln backend.XmlModeHint) {
+	for _, m := range xmln.Entry {
+		mode, ok := freesp.ModeFromString[m.Mode]
+		if !ok {
+			log.Printf("ModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
+			continue
+		}
+		pos := image.Point{m.X, m.Y}
+		mp.SetModePosition(mode, pos)
+	}
+}
+
+func NodesApplyHints(path string, g bh.SignalGraphTypeIf, xmlh []backend.XmlNodePosHint) {
+	for _, n := range g.ProcessingNodes() {
+		var p string
+		if len(path) == 0 {
+			p = n.Name()
+		} else {
+			p = fmt.Sprintf("%s/%s", path, n.Name())
+		}
+		ok := false
+		var xmln backend.XmlNodePosHint
+		for _, xmln = range xmlh {
+			if p == xmln.Name {
+				ok = true
+				break
+			}
+		}
+		if ok {
+			n.SetExpanded(xmln.Expanded)
+			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+			for i, p := range n.InPorts() {
+				ok = p.Name() == xmln.InPorts[i].Name
+				if !ok {
+					log.Printf("NodesApplyHints FIXME: name mismatch\n")
+					continue
+				}
+				ModePositionerApplyHints(p, xmln.InPorts[i].XmlModeHint)
+			}
+			for i, p := range n.OutPorts() {
+				ok = p.Name() == xmln.OutPorts[i].Name
+				if !ok {
+					log.Printf("NodesApplyHints FIXME: name mismatch\n")
+					continue
+				}
+				ModePositionerApplyHints(p, xmln.OutPorts[i].XmlModeHint)
+			}
+		}
+		nt := n.ItsType()
+		for _, impl := range nt.Implementation() {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
+				NodesApplyHints(p, impl.Graph(), xmlh)
+				break
+			}
+		}
+	}
+}
+
 type signalGraph struct {
-	filename string
-	itsType  bh.SignalGraphTypeIf
+	filename   string
+	pathPrefix string
+	itsType    bh.SignalGraphTypeIf
 }
 
 /*
@@ -76,6 +173,14 @@ func (s *signalGraph) WriteFile(filepath string) error {
 
 func (s *signalGraph) SetFilename(filename string) {
 	s.filename = filename
+}
+
+func (s signalGraph) PathPrefix() string {
+	return s.pathPrefix
+}
+
+func (s *signalGraph) SetPathPrefix(newP string) {
+	s.pathPrefix = newP
 }
 
 func (s *signalGraph) RemoveFromTree(tree tr.TreeIf) {

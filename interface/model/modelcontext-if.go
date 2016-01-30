@@ -16,6 +16,7 @@ type FileManagerIf interface {
 	Access(name string) (tree.ToplevelTreeElement, error)
 	Remove(name string)
 	Rename(oldName, newName string) error
+	Store(name string) error
 }
 
 type FileManagerMappingIf interface {

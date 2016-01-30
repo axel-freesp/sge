@@ -7,6 +7,7 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -30,6 +31,7 @@ func FileManagerSGNew(context FilemanagerContextIf) *fileManagerSG {
 func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
 	filename := f.NewFilename()
 	sg = behaviour.SignalGraphNew(filename, f.context)
+	f.signalGraphMap[filename] = sg.(bh.SignalGraphIf)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {
@@ -55,8 +57,9 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 		return
 	}
 	sg = behaviour.SignalGraphNew(name, f.context)
-	for _, try := range backend.XmlSearchPaths() {
-		err = sg.ReadFile(fmt.Sprintf("%s/%s", try, name))
+	var filedir string
+	for _, filedir = range backend.XmlSearchPaths() {
+		err = sg.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err == nil {
 			break
 		}
@@ -65,6 +68,24 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerSG.Access: graph file %s not found.", name)
 		return
 	}
+	sg.SetPathPrefix(filedir)
+	hint := backend.XmlGraphHintNew(name)
+	hintfilename := fmt.Sprintf("%s/%s.hints.xml", filedir, tool.Prefix(name))
+	var buf []byte
+	buf, err = tool.ReadFile(hintfilename)
+	if err != nil {
+		return
+	}
+	_, err = hint.Read(buf)
+	if err != nil {
+		return
+	}
+	err = behaviour.SignalGraphApplyHints(sg.(bh.SignalGraphIf), hint)
+	if err != nil {
+		err = fmt.Errorf("fileManagerSG.Access: %s", err)
+		return
+	}
+
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {
@@ -82,6 +103,7 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 	f.context.GVC().Add(gv, name)
 	f.signalGraphMap[name] = sg.(bh.SignalGraphIf)
 	log.Printf("fileManagerSG.Access: graph %s successfully loaded.\n", name)
+
 	return
 }
 
@@ -121,5 +143,32 @@ func (f *fileManagerSG) Rename(oldName, newName string) (err error) {
 	delete(f.signalGraphMap, oldName)
 	sg.SetFilename(newName)
 	f.signalGraphMap[newName] = sg
+	return
+}
+
+func (f *fileManagerSG) Store(name string) (err error) {
+	sg, ok := f.signalGraphMap[name]
+	if !ok {
+		err = fmt.Errorf("fileManagerSG.Rename error: graph %s not found\n", name)
+		return
+	}
+	var filename string
+	if len(sg.PathPrefix()) == 0 {
+		filename = sg.Filename()
+	} else {
+		filename = fmt.Sprintf("%s/%s", sg.PathPrefix(), sg.Filename())
+	}
+	err = sg.WriteFile(filename)
+	if err != nil {
+		return
+	}
+	hint := behaviour.CreateXmlGraphHint(sg)
+	hintfilename := fmt.Sprintf("%s.hints.xml", tool.Prefix(filename))
+	var buf []byte
+	buf, err = hint.Write()
+	if err != nil {
+		return
+	}
+	err = tool.WriteFile(hintfilename, buf)
 	return
 }

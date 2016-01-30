@@ -47,8 +47,9 @@ func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElement, err er
 		return
 	}
 	lib = behaviour.LibraryNew(name, f.context)
-	for _, try := range backend.XmlSearchPaths() {
-		err = lib.ReadFile(fmt.Sprintf("%s/%s", try, name))
+	var filedir string
+	for _, filedir := range backend.XmlSearchPaths() {
+		err = lib.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err == nil {
 			break
 		}
@@ -57,6 +58,7 @@ func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElement, err er
 		err = fmt.Errorf("fileManagerLib.Access: library file %s not found", name)
 		return
 	}
+	lib.SetPathPrefix(filedir)
 	f.libraryMap[name] = lib.(bh.LibraryIf)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(lib.(bh.LibraryIf))
@@ -114,5 +116,24 @@ func (f *fileManagerLib) Rename(oldName, newName string) (err error) {
 	lib.SetFilename(newName)
 	f.libraryMap[newName] = lib
 	log.Printf("fileManagerLib.Access: library %s successfully renamed to %d\n", oldName, newName)
+	return
+}
+
+func (f *fileManagerLib) Store(name string) (err error) {
+	lib, ok := f.libraryMap[name]
+	if !ok {
+		err = fmt.Errorf("fileManagerLib.Store error: library %s not found\n", name)
+		return
+	}
+	var filename string
+	if len(lib.PathPrefix()) == 0 {
+		filename = lib.Filename()
+	} else {
+		filename = fmt.Sprintf("%s/%s", lib.PathPrefix(), lib.Filename())
+	}
+	err = lib.WriteFile(filename)
+	if err != nil {
+		return
+	}
 	return
 }

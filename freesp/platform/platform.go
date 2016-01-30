@@ -13,6 +13,7 @@ import (
 
 type platform struct {
 	filename   string
+	pathPrefix string
 	platformId string
 	archlist   archList
 }
@@ -20,7 +21,7 @@ type platform struct {
 var _ pf.PlatformIf = (*platform)(nil)
 
 func PlatformNew(filename string) *platform {
-	return &platform{filename, "", archListInit()}
+	return &platform{filename, "", "", archListInit()}
 }
 
 func (p *platform) PlatformId() string {
@@ -75,6 +76,14 @@ func (p *platform) Filename() string {
 func (p *platform) SetFilename(newFilename string) {
 	p.filename = newFilename
 	// TODO
+}
+
+func (p platform) PathPrefix() string {
+	return p.pathPrefix
+}
+
+func (p *platform) SetPathPrefix(newP string) {
+	p.pathPrefix = newP
 }
 
 func (p *platform) Read(data []byte) (cnt int, err error) {

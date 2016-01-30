@@ -94,6 +94,7 @@ type NodeIdIf interface {
 
 type SignalTypeIf interface {
 	tree.TreeElement
+	DefinedAt() string
 	TypeName() string
 	SetTypeName(string)
 	CType() string

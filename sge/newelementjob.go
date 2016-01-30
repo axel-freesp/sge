@@ -186,12 +186,16 @@ func (j *NewElementJob) CreateObject(fts *models.FilesTreeStore) (ret tr.TreeEle
 		default:
 			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: referenced parentObject wrong type %T\n", parentObject)
 		}
+		parentObject, err = fts.GetObjectById(j.parentId)
+		if err != nil {
+			log.Fatalf("NewElementJob.CreateObject(eSignalType) error: parent library object not found\n")
+		}
 		name := j.input[iSignalTypeName]
 		cType := j.input[iCType]
 		channelId := j.input[iChannelId]
 		scope := string2scope[j.input[iScope]]
 		mode := string2mode[j.input[iSignalMode]]
-		ret, err = behaviour.SignalTypeNew(name, cType, channelId, scope, mode)
+		ret, err = behaviour.SignalTypeNew(name, cType, channelId, scope, mode, parentObject.(bh.LibraryIf).Filename())
 		if err != nil {
 			log.Printf("NewElementJob.CreateObject(eSignalType) error: SignalTypeNew failed: %s\n", err)
 			return

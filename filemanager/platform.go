@@ -57,8 +57,9 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 		return
 	}
 	pl = platform.PlatformNew(name)
-	for _, try := range backend.XmlSearchPaths() {
-		err = pl.ReadFile(fmt.Sprintf("%s/%s", try, name))
+	var filedir string
+	for _, filedir := range backend.XmlSearchPaths() {
+		err = pl.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err == nil {
 			break
 		}
@@ -67,6 +68,7 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerPF.Access: platform file %s not found", name)
 		return
 	}
+	pl.SetPathPrefix(filedir)
 	pv, err := views.PlatformViewNew(pl.(pf.PlatformIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: Could not create platform view.")
@@ -120,5 +122,24 @@ func (f *fileManagerPF) Rename(oldName, newName string) (err error) {
 	delete(f.platformMap, oldName)
 	pl.SetFilename(newName)
 	f.platformMap[newName] = pl
+	return
+}
+
+func (f *fileManagerPF) Store(name string) (err error) {
+	pl, ok := f.platformMap[name]
+	if !ok {
+		err = fmt.Errorf("fileManagerPF.Store error: platform %s not found.\n", name)
+		return
+	}
+	var filename string
+	if len(pl.PathPrefix()) == 0 {
+		filename = pl.Filename()
+	} else {
+		filename = fmt.Sprintf("%s/%s", pl.PathPrefix(), pl.Filename())
+	}
+	err = pl.WriteFile(filename)
+	if err != nil {
+		return
+	}
 	return
 }

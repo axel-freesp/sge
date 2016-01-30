@@ -103,7 +103,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 	case JobPaste:
 		level++
 		for _, j := range job.paste.newElements {
-			log.Printf("jobApplier.Apply (JobPaste): level %d: %v\n", level, j)
+			//log.Printf("jobApplier.Apply (JobPaste): level %d: %v\n", level, j)
 			j.parentId = job.paste.context
 			state, err = a.Apply(EditorJobNew(JobNewElement, j))
 			if err != nil {
@@ -111,7 +111,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 				return
 			}
 			for _, ch := range job.paste.children {
-				log.Printf("jobApplier.Apply (JobPaste): level %d: %v\n", level, ch)
+				//log.Printf("jobApplier.Apply (JobPaste): level %d: %v\n", level, ch)
 				ch.context = state.(string)
 				_, err = a.Apply(EditorJobNew(JobPaste, ch))
 				if err != nil {

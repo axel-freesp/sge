@@ -15,17 +15,18 @@ import (
 )
 
 type mapping struct {
-	graph    bh.SignalGraphIf
-	platform pf.PlatformIf
-	context  mod.ModelContextIf
-	maps     map[string]*mapelem
-	filename string
+	graph      bh.SignalGraphIf
+	platform   pf.PlatformIf
+	context    mod.ModelContextIf
+	maps       map[string]*mapelem
+	filename   string
+	pathPrefix string
 }
 
 var _ mp.MappingIf = (*mapping)(nil)
 
 func MappingNew(filename string, context mod.ModelContextIf) *mapping {
-	return &mapping{nil, nil, context, make(map[string]*mapelem), filename}
+	return &mapping{nil, nil, context, make(map[string]*mapelem), filename, ""}
 }
 
 func (m *mapping) CreateXml() (buf []byte, err error) {
@@ -126,6 +127,14 @@ func (m mapping) Filename() string {
 
 func (m *mapping) SetFilename(newFilename string) {
 	m.filename = newFilename
+}
+
+func (m mapping) PathPrefix() string {
+	return m.pathPrefix
+}
+
+func (m *mapping) SetPathPrefix(newP string) {
+	m.pathPrefix = newP
 }
 
 func (m *mapping) Read(data []byte) (cnt int, err error) {

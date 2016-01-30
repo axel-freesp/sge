@@ -3,12 +3,14 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	"github.com/axel-freesp/sge/freesp/mapping"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -76,9 +78,9 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		return
 	}
 	m = mapping.MappingNew(name, f.context)
-	for _, try := range backend.XmlSearchPaths() {
-		log.Printf("fileManagerMap.Access: try path %s\n", try)
-		err = m.ReadFile(fmt.Sprintf("%s/%s", try, name))
+	var filedir string
+	for _, filedir := range backend.XmlSearchPaths() {
+		err = m.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err != nil {
 			log.Printf("fileManagerMap.Access error: %s\n", err)
 		}
@@ -90,6 +92,7 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerMap.Access: mapping file %s not found.", name)
 		return
 	}
+	m.SetPathPrefix(filedir)
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(m.(mp.MappingIf))
 	if err != nil {
@@ -139,5 +142,32 @@ func (f *fileManagerMap) Rename(oldName, newName string) (err error) {
 	delete(f.mappingMap, oldName)
 	m.SetFilename(newName)
 	f.mappingMap[newName] = m
+	return
+}
+
+func (f *fileManagerMap) Store(name string) (err error) {
+	m, ok := f.mappingMap[name]
+	if !ok {
+		err = fmt.Errorf("fileManagerMap.Store error: mapping %s not found.\n", name)
+		return
+	}
+	var filename string
+	if len(m.PathPrefix()) == 0 {
+		filename = m.Filename()
+	} else {
+		filename = fmt.Sprintf("%s/%s", m.PathPrefix(), m.Filename())
+	}
+	err = m.WriteFile(filename)
+	if err != nil {
+		return
+	}
+	hint := behaviour.CreateXmlGraphHint(m.Graph())
+	hintfilename := fmt.Sprintf("%s.hints.xml", tool.Prefix(filename))
+	var buf []byte
+	buf, err = hint.Write()
+	if err != nil {
+		return
+	}
+	err = tool.WriteFile(hintfilename, buf)
 	return
 }

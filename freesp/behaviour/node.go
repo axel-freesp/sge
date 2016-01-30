@@ -364,7 +364,6 @@ func (n *node) SetPathModePosition(path string, mode gr.PositionMode, pos image.
 	if !ok {
 		n.pathlist.Append(path)
 	}
-	//log.Printf("node.SetPathModePosition(%s): position[%v] = %v\n", n.Name(), gr.CreatePathMode(path, mode), pos)
 	n.position[gr.CreatePathMode(path, mode)] = pos
 }
 

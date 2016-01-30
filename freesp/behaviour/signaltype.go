@@ -14,6 +14,7 @@ type signalType struct {
 	name, ctype, msgid string
 	scope              bh.Scope
 	mode               bh.Mode
+	definedAt          string
 }
 
 /*
@@ -22,23 +23,46 @@ type signalType struct {
 
 var _ bh.SignalTypeIf = (*signalType)(nil)
 
-func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode) (t *signalType, err error) {
-	newT := &signalType{name, ctype, msgid, scope, mode}
+func SignalTypeNew(name, ctype, msgid string, scope bh.Scope, mode bh.Mode, definedAt string) (t *signalType, err error) {
+	newT := &signalType{name, ctype, msgid, scope, mode, definedAt}
 	sType, ok := freesp.GetSignalTypeByName(name)
 	if ok {
-		if (*newT) != (*(sType.(*signalType))) {
+		if !signalTypeCpmpatible(newT, sType) {
 			err = fmt.Errorf(`SignalTypeNew error: adding existing signal
 				type %s, which is incompatible`, name)
 			return
 		}
-		log.Printf(`SignalTypeNew: warning: adding existing
-			signal type definition %s (taking the existing)`, name)
+		log.Printf(`SignalTypeNew: warning: adding existing signal type
+			definition %s (taking the existing)`, name)
 		t = sType.(*signalType)
 	} else {
 		t = newT
 		freesp.RegisterSignalType(t)
 	}
 	return
+}
+
+func signalTypeCpmpatible(s1, s2 bh.SignalTypeIf) bool {
+	if s1.TypeName() != s2.TypeName() {
+		return true
+	}
+	if s1.CType() != s2.CType() {
+		return false
+	}
+	if s1.Scope() != s2.Scope() {
+		return false
+	}
+	if s1.ChannelId() != s2.ChannelId() {
+		return false
+	}
+	if s1.Mode() != s2.Mode() {
+		return false
+	}
+	return true
+}
+
+func (t signalType) DefinedAt() string {
+	return t.definedAt
 }
 
 func SignalTypeDestroy(t bh.SignalTypeIf) {

@@ -72,11 +72,12 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				gv.Sync()
 			}
 		case bh.NodeIf:
-			//log.Printf("------------------------------------------------------------------\n")
-			//log.Printf("treeSelectionChangedCB: path=%s -> nodeId=%s\n", path, nodeIdFromPath(treeStore, path))
 			global.win.graphViews.Select2(obj, nodeIdFromPath(treeStore, path))
-		case bh.PortIf, bh.ConnectionIf:
-			log.Printf("treeSelectionChangedCB: path=%s\n", path)
+		case bh.PortIf:
+			p := strings.Split(path, ":")
+			npath := strings.Join(p[:len(p)-1], ":")
+			global.win.graphViews.Select2(obj, nodeIdFromPath(treeStore, npath))
+		case bh.ConnectionIf:
 			global.win.graphViews.Select(obj)
 		case pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
 			global.win.graphViews.Select(obj)

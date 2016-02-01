@@ -224,13 +224,12 @@ func (g *Global) EditNode(node bh.NodeIf, id bh.NodeIdIf) {
 	log.Printf("Global.EditNode: %v\n", node)
 }
 
-func (g *Global) SelectPort(port bh.PortIf) {
-	p := port.(bh.PortIf)
-	n := p.Node()
-	cursor := g.fts.Cursor(n)
+func (g *Global) SelectPort(p bh.PortIf, n bh.NodeIf, id bh.NodeIdIf) {
+	cursor := g.nodePath(n, g.fts.Cursor(n), id)
 	pCursor := g.fts.CursorAt(cursor, p)
-	path, _ := gtk.TreePathNewFromString(pCursor.Path)
+	path, _ := gtk.TreePathNewFromString(cursor.Path)
 	g.ftv.TreeView().ExpandToPath(path)
+	path, _ = gtk.TreePathNewFromString(pCursor.Path)
 	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
 }
 

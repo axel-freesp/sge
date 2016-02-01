@@ -20,10 +20,10 @@ type NodeIf interface {
 	InPort(int) BBoxer
 	OutPort(int) BBoxer
 	SelectPort(port bh.PortIf)
-	GetSelectedPort() (ok bool, port bh.PortIf)
+	GetSelectedPort(bh.NodeIdIf) (bh.PortIf, bool)
 	InPortByName(name string) (BoxedSelecter, bool)
 	OutPortByName(name string) (BoxedSelecter, bool)
-	SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool)
+	SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf)
 	GetHighlightedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 }
 

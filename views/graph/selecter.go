@@ -25,14 +25,16 @@ var _ Selecter = (*SelectObject)(nil)
 func (s *SelectObject) Select() (modified bool) {
 	modified = !s.selected
 	s.selected = true
-	modified = modified || s.onSelect()
+	m := s.onSelect()
+	modified = modified || m
 	return
 }
 
 func (s *SelectObject) Deselect() (modified bool) {
 	modified = s.selected
 	s.selected = false
-	modified = modified || s.onDeselect()
+	m := s.onDeselect()
+	modified = modified || m
 	return
 }
 
@@ -56,7 +58,8 @@ func (h *HighlightObject) DoHighlight(hit bool, pos image.Point) (modified bool)
 	modified = (h.highlighted != hit)
 	h.highlighted = hit
 	if modified || hit {
-		modified = h.onHighlight(hit, pos) || modified
+		m := h.onHighlight(hit, pos)
+		modified = modified || m
 	}
 	return
 }

@@ -90,7 +90,7 @@ func (n *Node) SelectPort(port bh.PortIf) {
 	n.selectedPort = index
 }
 
-func (n Node) GetSelectedPort() (ok bool, port bh.PortIf) {
+func (n Node) GetSelectedPort(ownId bh.NodeIdIf) (port bh.PortIf, ok bool) {
 	if n.selectedPort == -1 {
 		return
 	}
@@ -161,10 +161,10 @@ func (n *Node) Expand() {
 func (n *Node) Collapse() {
 }
 
-func (n *Node) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool) {
-	//log.Printf("Node.SelectNode(%s), ownId=%v, selectId=%v", n.Name(), ownId, selectId)
+func (n *Node) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
 	if ownId.String() == selectId.String() {
 		n.highlighted = true
+		node = n
 		modified = n.Select()
 	} else {
 		n.highlighted = false
@@ -234,9 +234,11 @@ var _ Selecter = (*Port)(nil)
 func (n *Node) onSelect() (modified bool) {
 	for i, p := range n.ports {
 		if i == n.selectedPort {
-			modified = modified || p.Select()
+			m := p.Select()
+			modified = modified || m
 		} else {
-			modified = modified || p.Deselect()
+			m := p.Deselect()
+			modified = modified || m
 		}
 	}
 	return
@@ -244,7 +246,8 @@ func (n *Node) onSelect() (modified bool) {
 
 func (n *Node) onDeselect() (modified bool) {
 	for _, p := range n.ports {
-		modified = modified || p.Deselect()
+		m := p.Deselect()
+		modified = modified || m
 	}
 	return
 }

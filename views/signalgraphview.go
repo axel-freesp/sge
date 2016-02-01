@@ -124,13 +124,6 @@ func (v signalGraphView) IdentifyMapping(g mp.MappingIf) bool {
 
 func (v *signalGraphView) Select(obj interface{}) {
 	switch obj.(type) {
-	case bh.PortIf:
-		v.deselectConnects()
-		n, ok := v.selectNode(obj.(bh.PortIf).Node())
-		if ok {
-			n.SelectPort(obj.(bh.PortIf))
-			v.repaintNode(n)
-		}
 	case bh.ConnectionIf:
 		v.deselectNodes()
 		v.selectConnect(obj.(bh.ConnectionIf))
@@ -142,16 +135,28 @@ func (v *signalGraphView) Select2(obj interface{}, id string) {
 	case bh.NodeIf:
 		v.deselectConnects()
 		v.selectNode2(obj.(bh.NodeIf), id)
-	}
-}
-
-func (v *signalGraphView) selectNode2(obj bh.NodeIf, id string) {
-	var n graph.NodeIf
-	for _, n = range v.nodes {
-		if n.SelectNode(obj, freesp.NodeIdFromString(n.Name()), freesp.NodeIdFromString(id)) {
+	case bh.PortIf:
+		v.deselectConnects()
+		n := v.selectNode2(obj.(bh.PortIf).Node(), id)
+		if n != nil {
+			n.SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
 		}
 	}
+}
+
+func (v *signalGraphView) selectNode2(obj bh.NodeIf, id string) (node graph.NodeIf) {
+	var n graph.NodeIf
+	for _, n = range v.nodes {
+		ok, nd := n.SelectNode(obj, freesp.NodeIdFromString(n.Name()), freesp.NodeIdFromString(id))
+		if ok {
+			v.repaintNode(n)
+		}
+		if nd != nil {
+			node = nd
+		}
+	}
+	return
 }
 
 func (v *signalGraphView) selectNode(obj bh.NodeIf) (ret graph.NodeIf, ok bool) {
@@ -287,23 +292,17 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 	for _, n := range v.nodes {
 		hit, _ := n.CheckHit(pos)
 		if hit {
-			//if n.Select() {
-			//	v.repaintNode(n)
-			//}
-			selected, ok := n.GetHighlightedNode(freesp.NodeIdFromString(n.Name()))
+			nodeId := freesp.NodeIdFromString(n.Name())
+			selected, ok := n.GetHighlightedNode(nodeId)
 			if !ok {
 				log.Printf("signalGraphView.handleNodeSelect: FIXME: hit=true, GetSelectedNode() is not ok\n")
 				return
 			}
 			v.context.SelectNode(n.UserObj(), selected)
-			//ok, port := n.(graph.NodeIf).GetSelectedPort()
-			//if ok {
-			//	v.context.SelectPort(port)
-			//}
-			//} else {
-			//	if n.Deselect() {
-			//		v.repaintNode(n)
-			//	}
+			port, ok := n.GetSelectedPort(nodeId)
+			if ok {
+				v.context.SelectPort(port, n.UserObj(), selected)
+			}
 		}
 	}
 }

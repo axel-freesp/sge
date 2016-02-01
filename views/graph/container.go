@@ -202,16 +202,20 @@ func (c *Container) onSelect() (modified bool) {
 	for _, ch := range c.Children {
 		if ch.IsHighlighted() {
 			//c.selected = false
-			modified = modified || ch.Select()
+			m := ch.Select()
+			modified = modified || m
 		} else {
-			modified = modified || ch.Deselect()
+			m := ch.Deselect()
+			modified = modified || m
 		}
 	}
 	for _, p := range c.ports {
 		if p.IsHighlighted() {
-			modified = modified || p.Select()
+			m := p.Select()
+			modified = modified || m
 		} else {
-			modified = modified || p.Deselect()
+			m := p.Deselect()
+			modified = modified || m
 		}
 	}
 	return
@@ -219,10 +223,12 @@ func (c *Container) onSelect() (modified bool) {
 
 func (c *Container) onDeselect() (modified bool) {
 	for _, ch := range c.Children {
-		modified = modified || ch.Deselect()
+		m := ch.Deselect()
+		modified = modified || m
 	}
 	for _, p := range c.ports {
-		modified = modified || p.Deselect()
+		m := p.Deselect()
+		modified = modified || m
 	}
 	return
 }

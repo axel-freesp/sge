@@ -277,7 +277,17 @@ func (n ExpandedNode) SelectPort(port bh.PortIf) {
 	n.SelectModePort(port)
 }
 
-func (n ExpandedNode) GetSelectedPort() (ok bool, port bh.PortIf) {
+func (n ExpandedNode) GetSelectedPort(ownId bh.NodeIdIf) (port bh.PortIf, ok bool) {
+	if !n.IsHighlighted() {
+		return
+	}
+	for _, ch := range n.Children {
+		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
+		port, ok = ch.(NodeIf).GetSelectedPort(chId)
+		if ok {
+			return
+		}
+	}
 	if n.selectedPort == -1 {
 		return
 	}
@@ -326,21 +336,22 @@ func (n ExpandedNode) ChildByName(name string) (chn NodeIf, ok bool) {
 	return
 }
 
-func (n *ExpandedNode) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool) {
-	//log.Printf("ExpandedNode.SelectNode(%s), selectId=%v", ownId, selectId)
+func (n *ExpandedNode) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
 	if ownId.String() == selectId.String() || ownId.IsAncestor(selectId) {
 		n.highlighted = true
+		node = n
 		modified = n.Select()
 	} else {
 		n.highlighted = false
 		modified = n.Deselect()
 	}
-	//log.Printf("ExpandedNode.SelectNode(%s) No of child nodes: %d\n", ownId, len(n.Children))
 	for _, ch := range n.Children {
 		nn := ch.(NodeIf)
 		chId := freesp.NodeIdNew(ownId, nn.Name())
-		//log.Printf("ExpandedNode.SelectNode(%s) call SelectNode(%v)\n", ownId, chId)
-		m := nn.SelectNode(obj, chId, selectId)
+		m, nd := nn.SelectNode(obj, chId, selectId)
+		if nd != nil {
+			node = nd
+		}
 		modified = modified || m
 	}
 	return

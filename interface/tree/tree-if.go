@@ -14,6 +14,7 @@ type TreeMgrIf interface {
 	RemoveToplevel(id string) (deleted []IdWithObject, err error)
 	SetValueById(id, value string) error
 	GetToplevelId(ToplevelTreeElement) (id string, err error)
+	GetObjectById(string) (TreeElement, error)
 }
 
 type TreeIf interface {

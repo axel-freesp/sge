@@ -23,8 +23,8 @@ type NodeIf interface {
 	GetSelectedPort() (ok bool, port bh.PortIf)
 	InPortByName(name string) (BoxedSelecter, bool)
 	OutPortByName(name string) (BoxedSelecter, bool)
-	SelectNode(ownId, selectId bh.NodeIdIf)
-	GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
+	SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool)
+	GetHighlightedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 }
 
 type Porter interface {
@@ -101,12 +101,12 @@ type Drawer interface {
 }
 
 type Selecter interface {
-	Select() bool
-	Deselect() bool
+	Select() (modified bool)
+	Deselect() (modified bool)
 	IsSelected() bool
-	RegisterOnSelect(inSelect, onDeselect OnSelectionFunc)
+	RegisterOnSelect(onSelect, onDeselect OnSelectionFunc)
 }
-type OnSelectionFunc func()
+type OnSelectionFunc func() (modified bool)
 
 type Highlighter interface {
 	IsHighlighted() bool

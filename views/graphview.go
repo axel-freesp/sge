@@ -152,6 +152,12 @@ func (gvc *graphViewCollection) Select(obj interface{}) {
 	}
 }
 
+func (gvc *graphViewCollection) Select2(obj interface{}, id string) {
+	for _, v := range gvc.graphview {
+		v.Select2(obj, id)
+	}
+}
+
 func (gvc *graphViewCollection) CurrentView() (v GraphViewIf) {
 	name := gvc.stack.GetVisibleChildName()
 	var ok bool

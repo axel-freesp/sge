@@ -29,6 +29,7 @@ type GraphViewCollectionIf interface {
 	XmlTextView() XmlTextViewIf
 	Sync()
 	Select(obj interface{})
+	Select2(obj interface{}, id string)
 	CurrentView() GraphViewIf
 }
 
@@ -36,6 +37,7 @@ type GraphViewIf interface {
 	Widget() *gtk.Widget
 	Sync()
 	Select(obj interface{})
+	Select2(obj interface{}, id string)
 	Expand(obj interface{})
 	Collapse(obj interface{})
 	IdentifyGraph(bh.SignalGraphIf) bool

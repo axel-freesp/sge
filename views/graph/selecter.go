@@ -22,17 +22,17 @@ type HighlightObject struct {
 
 var _ Selecter = (*SelectObject)(nil)
 
-func (s *SelectObject) Select() (selected bool) {
-	selected = s.selected
+func (s *SelectObject) Select() (modified bool) {
+	modified = !s.selected
 	s.selected = true
-	s.onSelect()
+	modified = modified || s.onSelect()
 	return
 }
 
-func (s *SelectObject) Deselect() (selected bool) {
-	selected = s.selected
+func (s *SelectObject) Deselect() (modified bool) {
+	modified = s.selected
 	s.selected = false
-	s.onDeselect()
+	modified = modified || s.onDeselect()
 	return
 }
 
@@ -44,7 +44,7 @@ func (s *SelectObject) RegisterOnSelect(onSelect, onDeselect OnSelectionFunc) {
 	s.onSelect, s.onDeselect = onSelect, onDeselect
 }
 
-var defaultSelection = func() {}
+var defaultSelection = func() bool { return false }
 
 /*
  *      Default Highlighter implementation
@@ -55,7 +55,6 @@ var _ Highlighter = (*HighlightObject)(nil)
 func (h *HighlightObject) DoHighlight(hit bool, pos image.Point) (modified bool) {
 	modified = (h.highlighted != hit)
 	h.highlighted = hit
-	h.Pos = pos
 	if modified || hit {
 		modified = h.onHighlight(hit, pos) || modified
 	}

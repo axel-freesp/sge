@@ -7,6 +7,7 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
+	tr "github.com/axel-freesp/sge/interface/tree"
 	"github.com/axel-freesp/sge/models"
 	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
@@ -14,6 +15,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
+	"strings"
 )
 
 var global Global
@@ -23,7 +25,17 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 	var iter gtk.TreeIter
 	var model gtk.ITreeModel
 	if selection.GetSelected(&model, &iter) {
-		obj, err := treeStore.GetObject(&iter) // This one updates treeStore.Current...
+		var err error
+		var tpath *gtk.TreePath
+		var path string
+		var obj tr.TreeElement
+		tpath, err = treeStore.TreeStore().GetPath(&iter)
+		if err != nil {
+			log.Println("treeSelectionChangedCB: Could not get path from model", err)
+			return
+		}
+		path = tpath.String()
+		obj, err = treeStore.GetObject(&iter) // This one updates treeStore.Current...
 		if err != nil {
 			log.Println("treeSelectionChangedCB: Could not get object from model", err)
 			obj, err = treeStore.GetObjectById("0")
@@ -59,9 +71,33 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				}
 				gv.Sync()
 			}
-		case bh.NodeIf, bh.PortIf, bh.ConnectionIf, pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
+		case bh.NodeIf:
+			//log.Printf("------------------------------------------------------------------\n")
+			//log.Printf("treeSelectionChangedCB: path=%s -> nodeId=%s\n", path, nodeIdFromPath(treeStore, path))
+			global.win.graphViews.Select2(obj, nodeIdFromPath(treeStore, path))
+		case bh.PortIf, bh.ConnectionIf:
+			log.Printf("treeSelectionChangedCB: path=%s\n", path)
+			global.win.graphViews.Select(obj)
+		case pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
 			global.win.graphViews.Select(obj)
 		}
+	}
+}
+
+func nodeIdFromPath(fts tr.TreeMgrIf, path string) string {
+	p := strings.Split(path, ":")
+	obj, err := fts.GetObjectById(path)
+	if err != nil {
+		log.Panicf("nodeIdFromPath: could not get object of %s\n", path)
+	}
+	last := obj.(bh.NodeIf).Name()
+	//log.Printf("nodeIdFromPath(%s): last=%s\n", path, last)
+	if len(p)/3 == 0 {
+		return last
+	} else {
+		parentPath := strings.Join(p[:len(p)-3], ":")
+		//log.Printf("nodeIdFromPath(%s): last=%s, return %s/%s\n", path, last, nodeIdFromPath(fts, parentPath), last)
+		return fmt.Sprintf("%s/%s", nodeIdFromPath(fts, parentPath), last)
 	}
 }
 

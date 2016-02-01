@@ -19,10 +19,11 @@ type ContainerChild interface {
 //
 type Container struct {
 	NamedBoxObject
-	Children                    []ContainerChild
-	ports                       []*ContainerPort
-	selectedChild, selectedPort int
-	config                      ContainerConfig
+	Children      []ContainerChild
+	ports         []*ContainerPort
+	selectedChild int
+	selectedPort  int
+	config        ContainerConfig
 }
 
 type ContainerConfig struct {
@@ -58,10 +59,10 @@ func (c *Container) ContainerInit() {
 	c.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return c.onHighlight(hit, pos)
 	})
-	c.RegisterOnSelect(func() {
-		c.onSelect()
-	}, func() {
-		c.onDeselect()
+	c.RegisterOnSelect(func() bool {
+		return c.onSelect()
+	}, func() bool {
+		return c.onDeselect()
 	})
 }
 
@@ -197,32 +198,31 @@ func (c Container) CalcPortPos(idx, cnt int) (pos image.Point) {
 
 var _ Selecter = (*Arch)(nil)
 
-func (c *Container) onSelect() {
+func (c *Container) onSelect() (modified bool) {
 	for _, ch := range c.Children {
-		hit, _ := ch.CheckHit(c.Pos)
-		if hit {
-			ch.Select()
+		if ch.IsHighlighted() {
+			//c.selected = false
+			modified = modified || ch.Select()
 		} else {
-			ch.Deselect()
+			modified = modified || ch.Deselect()
 		}
 	}
 	for _, p := range c.ports {
-		hit, _ := p.CheckHit(c.Pos)
-		if hit {
-			p.Select()
+		if p.IsHighlighted() {
+			modified = modified || p.Select()
 		} else {
-			p.Deselect()
+			modified = modified || p.Deselect()
 		}
 	}
 	return
 }
 
-func (c *Container) onDeselect() {
+func (c *Container) onDeselect() (modified bool) {
 	for _, ch := range c.Children {
-		ch.Deselect()
+		modified = modified || ch.Deselect()
 	}
 	for _, p := range c.ports {
-		p.Deselect()
+		modified = modified || p.Deselect()
 	}
 	return
 }

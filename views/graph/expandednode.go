@@ -326,32 +326,38 @@ func (n ExpandedNode) ChildByName(name string) (chn NodeIf, ok bool) {
 	return
 }
 
-func (n *ExpandedNode) SelectNode(ownId, selectId bh.NodeIdIf) {
-	if !ownId.IsAncestor(selectId) {
-		return
+func (n *ExpandedNode) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool) {
+	//log.Printf("ExpandedNode.SelectNode(%s), selectId=%v", ownId, selectId)
+	if ownId.String() == selectId.String() || ownId.IsAncestor(selectId) {
+		n.highlighted = true
+		modified = n.Select()
+	} else {
+		n.highlighted = false
+		modified = n.Deselect()
 	}
-	n.Select()
-	if ownId == selectId {
-		return
-	}
+	//log.Printf("ExpandedNode.SelectNode(%s) No of child nodes: %d\n", ownId, len(n.Children))
 	for _, ch := range n.Children {
-		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
-		ch.(NodeIf).SelectNode(chId, selectId)
+		nn := ch.(NodeIf)
+		chId := freesp.NodeIdNew(ownId, nn.Name())
+		//log.Printf("ExpandedNode.SelectNode(%s) call SelectNode(%v)\n", ownId, chId)
+		m := nn.SelectNode(obj, chId, selectId)
+		modified = modified || m
 	}
+	return
 }
 
-func (n ExpandedNode) GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool) {
-	if !n.IsSelected() {
+func (n ExpandedNode) GetHighlightedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
+	if !n.IsHighlighted() {
 		return
 	}
 	for _, ch := range n.Children {
 		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
-		selectId, ok = ch.(NodeIf).GetSelectedNode(chId)
+		id, ok = ch.(NodeIf).GetHighlightedNode(chId)
 		if ok {
 			return
 		}
 	}
-	selectId, ok = ownId, true
+	id, ok = ownId, true
 	return
 }
 

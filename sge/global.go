@@ -14,6 +14,7 @@ import (
 	"github.com/axel-freesp/sge/views"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
+	"strings"
 )
 
 const (
@@ -190,22 +191,33 @@ func (g *Global) CleanupSignalType(st bh.SignalTypeIf) {
 //
 
 func (g *Global) SelectNode(n bh.NodeIf, id bh.NodeIdIf) {
-	log.Printf("Global.SelectNode: n=%s, id=%s\n", n.Name(), id)
-	subn, ok := n.SubNode(behaviour.NodeIdFromString(n.Name()), id)
-	if !ok {
-		log.Printf("Global.SelectNode: strange: no subnode for id=%s\n", id)
+	//log.Printf("Global.SelectNode(%v)\n", id)
+	cursor := g.nodePath(n, g.fts.Cursor(n), id)
+	path, _ := gtk.TreePathNewFromString(g.fts.Parent(cursor).Path)
+	g.ftv.TreeView().ExpandToPath(path)
+	path, _ = gtk.TreePathNewFromString(cursor.Path)
+	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+}
+
+func (g *Global) nodePath(n bh.NodeIf, nCursor tr.Cursor, selectId bh.NodeIdIf) (cursor tr.Cursor) {
+	ids := strings.Split(selectId.String(), "/")
+	if len(ids) == 1 {
+		cursor = nCursor
 		return
 	}
-	var cursor tr.Cursor
-	if id.String() == n.Name() {
-		cursor = g.fts.Cursor(n)
-	} else {
-		nCursor := g.fts.Cursor(n)
-		cursor = g.fts.CursorAt(nCursor, subn)
+	nt := n.ItsType()
+	for _, impl := range nt.Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			for _, nn := range impl.Graph().ProcessingNodes() {
+				if nn.Name() == ids[1] {
+					cursor = g.nodePath(nn, g.fts.CursorAt(nCursor, nn), behaviour.NodeIdFromString(strings.Join(ids[1:], "/")))
+					break
+				}
+			}
+			break
+		}
 	}
-	path, _ := gtk.TreePathNewFromString(cursor.Path)
-	g.ftv.TreeView().ExpandToPath(path)
-	g.ftv.TreeView().SetCursor(path, g.ftv.TreeView().GetExpanderColumn(), false)
+	return
 }
 
 func (g *Global) EditNode(node bh.NodeIf, id bh.NodeIdIf) {

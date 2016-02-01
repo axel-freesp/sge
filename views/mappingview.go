@@ -203,11 +203,14 @@ func (v *mappingView) Select(obj interface{}) {
 	}
 }
 
+func (v *mappingView) Select2(obj interface{}, id string) {
+}
+
 func (v *mappingView) selectArch(toSelect graph.ArchIf) {
 	var a graph.ArchIf
 	for _, a = range v.arch {
 		if a.Name() == toSelect.Name() {
-			if !a.Select() {
+			if a.Select() {
 				v.repaintArch(a)
 			}
 			return
@@ -285,7 +288,7 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 			}
 			continue
 		}
-		if !a.Select() {
+		if a.Select() {
 			v.repaintArch(a)
 		}
 		v.context.SelectArch(a.UserObj())
@@ -325,7 +328,7 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 		}
 		return
 	}
-	if !v.unmapped.Select() {
+	if v.unmapped.Select() {
 		v.repaintUnmapped(v.unmapped)
 	}
 	var ok bool

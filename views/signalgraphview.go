@@ -124,14 +124,11 @@ func (v signalGraphView) IdentifyMapping(g mp.MappingIf) bool {
 
 func (v *signalGraphView) Select(obj interface{}) {
 	switch obj.(type) {
-	case bh.NodeIf:
-		v.deselectConnects()
-		v.selectNode(obj.(bh.NodeIf))
 	case bh.PortIf:
 		v.deselectConnects()
 		n, ok := v.selectNode(obj.(bh.PortIf).Node())
 		if ok {
-			n.(graph.NodeIf).SelectPort(obj.(bh.PortIf))
+			n.SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
 		}
 	case bh.ConnectionIf:
@@ -140,11 +137,28 @@ func (v *signalGraphView) Select(obj interface{}) {
 	}
 }
 
+func (v *signalGraphView) Select2(obj interface{}, id string) {
+	switch obj.(type) {
+	case bh.NodeIf:
+		v.deselectConnects()
+		v.selectNode2(obj.(bh.NodeIf), id)
+	}
+}
+
+func (v *signalGraphView) selectNode2(obj bh.NodeIf, id string) {
+	var n graph.NodeIf
+	for _, n = range v.nodes {
+		if n.SelectNode(obj, freesp.NodeIdFromString(n.Name()), freesp.NodeIdFromString(id)) {
+			v.repaintNode(n)
+		}
+	}
+}
+
 func (v *signalGraphView) selectNode(obj bh.NodeIf) (ret graph.NodeIf, ok bool) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
 		if obj == n.UserObj() {
-			if !n.Select() {
+			if n.Select() {
 				v.repaintNode(n)
 			}
 			ret = n
@@ -174,7 +188,7 @@ func (v *signalGraphView) selectConnect(conn bh.ConnectionIf) {
 		if n1 == c.From() && n2 == c.To() &&
 			n1.OutPorts()[c.FromId()] == conn.From() &&
 			n2.InPorts()[c.ToId()] == conn.To() {
-			if !c.Select() {
+			if c.Select() {
 				v.repaintConnection(c)
 			}
 		} else {
@@ -256,7 +270,7 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 	case gdk.EVENT_2BUTTON_PRESS:
 		log.Println("areaButtonCallback 2BUTTON_PRESS")
 		for _, n := range v.nodes {
-			selected, ok := n.GetSelectedNode(freesp.NodeIdNew(freesp.EmptyNodeId, n.Name()))
+			selected, ok := n.GetHighlightedNode(freesp.NodeIdNew(freesp.EmptyNodeId, n.Name()))
 			if ok {
 				v.context.EditNode(n.UserObj(), selected)
 				break
@@ -273,23 +287,23 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 	for _, n := range v.nodes {
 		hit, _ := n.CheckHit(pos)
 		if hit {
-			if !n.Select() {
-				v.repaintNode(n)
-			}
-			selected, ok := n.GetSelectedNode(freesp.NodeIdFromString(n.Name()))
+			//if n.Select() {
+			//	v.repaintNode(n)
+			//}
+			selected, ok := n.GetHighlightedNode(freesp.NodeIdFromString(n.Name()))
 			if !ok {
 				log.Printf("signalGraphView.handleNodeSelect: FIXME: hit=true, GetSelectedNode() is not ok\n")
 				return
 			}
 			v.context.SelectNode(n.UserObj(), selected)
-			ok, port := n.(graph.NodeIf).GetSelectedPort()
-			if ok {
-				v.context.SelectPort(port)
-			}
-		} else {
-			if n.Deselect() {
-				v.repaintNode(n)
-			}
+			//ok, port := n.(graph.NodeIf).GetSelectedPort()
+			//if ok {
+			//	v.context.SelectPort(port)
+			//}
+			//} else {
+			//	if n.Deselect() {
+			//		v.repaintNode(n)
+			//	}
 		}
 	}
 }

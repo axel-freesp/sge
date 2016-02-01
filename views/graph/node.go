@@ -34,10 +34,10 @@ func NodeNew(pos image.Point, n bh.NodeIf, path string) (ret *Node) {
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
-	ret.RegisterOnSelect(func() {
-		ret.onSelect()
-	}, func() {
-		ret.onDeselect()
+	ret.RegisterOnSelect(func() bool {
+		return ret.onSelect()
+	}, func() bool {
+		return ret.onDeselect()
 	})
 	portBox := image.Rect(0, 0, global.portW, global.portH)
 	portBox = portBox.Add(box.Min)
@@ -161,15 +161,21 @@ func (n *Node) Expand() {
 func (n *Node) Collapse() {
 }
 
-func (n *Node) SelectNode(ownId, selectId bh.NodeIdIf) {
-	if ownId == selectId {
-		n.Select()
+func (n *Node) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool) {
+	//log.Printf("Node.SelectNode(%s), ownId=%v, selectId=%v", n.Name(), ownId, selectId)
+	if ownId.String() == selectId.String() {
+		n.highlighted = true
+		modified = n.Select()
+	} else {
+		n.highlighted = false
+		modified = n.Deselect()
 	}
+	return
 }
 
-func (n *Node) GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool) {
-	if n.IsSelected() {
-		selectId, ok = ownId, true
+func (n *Node) GetHighlightedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
+	if n.IsHighlighted() {
+		id, ok = ownId, true
 	}
 	return
 }
@@ -225,20 +231,20 @@ func (n Node) Draw(ctxt interface{}) {
 var _ Selecter = (*Node)(nil)
 var _ Selecter = (*Port)(nil)
 
-func (n *Node) onSelect() (selected bool) {
+func (n *Node) onSelect() (modified bool) {
 	for i, p := range n.ports {
 		if i == n.selectedPort {
-			p.Select()
+			modified = modified || p.Select()
 		} else {
-			p.Deselect()
+			modified = modified || p.Deselect()
 		}
 	}
 	return
 }
 
-func (n *Node) onDeselect() (selected bool) {
+func (n *Node) onDeselect() (modified bool) {
 	for _, p := range n.ports {
-		p.Deselect()
+		modified = modified || p.Deselect()
 	}
 	return
 }

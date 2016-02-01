@@ -108,6 +108,9 @@ func (v *platformView) Select(obj interface{}) {
 	}
 }
 
+func (v *platformView) Select2(obj interface{}, id string) {
+}
+
 func (v *platformView) selectArch(toSelect graph.ArchIf) {
 	var a graph.ArchIf
 	for _, a = range v.arch {

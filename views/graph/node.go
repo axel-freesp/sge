@@ -161,7 +161,7 @@ func (n *Node) Expand() {
 func (n *Node) Collapse() {
 }
 
-func (n *Node) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
+func (n *Node) SelectNode(ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
 	if ownId.String() == selectId.String() {
 		n.highlighted = true
 		node = n
@@ -175,6 +175,13 @@ func (n *Node) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified 
 
 func (n *Node) GetHighlightedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
 	if n.IsHighlighted() {
+		id, ok = ownId, true
+	}
+	return
+}
+
+func (n *Node) GetSelectedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
+	if n.IsSelected() {
 		id, ok = ownId, true
 	}
 	return

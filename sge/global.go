@@ -190,8 +190,27 @@ func (g *Global) CleanupSignalType(st bh.SignalTypeIf) {
 //		views.Context interface
 //
 
-func (g *Global) SelectNode(n bh.NodeIf, id bh.NodeIdIf) {
-	//log.Printf("Global.SelectNode(%v)\n", id)
+func (g Global) GetNodeById(id bh.NodeIdIf) (n bh.NodeIf, err error) {
+	sg, err := g.SignalGraphMgr().Access(id.Filename())
+	if err != nil {
+		err = fmt.Errorf("Global.GetNodeById error: %s", err)
+		return
+	}
+	for _, n = range sg.(bh.SignalGraphIf).Nodes() {
+		if n.Name() == id.First() {
+			return
+		}
+	}
+	err = fmt.Errorf("Global.GetNodeById error: node %v not found in graph %s\n", id, id.Filename())
+	return
+}
+
+func (g *Global) SelectNode(id bh.NodeIdIf) {
+	n, err := g.GetNodeById(id)
+	if err != nil {
+		log.Printf("Global.SelectNode error: %s\n", err)
+		return
+	}
 	cursor := g.nodePath(n, g.fts.Cursor(n), id)
 	path, _ := gtk.TreePathNewFromString(g.fts.Parent(cursor).Path)
 	g.ftv.TreeView().ExpandToPath(path)
@@ -220,11 +239,16 @@ func (g *Global) nodePath(n bh.NodeIf, nCursor tr.Cursor, selectId bh.NodeIdIf) 
 	return
 }
 
-func (g *Global) EditNode(node bh.NodeIf, id bh.NodeIdIf) {
-	log.Printf("Global.EditNode: %v\n", node)
+func (g *Global) EditNode(id bh.NodeIdIf) {
+	log.Printf("Global.EditNode FIXME: %v\n", id)
 }
 
-func (g *Global) SelectPort(p bh.PortIf, n bh.NodeIf, id bh.NodeIdIf) {
+func (g *Global) SelectPort(p bh.PortIf, id bh.NodeIdIf) {
+	n, err := g.GetNodeById(id)
+	if err != nil {
+		log.Printf("Global.SelectPort error: %s\n", err)
+		return
+	}
 	cursor := g.nodePath(n, g.fts.Cursor(n), id)
 	pCursor := g.fts.CursorAt(cursor, p)
 	path, _ := gtk.TreePathNewFromString(cursor.Path)

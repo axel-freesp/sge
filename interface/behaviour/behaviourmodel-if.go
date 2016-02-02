@@ -90,6 +90,10 @@ type NodeIdIf interface {
 	fmt.Stringer
 	Parent() NodeIdIf
 	IsAncestor(NodeIdIf) bool
+	SetFilename(string)
+	Filename() string
+	First() string
+	TruncFirst()
 }
 
 type SignalTypeIf interface {

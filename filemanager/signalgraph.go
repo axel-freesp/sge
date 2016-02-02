@@ -73,19 +73,17 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 	hintfilename := fmt.Sprintf("%s/%s.hints.xml", filedir, tool.Prefix(name))
 	var buf []byte
 	buf, err = tool.ReadFile(hintfilename)
-	if err != nil {
-		return
+	if err == nil {
+		_, err = hint.Read(buf)
+		if err != nil {
+			return
+		}
+		err = behaviour.SignalGraphApplyHints(sg.(bh.SignalGraphIf), hint)
+		if err != nil {
+			err = fmt.Errorf("fileManagerSG.Access: %s", err)
+			return
+		}
 	}
-	_, err = hint.Read(buf)
-	if err != nil {
-		return
-	}
-	err = behaviour.SignalGraphApplyHints(sg.(bh.SignalGraphIf), hint)
-	if err != nil {
-		err = fmt.Errorf("fileManagerSG.Access: %s", err)
-		return
-	}
-
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(sg.(bh.SignalGraphIf))
 	if err != nil {

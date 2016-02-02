@@ -23,8 +23,9 @@ type NodeIf interface {
 	GetSelectedPort(bh.NodeIdIf) (bh.PortIf, bool)
 	InPortByName(name string) (BoxedSelecter, bool)
 	OutPortByName(name string) (BoxedSelecter, bool)
-	SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf)
+	SelectNode(ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf)
 	GetHighlightedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
+	GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 }
 
 type Porter interface {

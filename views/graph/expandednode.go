@@ -126,6 +126,12 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *Expa
 		}
 		ret.AddModePort(ret.portClipPos(pos), config, p, gr.PositionModeExpanded)
 	}
+	config = DrawConfig{ColorInit(ColorOption(OutputPort)),
+		ColorInit(ColorOption(HighlightOutPort)),
+		ColorInit(ColorOption(SelectOutPort)),
+		ColorInit(ColorOption(BoxFrame)),
+		Color{},
+		image.Point{}}
 	for i, p := range userObj.OutPorts() {
 		pos := p.ModePosition(gr.PositionModeExpanded)
 		if pos == empty {
@@ -336,7 +342,7 @@ func (n ExpandedNode) ChildByName(name string) (chn NodeIf, ok bool) {
 	return
 }
 
-func (n *ExpandedNode) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
+func (n *ExpandedNode) SelectNode(ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
 	if ownId.String() == selectId.String() || ownId.IsAncestor(selectId) {
 		n.highlighted = true
 		node = n
@@ -348,7 +354,7 @@ func (n *ExpandedNode) SelectNode(obj bh.NodeIf, ownId, selectId bh.NodeIdIf) (m
 	for _, ch := range n.Children {
 		nn := ch.(NodeIf)
 		chId := freesp.NodeIdNew(ownId, nn.Name())
-		m, nd := nn.SelectNode(obj, chId, selectId)
+		m, nd := nn.SelectNode(chId, selectId)
 		if nd != nil {
 			node = nd
 		}
@@ -364,6 +370,21 @@ func (n ExpandedNode) GetHighlightedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok 
 	for _, ch := range n.Children {
 		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
 		id, ok = ch.(NodeIf).GetHighlightedNode(chId)
+		if ok {
+			return
+		}
+	}
+	id, ok = ownId, true
+	return
+}
+
+func (n ExpandedNode) GetSelectedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
+	if !n.IsSelected() {
+		return
+	}
+	for _, ch := range n.Children {
+		chId := freesp.NodeIdNew(ownId, ch.(NodeIf).Name())
+		id, ok = ch.(NodeIf).GetSelectedNode(chId)
 		if ok {
 			return
 		}

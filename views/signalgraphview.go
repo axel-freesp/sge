@@ -20,6 +20,7 @@ type signalGraphView struct {
 	nodes       []graph.NodeIf
 	connections []graph.ConnectIf
 	sgType      bh.SignalGraphTypeIf
+	graphId     string
 	context     ContextIf
 
 	dragOffs       image.Point
@@ -30,7 +31,7 @@ var _ ScaledScene = (*signalGraphView)(nil)
 var _ GraphViewIf = (*signalGraphView)(nil)
 
 func SignalGraphViewNew(g bh.SignalGraphIf, context ContextIf) (viewer *signalGraphView, err error) {
-	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g.ItsType(), context, image.Point{}, false}
+	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g.ItsType(), g.Filename(), context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -40,7 +41,7 @@ func SignalGraphViewNew(g bh.SignalGraphIf, context ContextIf) (viewer *signalGr
 }
 
 func SignalGraphViewNewFromType(g bh.SignalGraphTypeIf, context ContextIf) (viewer *signalGraphView, err error) {
-	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g, context, image.Point{}, false}
+	viewer = &signalGraphView{nil, DrawArea{}, nil, nil, g, "", context, image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -72,6 +73,11 @@ func (v *signalGraphView) init() (err error) {
 
 func (v *signalGraphView) Sync() {
 	g := v.sgType
+	var selected bh.NodeIdIf
+	var wasSelected bool
+	if v.nodes != nil {
+		selected, wasSelected = v.getSelectedNode()
+	}
 	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 
 	var numberOfConnections = 0
@@ -104,6 +110,10 @@ func (v *signalGraphView) Sync() {
 	}
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
+	if wasSelected {
+		log.Printf("signalGraphView.Sync: select %v after sync\n", selected)
+		v.selectNode(selected)
+	}
 }
 
 func (v signalGraphView) IdentifyGraph(g bh.SignalGraphIf) bool {
@@ -134,10 +144,10 @@ func (v *signalGraphView) Select2(obj interface{}, id string) {
 	switch obj.(type) {
 	case bh.NodeIf:
 		v.deselectConnects()
-		v.selectNode2(obj.(bh.NodeIf), id)
+		v.selectNode(freesp.NodeIdFromString(id))
 	case bh.PortIf:
 		v.deselectConnects()
-		n := v.selectNode2(obj.(bh.PortIf).Node(), id)
+		n := v.selectNode(freesp.NodeIdFromString(id))
 		if n != nil {
 			n.SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
@@ -145,33 +155,15 @@ func (v *signalGraphView) Select2(obj interface{}, id string) {
 	}
 }
 
-func (v *signalGraphView) selectNode2(obj bh.NodeIf, id string) (node graph.NodeIf) {
+func (v *signalGraphView) selectNode(id bh.NodeIdIf) (node graph.NodeIf) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
-		ok, nd := n.SelectNode(obj, freesp.NodeIdFromString(n.Name()), freesp.NodeIdFromString(id))
+		ok, nd := n.SelectNode(freesp.NodeIdFromString(n.Name()), id)
 		if ok {
 			v.repaintNode(n)
 		}
 		if nd != nil {
 			node = nd
-		}
-	}
-	return
-}
-
-func (v *signalGraphView) selectNode(obj bh.NodeIf) (ret graph.NodeIf, ok bool) {
-	var n graph.NodeIf
-	for _, n = range v.nodes {
-		if obj == n.UserObj() {
-			if n.Select() {
-				v.repaintNode(n)
-			}
-			ret = n
-			ok = true
-		} else {
-			if n.Deselect() {
-				v.repaintNode(n)
-			}
 		}
 	}
 	return
@@ -220,6 +212,7 @@ func (v *signalGraphView) Expand(obj interface{}) {
 			log.Printf("signalGraphView.Expand: nothing to do\n")
 			return
 		}
+		v.drawAll()
 		obj.(bh.NodeIf).SetExpanded(true)
 		v.Sync()
 	default:
@@ -234,6 +227,7 @@ func (v *signalGraphView) Collapse(obj interface{}) {
 			log.Printf("signalGraphView.Collapse: nothing to do\n")
 			return
 		}
+		v.drawAll()
 		obj.(bh.NodeIf).SetExpanded(false)
 		v.Sync()
 	default:
@@ -277,7 +271,7 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 		for _, n := range v.nodes {
 			selected, ok := n.GetHighlightedNode(freesp.NodeIdNew(freesp.EmptyNodeId, n.Name()))
 			if ok {
-				v.context.EditNode(n.UserObj(), selected)
+				v.context.EditNode(selected)
 				break
 			}
 		}
@@ -286,6 +280,16 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 		v.button1Pressed = false
 	default:
 	}
+}
+
+func (v signalGraphView) getSelectedNode() (id bh.NodeIdIf, ok bool) {
+	for _, n := range v.nodes {
+		id, ok = n.GetSelectedNode(freesp.NodeIdFromString(n.Name()))
+		if ok {
+			break
+		}
+	}
+	return
 }
 
 func (v *signalGraphView) handleNodeSelect(pos image.Point) {
@@ -298,10 +302,11 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 				log.Printf("signalGraphView.handleNodeSelect: FIXME: hit=true, GetSelectedNode() is not ok\n")
 				return
 			}
-			v.context.SelectNode(n.UserObj(), selected)
+			selected.SetFilename(v.graphId)
+			v.context.SelectNode(selected)
 			port, ok := n.GetSelectedPort(nodeId)
 			if ok {
-				v.context.SelectPort(port, n.UserObj(), selected)
+				v.context.SelectPort(port, selected)
 			}
 		}
 	}

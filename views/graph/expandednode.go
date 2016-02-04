@@ -49,7 +49,7 @@ func (p PortConnector) Draw(ctxt interface{}) {
 type ExpandedNode struct {
 	Container
 	userObj     bh.NodeIf
-	path        string
+	positioner  gr.Positioner
 	connections []ConnectIf
 	portconn    []*PortConnector
 }
@@ -61,7 +61,9 @@ const (
 	expandedPortHeight = 10
 )
 
-func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *ExpandedNode) {
+func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *ExpandedNode) {
+	positioner := getPositioner(userObj)
+	pos := positioner.Position()
 	config := DrawConfig{ColorInit(ColorOption(NormalExpandedNode)),
 		ColorInit(ColorOption(HighlightExpandedNode)),
 		ColorInit(ColorOption(SelectExpandedNode)),
@@ -83,6 +85,7 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *Expa
 		empty := image.Point{}
 		first := image.Point{16, 32}
 		shift := image.Point{16, 16}
+		path := positioner.ActivePath()
 		for i, n := range g.ProcessingNodes() {
 			var ch ContainerChild
 			var nPath string
@@ -92,25 +95,28 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *Expa
 			} else {
 				nPath = userObj.Name()
 			}
+			n.SetActivePath(nPath)
 			if n.Expanded() {
 				mode = gr.PositionModeExpanded
 			} else {
 				mode = gr.PositionModeNormal
 			}
+			n.SetActiveMode(mode)
+			log.Printf("ExpandedNodeNew TODO: position of child nodes...\n")
 			chpos := n.PathModePosition(nPath, mode)
 			if chpos == empty {
 				chpos = pos.Add(first.Add(shift.Mul(i)))
 			}
 			if n.Expanded() {
-				ch = ExpandedNodeNew(chpos, n, nPath)
+				ch = ExpandedNodeNew(getPositioner, n)
 			} else {
-				ch = NodeNew(chpos, n, nPath)
+				ch = NodeNew(getPositioner, n)
 			}
 			children = append(children, ch)
 		}
 	}
 	ret = &ExpandedNode{ContainerInit(children, config, userObj, cconfig),
-		userObj, path, nil, nil}
+		userObj, positioner, nil, nil}
 	ret.ContainerInit()
 	empty := image.Point{}
 	config = DrawConfig{ColorInit(ColorOption(InputPort)),
@@ -124,7 +130,8 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *Expa
 		if pos == empty {
 			pos = ret.CalcInPortPos(i)
 		}
-		ret.AddModePort(ret.portClipPos(pos), config, p, gr.PositionModeExpanded)
+		p.SetActiveMode(gr.PositionModeExpanded)
+		ret.AddPort(ret.portClipPos(pos), config, p)
 	}
 	config = DrawConfig{ColorInit(ColorOption(OutputPort)),
 		ColorInit(ColorOption(HighlightOutPort)),
@@ -137,7 +144,8 @@ func ExpandedNodeNew(pos image.Point, userObj bh.NodeIf, path string) (ret *Expa
 		if pos == empty {
 			pos = ret.CalcOutPortPos(i)
 		}
-		ret.AddModePort(ret.portClipPos(pos), config, p, gr.PositionModeExpanded)
+		p.SetActiveMode(gr.PositionModeExpanded)
+		ret.AddPort(ret.portClipPos(pos), config, p)
 	}
 	for _, n := range g.ProcessingNodes() {
 		from, ok := ret.ChildByName(n.Name())
@@ -249,6 +257,10 @@ func (n ExpandedNode) OutPorts() []bh.PortIf {
 	return n.userObj.OutPorts()
 }
 
+func (n ExpandedNode) NumInPorts() int {
+	return len(n.userObj.InPorts())
+}
+
 func (n ExpandedNode) InPortIndex(portName string) int {
 	return n.userObj.InPortIndex(portName)
 }
@@ -279,10 +291,6 @@ func (n ExpandedNode) OutPort(idx int) (p BBoxer) {
 	return
 }
 
-func (n ExpandedNode) SelectPort(port bh.PortIf) {
-	n.SelectModePort(port)
-}
-
 func (n ExpandedNode) GetSelectedPort(ownId bh.NodeIdIf) (port bh.PortIf, ok bool) {
 	if !n.IsHighlighted() {
 		return
@@ -298,19 +306,19 @@ func (n ExpandedNode) GetSelectedPort(ownId bh.NodeIdIf) (port bh.PortIf, ok boo
 		return
 	}
 	ok = true
-	port = n.ports[n.selectedPort].UserObj2.(bh.PortIf)
+	port = n.ports[n.selectedPort].UserObj.(bh.PortIf)
 	return
 }
 
 func (n *ExpandedNode) SetPosition(pos image.Point) {
 	n.ContainerDefaultSetPosition(pos)
-	n.userObj.SetPathModePosition(n.path, gr.PositionModeExpanded, pos)
+	n.positioner.SetPosition(pos)
 }
 
 func (n ExpandedNode) InPortByName(name string) (ret BoxedSelecter, ok bool) {
 	for i := 0; i < len(n.UserObj().InPorts()); i++ {
 		p := n.ports[i]
-		if p.UserObj2.(bh.PortIf).Name() == name {
+		if p.UserObj.(bh.PortIf).Name() == name {
 			ok = true
 			ret = p
 			return
@@ -322,7 +330,7 @@ func (n ExpandedNode) InPortByName(name string) (ret BoxedSelecter, ok bool) {
 func (n ExpandedNode) OutPortByName(name string) (ret BoxedSelecter, ok bool) {
 	for i := 0; i < len(n.UserObj().OutPorts()); i++ {
 		p := n.ports[i+len(n.UserObj().InPorts())]
-		if p.UserObj2.(bh.PortIf).Name() == name {
+		if p.UserObj.(bh.PortIf).Name() == name {
 			ok = true
 			ret = p
 			return
@@ -391,6 +399,33 @@ func (n ExpandedNode) GetSelectedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok boo
 	}
 	id, ok = ownId, true
 	return
+}
+
+func (n ExpandedNode) ChildNodes() (nodelist []NodeIf) {
+	for _, c := range n.Children {
+		nodelist = append(nodelist, c.(NodeIf))
+	}
+	return
+}
+
+func (n *ExpandedNode) SelectPort(port bh.PortIf) {
+	var index int
+	if port.Direction() == gr.InPort {
+		index = n.InPortIndex(port.Name())
+	} else {
+		index = n.OutPortIndex(port.Name())
+		if index >= 0 {
+			index += n.NumInPorts()
+		}
+	}
+	for i, p := range n.ports {
+		if i == index {
+			p.Select()
+		} else {
+			p.Deselect()
+		}
+	}
+	n.selectedPort = index
 }
 
 //

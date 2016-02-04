@@ -206,6 +206,7 @@ func (g Global) GetNodeById(id bh.NodeIdIf) (n bh.NodeIf, err error) {
 }
 
 func (g *Global) SelectNode(id bh.NodeIdIf) {
+	log.Printf("Global.SelectNode(%v)\n", id)
 	n, err := g.GetNodeById(id)
 	if err != nil {
 		log.Printf("Global.SelectNode error: %s\n", err)
@@ -229,7 +230,8 @@ func (g *Global) nodePath(n bh.NodeIf, nCursor tr.Cursor, selectId bh.NodeIdIf) 
 		if impl.ImplementationType() == bh.NodeTypeGraph {
 			for _, nn := range impl.Graph().ProcessingNodes() {
 				if nn.Name() == ids[1] {
-					cursor = g.nodePath(nn, g.fts.CursorAt(nCursor, nn), behaviour.NodeIdFromString(strings.Join(ids[1:], "/")))
+					nnId := behaviour.NodeIdFromString(strings.Join(ids[1:], "/"), selectId.Filename())
+					cursor = g.nodePath(nn, g.fts.CursorAt(nCursor, nn), nnId)
 					break
 				}
 			}

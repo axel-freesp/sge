@@ -83,6 +83,30 @@ func (t *signalGraphType) NodeByName(name string) (n bh.NodeIf, ok bool) {
 	return
 }
 
+func (t *signalGraphType) NodeByPath(path string) (n bh.NodeIf, ok bool) {
+	var nodeName, restPath string
+	if strings.Contains(path, "/") {
+		p := strings.Split(path, "/")
+		nodeName = p[0]
+		restPath = strings.Join(p[1:], "/")
+	} else {
+		n, ok = t.NodeByName(path)
+		return
+	}
+	for _, n = range t.Nodes() {
+		if n.Name() == nodeName {
+			nt := n.ItsType()
+			for _, impl := range nt.Implementation() {
+				if impl.ImplementationType() == bh.NodeTypeGraph {
+					n, ok = impl.Graph().NodeByPath(restPath)
+				}
+			}
+			return
+		}
+	}
+	return
+}
+
 func (t *signalGraphType) Libraries() []bh.LibraryIf {
 	return t.libraries
 }

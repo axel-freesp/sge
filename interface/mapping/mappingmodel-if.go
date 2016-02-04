@@ -13,20 +13,22 @@ import (
 
 type MappingIf interface {
 	tree.ToplevelTreeElement
-	AddMapping(n behaviour.NodeIf, p platform.ProcessIf)
 	SetGraph(behaviour.SignalGraphIf)
 	Graph() behaviour.SignalGraphIf
 	SetPlatform(platform.PlatformIf)
 	Platform() platform.PlatformIf
-	Mapped(behaviour.NodeIf) (platform.ProcessIf, bool)
-	MappedElement(behaviour.NodeIf) (MappedElementIf, bool)
+	AddMapping(n behaviour.NodeIf, nId behaviour.NodeIdIf, p platform.ProcessIf)
+	Mapped(string) (platform.ProcessIf, bool)
+	MappedElement(behaviour.NodeIdIf) (MappedElementIf, bool)
+	MappedIds() []behaviour.NodeIdIf
 }
 
 type MappedElementIf interface {
 	tree.TreeElement
-	graph.Positioner
+	graph.PathModePositioner
+	graph.Expander
 	Mapping() MappingIf
-	Node() behaviour.NodeIf
+	NodeId() behaviour.NodeIdIf
 	Process() (platform.ProcessIf, bool)
 	SetProcess(platform.ProcessIf)
 }

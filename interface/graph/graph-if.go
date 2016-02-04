@@ -19,14 +19,25 @@ type Positioner interface {
 }
 
 type ModePositioner interface {
+	Positioner
 	ModePosition(PositionMode) image.Point
 	SetModePosition(PositionMode, image.Point)
+	SetActiveMode(PositionMode)
+	ActiveMode() PositionMode
 }
 
 type PathModePositioner interface {
+	ModePositioner
 	PathModePosition(string, PositionMode) image.Point
 	SetPathModePosition(string, PositionMode, image.Point)
 	PathList() []string
+	SetActivePath(string)
+	ActivePath() string
+}
+
+type Expander interface {
+	Expanded() bool
+	SetExpanded(bool)
 }
 
 type PositionMode string

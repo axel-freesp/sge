@@ -5,16 +5,6 @@ import (
 	"fmt"
 )
 
-type XmlNodeHint struct {
-	XmlModeHint
-	Expanded bool          `xml:"expanded,attr"`
-	Children []XmlNodeHint `xml:"children"`
-}
-
-func XmlNodeHintNew(expanded bool) *XmlNodeHint {
-	return &XmlNodeHint{*XmlModeHintNew(), expanded, nil}
-}
-
 type XmlHint struct {
 	X int `xml:"x,attr"`
 	Y int `xml:"y,attr"`

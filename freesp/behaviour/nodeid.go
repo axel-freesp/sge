@@ -16,13 +16,13 @@ var EmptyNodeId bh.NodeIdIf = (*nodeId)(nil)
 
 func NodeIdNew(parentId bh.NodeIdIf, id string) *nodeId {
 	if parentId == EmptyNodeId {
-		return &nodeId{[]string{id}, ""}
+		log.Panic("NodeIdNew FIXME: parent = nil")
 	}
-	return NodeIdFromString(fmt.Sprintf("%s/%s", parentId, id))
+	return NodeIdFromString(fmt.Sprintf("%s/%s", parentId, id), parentId.Filename())
 }
 
-func NodeIdFromString(idString string) *nodeId {
-	return &nodeId{strings.Split(idString, "/"), ""}
+func NodeIdFromString(idString, filename string) *nodeId {
+	return &nodeId{strings.Split(idString, "/"), filename}
 }
 
 func (n nodeId) String() string {
@@ -30,10 +30,13 @@ func (n nodeId) String() string {
 }
 
 func (n nodeId) Parent() bh.NodeIdIf {
-	return NodeIdFromString(strings.Join(n.path[:len(n.path)-1], "/"))
+	return NodeIdFromString(strings.Join(n.path[:len(n.path)-1], "/"), n.filename)
 }
 
 func (n nodeId) IsAncestor(id bh.NodeIdIf) bool {
+	if n.filename != id.Filename() {
+		return false
+	}
 	if id == EmptyNodeId {
 		return false
 	}
@@ -70,4 +73,44 @@ func (n *nodeId) TruncFirst() {
 		log.Panicf("nodeId.TruncFirst FIXME: empty path\n")
 	}
 	n.path = n.path[1:]
+}
+
+/*
+ *      NodeIdList
+ *
+ */
+
+type NodeIdList struct {
+	nodeIds []bh.NodeIdIf
+}
+
+func NodeIdListInit() NodeIdList {
+	return NodeIdList{nil}
+}
+
+func (l *NodeIdList) Append(st bh.NodeIdIf) {
+	l.nodeIds = append(l.nodeIds, st)
+}
+
+func (l *NodeIdList) Remove(st bh.NodeIdIf) {
+	var i int
+	for i = range l.nodeIds {
+		if st == l.nodeIds[i] {
+			break
+		}
+	}
+	if i >= len(l.nodeIds) {
+		for _, v := range l.nodeIds {
+			log.Printf("NodeIdList.RemoveNodeType have bh.NodeId %v\n", v)
+		}
+		log.Fatalf("NodeIdList.RemoveNodeType error: bh.NodeId %v not in this list\n", st)
+	}
+	for i++; i < len(l.nodeIds); i++ {
+		l.nodeIds[i-1] = l.nodeIds[i]
+	}
+	l.nodeIds = l.nodeIds[:len(l.nodeIds)-1]
+}
+
+func (l *NodeIdList) NodeIds() []bh.NodeIdIf {
+	return l.nodeIds
 }

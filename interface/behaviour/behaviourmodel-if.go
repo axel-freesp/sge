@@ -22,6 +22,7 @@ type SignalGraphTypeIf interface {
 	Libraries() []LibraryIf
 	Nodes() []NodeIf
 	NodeByName(string) (NodeIf, bool)
+	NodeByPath(string) (NodeIf, bool)
 	InputNodes() []NodeIf
 	OutputNodes() []NodeIf
 	ProcessingNodes() []NodeIf
@@ -73,6 +74,7 @@ const (
 type NodeIf interface {
 	tree.NamedTreeElementIf
 	graph.PathModePositioner
+	graph.Expander
 	ItsType() NodeTypeIf
 	InPorts() []PortIf
 	OutPorts() []PortIf
@@ -80,8 +82,6 @@ type NodeIf interface {
 	OutPortIndex(portname string) int
 	Context() SignalGraphTypeIf
 	PortLink() (string, bool)
-	Expanded() bool
-	SetExpanded(bool)
 	SubNode(ownId, childId NodeIdIf) (NodeIf, bool)
 	Children(ownId NodeIdIf) []NodeIdIf
 }
@@ -127,7 +127,6 @@ const (
 type PortTypeIf interface {
 	tree.NamedTreeElementIf
 	graph.Directioner
-	graph.ModePositioner
 	SignalType() SignalTypeIf
 	SetSignalType(SignalTypeIf)
 }

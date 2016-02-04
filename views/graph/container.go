@@ -35,9 +35,9 @@ type ContainerConfig struct {
 //
 type ContainerPort struct {
 	SelectableBox
-	UserObj  graph.Positioner
-	UserObj2 graph.ModePositioner
-	mode     graph.PositionMode
+	UserObj graph.Positioner
+	//UserObj2 graph.ModePositioner
+	//mode     graph.PositionMode
 }
 
 //
@@ -70,15 +70,12 @@ func (c *Container) ContainerInit() {
 //		Construct port
 //
 func ContainerPortNew(box image.Rectangle, config DrawConfig, userObj graph.Positioner, userObj2 graph.ModePositioner, mode graph.PositionMode) (p *ContainerPort) {
-	return &ContainerPort{SelectableBoxInit(box, config), userObj, userObj2, mode}
+	return &ContainerPort{SelectableBoxInit(box, config), userObj}
 }
 
 func (p *ContainerPort) SetPosition(pos image.Point) {
 	if p.UserObj != nil {
 		p.UserObj.SetPosition(pos)
-	}
-	if p.UserObj2 != nil {
-		p.UserObj2.SetModePosition(p.mode, pos)
 	}
 	p.BBoxDefaultSetPosition(pos)
 }
@@ -91,14 +88,6 @@ func (c *Container) AddPort(pos image.Point, config DrawConfig, userObj graph.Po
 	pos = c.portClipPos(pos)
 	box := image.Rectangle{pos, pos.Add(size)}
 	p = ContainerPortNew(box, config, userObj, nil, graph.PositionMode(-1))
-	c.ports = append(c.ports, p)
-	return
-}
-
-func (c *Container) AddModePort(pos image.Point, config DrawConfig, userObj graph.ModePositioner, mode graph.PositionMode) (p *ContainerPort) {
-	size := image.Point{c.config.portWidth, c.config.portHeight}
-	box := image.Rectangle{pos, pos.Add(size)}
-	p = ContainerPortNew(box, config, nil, userObj, mode)
 	c.ports = append(c.ports, p)
 	return
 }
@@ -131,12 +120,6 @@ func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
 		if p.UserObj != nil {
 			ap := p.UserObj
 			pos = ap.Position()
-			if pos == empty {
-				pos = c.CalcPortPos(i, len(c.ports))
-			}
-		} else if p.UserObj2 != nil {
-			ap := p.UserObj2
-			pos = ap.ModePosition(p.mode)
 			if pos == empty {
 				pos = c.CalcPortPos(i, len(c.ports))
 			}
@@ -266,33 +249,12 @@ func (c *Container) SelectPort(userObj graph.Positioner) {
 	}
 }
 
-func (c *Container) SelectModePort(userObj graph.ModePositioner) {
-	c.selectedPort = -1
-	for i, p := range c.ports {
-		if p.UserObj2 == userObj {
-			c.selectedPort = i
-			p.Select()
-		} else {
-			p.Deselect()
-		}
-	}
-}
-
 func (c Container) GetSelectedPort() (ok bool, userObj graph.Positioner) {
 	if c.selectedPort == -1 {
 		return
 	}
 	ok = true
 	userObj = c.ports[c.selectedPort].UserObj
-	return
-}
-
-func (c Container) GetSelectedModePort() (ok bool, userObj graph.ModePositioner) {
-	if c.selectedPort == -1 {
-		return
-	}
-	ok = true
-	userObj = c.ports[c.selectedPort].UserObj2
 	return
 }
 

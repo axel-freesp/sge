@@ -90,9 +90,11 @@ func (v *signalGraphView) Sync() {
 
 	for i, n := range g.Nodes() {
 		if n.Expanded() {
-			v.nodes[i] = graph.ExpandedNodeNew(n.PathModePosition("", gr.PositionModeExpanded), n, "")
+			n.SetActiveMode(gr.PositionModeExpanded)
+			v.nodes[i] = graph.ExpandedNodeNew(func(n bh.NodeIf) gr.PathModePositioner { return n }, n)
 		} else {
-			v.nodes[i] = graph.NodeNew(n.PathModePosition("", gr.PositionModeNormal), n, "")
+			n.SetActiveMode(gr.PositionModeNormal)
+			v.nodes[i] = graph.NodeNew(func(n bh.NodeIf) gr.PathModePositioner { return n }, n)
 		}
 	}
 	var index = 0
@@ -144,10 +146,10 @@ func (v *signalGraphView) Select2(obj interface{}, id string) {
 	switch obj.(type) {
 	case bh.NodeIf:
 		v.deselectConnects()
-		v.selectNode(freesp.NodeIdFromString(id))
+		v.selectNode(freesp.NodeIdFromString(id, v.graphId))
 	case bh.PortIf:
 		v.deselectConnects()
-		n := v.selectNode(freesp.NodeIdFromString(id))
+		n := v.selectNode(freesp.NodeIdFromString(id, v.graphId))
 		if n != nil {
 			n.SelectPort(obj.(bh.PortIf))
 			v.repaintNode(n)
@@ -158,7 +160,7 @@ func (v *signalGraphView) Select2(obj interface{}, id string) {
 func (v *signalGraphView) selectNode(id bh.NodeIdIf) (node graph.NodeIf) {
 	var n graph.NodeIf
 	for _, n = range v.nodes {
-		ok, nd := n.SelectNode(freesp.NodeIdFromString(n.Name()), id)
+		ok, nd := n.SelectNode(freesp.NodeIdFromString(n.Name(), v.graphId), id)
 		if ok {
 			v.repaintNode(n)
 		}
@@ -284,7 +286,7 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 
 func (v signalGraphView) getSelectedNode() (id bh.NodeIdIf, ok bool) {
 	for _, n := range v.nodes {
-		id, ok = n.GetSelectedNode(freesp.NodeIdFromString(n.Name()))
+		id, ok = n.GetSelectedNode(freesp.NodeIdFromString(n.Name(), v.graphId))
 		if ok {
 			break
 		}
@@ -296,7 +298,7 @@ func (v *signalGraphView) handleNodeSelect(pos image.Point) {
 	for _, n := range v.nodes {
 		hit, _ := n.CheckHit(pos)
 		if hit {
-			nodeId := freesp.NodeIdFromString(n.Name())
+			nodeId := freesp.NodeIdFromString(n.Name(), v.graphId)
 			selected, ok := n.GetHighlightedNode(nodeId)
 			if !ok {
 				log.Printf("signalGraphView.handleNodeSelect: FIXME: hit=true, GetSelectedNode() is not ok\n")

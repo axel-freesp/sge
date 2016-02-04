@@ -13,7 +13,7 @@ import (
 type Node struct {
 	NamedBoxObject
 	userObj      bh.NodeIf
-	path         string
+	positioner   gr.Positioner
 	ports        []*Port
 	selectedPort int
 }
@@ -21,7 +21,11 @@ type Node struct {
 var _ NodeIf = (*Node)(nil)
 var _ ContainerChild = (*Node)(nil)
 
-func NodeNew(pos image.Point, n bh.NodeIf, path string) (ret *Node) {
+type GetPositioner func(n bh.NodeIf) gr.PathModePositioner
+
+func NodeNew(getPositioner GetPositioner, n bh.NodeIf) (ret *Node) {
+	positioner := getPositioner(n)
+	pos := positioner.Position()
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X+global.nodeWidth, pos.Y+global.nodeHeight+numPorts(n)*dy)
 	config := DrawConfig{ColorInit(ColorOption(NodeNormal)),
@@ -30,7 +34,7 @@ func NodeNew(pos image.Point, n bh.NodeIf, path string) (ret *Node) {
 		ColorInit(ColorOption(BoxFrame)),
 		ColorInit(ColorOption(Text)),
 		image.Point{global.padX, global.padY}}
-	ret = &Node{NamedBoxObjectInit(box, config, n), n, path, nil, -1}
+	ret = &Node{NamedBoxObjectInit(box, config, n), n, positioner, nil, -1}
 	ret.RegisterOnHighlight(func(hit bool, pos image.Point) bool {
 		return ret.onHighlight(hit, pos)
 	})
@@ -187,6 +191,10 @@ func (n *Node) GetSelectedNode(ownId bh.NodeIdIf) (id bh.NodeIdIf, ok bool) {
 	return
 }
 
+func (n Node) ChildNodes() []NodeIf {
+	return nil
+}
+
 //
 //		ContainerChild interface
 //
@@ -204,8 +212,7 @@ var _ gr.Positioner = (*Port)(nil)
 // (overwrite BBoxObject default implementation)
 func (n *Node) SetPosition(pos image.Point) {
 	shift := pos.Sub(n.Position())
-	//log.Printf("Node.SetPosition: path=%s, mode=%v, pos=%v\n", n.path, gr.PositionModeNormal, pos)
-	n.userObj.SetPathModePosition(n.path, gr.PositionModeNormal, pos)
+	n.positioner.SetPosition(pos)
 	n.BBoxDefaultSetPosition(pos)
 	for _, p := range n.ports {
 		p.SetPosition(p.Position().Add(shift))

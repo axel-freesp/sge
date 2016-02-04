@@ -1,6 +1,7 @@
 package views
 
 import (
+	freesp "github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
@@ -33,7 +34,7 @@ var _ ScaledScene = (*mappingView)(nil)
 var _ GraphViewIf = (*mappingView)(nil)
 
 func MappingViewNew(m mp.MappingIf, context ContextIf) (viewer *mappingView, err error) {
-	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, &unmappedProcess{}, image.Point{}, false}
+	viewer = &mappingView{nil, DrawArea{}, m, nil, nil, nil, context, nil, unmappedProcessNew(), image.Point{}, false}
 	err = viewer.init()
 	if err != nil {
 		return
@@ -66,6 +67,7 @@ func (v *mappingView) init() (err error) {
 func (v *mappingView) Sync() {
 	log.Printf("mappingView.Sync()\n")
 	g := v.mapping.Graph()
+	gFilename := g.Filename()
 	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 	var numberOfConnections = 0
 	for _, n := range g.Nodes() {
@@ -75,7 +77,27 @@ func (v *mappingView) Sync() {
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 	for i, n := range g.Nodes() {
-		v.nodes[i] = graph.NodeNew(n.PathModePosition("", gr.PositionModeMapping), n, "")
+		nId := freesp.NodeIdFromString(n.Name(), g.Filename())
+		melem, ok := v.mapping.MappedElement(nId)
+		if ok {
+			getPositioner := func(n bh.NodeIf) gr.PathModePositioner {
+				nId := freesp.NodeIdFromString(n.Name(), gFilename)
+				melem, ok := v.mapping.MappedElement(nId)
+				if !ok {
+					log.Panicf("Fatal: no mapped element for node %s", n.Name())
+				}
+				return melem
+			}
+			if melem.Expanded() {
+				melem.SetActiveMode(gr.PositionModeExpanded)
+				v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n)
+			} else {
+				melem.SetActiveMode(gr.PositionModeMapping)
+				v.nodes[i] = graph.NodeNew(getPositioner, n)
+			}
+		} else {
+			log.Printf("mappingView.Sync warning: node %s is not mapped\n", n.Name())
+		}
 	}
 	var index = 0
 	for _, n := range g.Nodes() {
@@ -95,14 +117,17 @@ func (v *mappingView) Sync() {
 	for i, a := range p.Arch() {
 		v.arch[i] = graph.ArchMappingNew(a, v.nodes, v.mapping)
 	}
-	var unmappedNodes []*graph.Node
+	var unmappedNodes []graph.NodeIf
+	var unmappedIds []bh.NodeIdIf
 	for _, n := range v.nodes {
-		_, ok := v.mapping.Mapped(n.UserObj())
+		nId := freesp.NodeIdFromString(n.Name(), g.Filename())
+		_, ok := v.mapping.Mapped(n.Name())
 		if !ok {
-			unmappedNodes = append(unmappedNodes, n.(*graph.Node))
+			unmappedNodes = append(unmappedNodes, n)
+			unmappedIds = append(unmappedIds, nId)
 		}
 	}
-	v.unmapped = graph.ProcessMappingNew(unmappedNodes, v.unmappedObj)
+	v.unmapped = graph.ProcessMappingNew(unmappedNodes, unmappedIds, v.unmappedObj)
 	// TODO: add v.unmapped to scene
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
@@ -146,30 +171,6 @@ func (v *mappingView) Select(obj interface{}) {
 			a.SelectChannel(ch)
 			v.repaintArch(a)
 		}
-	case bh.NodeIf:
-		n := obj.(bh.NodeIf)
-		melem, ok := v.mapping.MappedElement(n)
-		if !ok {
-			// todo: unmapped nodes
-			return
-		}
-		p, ok := melem.Process()
-		if !ok {
-			return
-		}
-		var a graph.ArchIf
-		a, ok = v.focusArchFromUserObject(p.Arch())
-		if !ok {
-			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
-			return
-		}
-		pr := a.SelectProcess(p)
-		if pr == nil {
-			log.Printf("mappingView.Select error: process %v not found\n", p)
-			return
-		}
-		pr.(*graph.ProcessMapping).SelectNode(n)
-		v.repaintArch(a)
 	case mp.MappedElementIf:
 		melem := obj.(mp.MappedElementIf)
 		p, isMapped := melem.Process()
@@ -190,10 +191,12 @@ func (v *mappingView) Select(obj interface{}) {
 				return
 			}
 		}
-		n := melem.Node()
-		if n != nil {
-			pr.(*graph.ProcessMapping).SelectNode(n)
-		}
+		/*
+			n := melem.Node()
+			if n != nil {
+				pr.(*graph.ProcessMapping).SelectNode(n)
+			}
+		*/
 		if isMapped {
 			v.repaintArch(a)
 		} else {
@@ -204,6 +207,35 @@ func (v *mappingView) Select(obj interface{}) {
 }
 
 func (v *mappingView) Select2(obj interface{}, id string) {
+	switch obj.(type) {
+	case bh.NodeIf:
+		p, ok := v.mapping.Mapped(id)
+		if !ok {
+			// todo: unmapped nodes
+			return
+		}
+		var a graph.ArchIf
+		a, ok = v.focusArchFromUserObject(p.Arch())
+		if !ok {
+			log.Printf("mappingView.Select error: arch %s not found\n", a.Name())
+			return
+		}
+		/*
+			pr := a.SelectProcess(p)
+			if pr == nil {
+				log.Printf("mappingView.Select error: process %v not found\n", p)
+				return
+			}
+			* */
+		for _, n := range v.nodes {
+			// TODO: filenames...
+			modified, _ := n.SelectNode(freesp.NodeIdFromString(n.Name(), ""),
+				freesp.NodeIdFromString(id, ""))
+			if modified {
+				v.repaintArch(a)
+			}
+		}
+	}
 }
 
 func (v *mappingView) selectArch(toSelect graph.ArchIf) {
@@ -234,9 +266,33 @@ func (v *mappingView) focusArchFromUserObject(obj pf.ArchIf) (ret graph.ArchIf, 
 }
 
 func (v *mappingView) Expand(obj interface{}) {
+	switch obj.(type) {
+	case bh.NodeIf:
+		log.Printf("mappingView.Expand\n")
+		if obj.(bh.NodeIf).Expanded() {
+			log.Printf("mappingView.Expand: nothing to do\n")
+			return
+		}
+		v.drawAll()
+		obj.(bh.NodeIf).SetExpanded(true)
+		v.Sync()
+	default:
+	}
 }
 
 func (v *mappingView) Collapse(obj interface{}) {
+	switch obj.(type) {
+	case bh.NodeIf:
+		log.Printf("mappingView.Collapse\n")
+		if !obj.(bh.NodeIf).Expanded() {
+			log.Printf("mappingView.Collapse: nothing to do\n")
+			return
+		}
+		v.drawAll()
+		obj.(bh.NodeIf).SetExpanded(false)
+		v.Sync()
+	default:
+	}
 }
 
 //
@@ -314,7 +370,8 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 			continue
 		}
 		var melem mp.MappedElementIf
-		melem, ok = v.mapping.MappedElement(n.UserObj())
+		nId := freesp.NodeIdFromString(n.Name(), v.mapping.Graph().Filename())
+		melem, ok = v.mapping.MappedElement(nId)
 		if !ok {
 			// todo: unmapped node
 		} else {
@@ -339,7 +396,8 @@ func (v *mappingView) handleArchSelect(pos image.Point) {
 		return
 	}
 	var melem mp.MappedElementIf
-	melem, ok = v.mapping.MappedElement(n.UserObj())
+	nId := freesp.NodeIdFromString(n.Name(), v.mapping.Graph().Filename())
+	melem, ok = v.mapping.MappedElement(nId)
 	if !ok {
 		// todo: unmapped node
 	} else {
@@ -515,10 +573,10 @@ func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 //		Private methods
 //
 
-func (v *mappingView) findNode(name string) *graph.Node {
+func (v *mappingView) findNode(name string) graph.NodeIf {
 	for _, d := range v.nodes {
 		if d.Name() == name {
-			return d.(*graph.Node)
+			return d
 		}
 	}
 	return nil
@@ -551,7 +609,11 @@ func (v *mappingView) drawScene(r image.Rectangle) {
 }
 
 type unmappedProcess struct {
-	pos image.Point
+	gr.ModePositionerObject
+}
+
+func unmappedProcessNew() *unmappedProcess {
+	return &unmappedProcess{gr.ModePositionerObjectInit()}
 }
 
 var _ pf.ProcessIf = (*unmappedProcess)(nil)
@@ -561,14 +623,6 @@ func (p *unmappedProcess) Name() string {
 }
 
 func (p *unmappedProcess) SetName(string) {
-}
-
-func (p *unmappedProcess) ModePosition(gr.PositionMode) image.Point {
-	return p.pos
-}
-
-func (p *unmappedProcess) SetModePosition(m gr.PositionMode, pos image.Point) {
-	p.pos = pos
 }
 
 func (p *unmappedProcess) Arch() pf.ArchIf {

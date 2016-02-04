@@ -8,6 +8,7 @@ import (
 	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
+	"github.com/axel-freesp/sge/tool"
 	"github.com/axel-freesp/sge/views"
 	"log"
 )
@@ -58,7 +59,7 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 	}
 	pl = platform.PlatformNew(name)
 	var filedir string
-	for _, filedir := range backend.XmlSearchPaths() {
+	for _, filedir = range backend.XmlSearchPaths() {
 		err = pl.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err == nil {
 			break
@@ -68,7 +69,33 @@ func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerPF.Access: platform file %s not found", name)
 		return
 	}
+	log.Printf("fileManagerPL.Access: filedir=%s, name=%s\n", filedir, name)
+	var filename string
+	if len(filedir) > 0 {
+		filename = fmt.Sprintf("%s/%s", filedir, name)
+	} else {
+		filename = name
+	}
 	pl.SetPathPrefix(filedir)
+	hint := backend.XmlPlatformHintNew(name)
+	hintfilename := f.HintFilename(filename)
+	log.Printf("fileManagerPL.Access: filedir=%s, hintfilename=%s\n", filedir, hintfilename)
+	var buf []byte
+	buf, err = tool.ReadFile(hintfilename)
+	if err == nil {
+		_, err = hint.Read(buf)
+		if err != nil {
+			return
+		}
+		err = platform.PlatformApplyHints(pl.(pf.PlatformIf), hint)
+		if err != nil {
+			err = fmt.Errorf("fileManagerPL.Access: %s", err)
+			return
+		}
+	} else {
+		log.Printf("fileManagerPF.Access: error reading hints file: %s\n", err)
+	}
+
 	pv, err := views.PlatformViewNew(pl.(pf.PlatformIf), f.context)
 	if err != nil {
 		err = fmt.Errorf("fileManagerPF.Access: Could not create platform view.")
@@ -141,5 +168,13 @@ func (f *fileManagerPF) Store(name string) (err error) {
 	if err != nil {
 		return
 	}
+	hint := platform.CreateXmlPlatformHint(pl)
+	hintfilename := f.HintFilename(filename)
+	var buf []byte
+	buf, err = hint.Write()
+	if err != nil {
+		return
+	}
+	err = tool.WriteFile(hintfilename, buf)
 	return
 }

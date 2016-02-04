@@ -7,24 +7,24 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"image"
 	"log"
 )
 
 type arch struct {
+	gr.ModePositionerObject
 	name      string
 	iotypes   ioTypeList
 	processes processList
 	platform  pf.PlatformIf
-	position  map[gr.PositionMode]image.Point
 	archports []pf.ArchPortIf
 }
 
 var _ pf.ArchIf = (*arch)(nil)
 
 func ArchNew(name string, platform pf.PlatformIf) *arch {
-	return &arch{name, ioTypeListInit(), processListInit(), platform,
-		make(map[gr.PositionMode]image.Point), nil}
+	return &arch{gr.ModePositionerObjectInit(), name, ioTypeListInit(),
+		processListInit(), platform, nil}
 }
 
 func createArchFromXml(xmla backend.XmlArch, platform pf.PlatformIf) (a *arch, err error) {
@@ -45,14 +45,16 @@ func createArchFromXml(xmla backend.XmlArch, platform pf.PlatformIf) (a *arch, e
 		}
 		a.processes.Append(pr)
 	}
-	for _, xmlh := range xmla.Entry {
-		mode, ok := freesp.ModeFromString[xmlh.Mode]
-		if !ok {
-			log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
-			continue
+	/*
+		for _, xmlh := range xmla.Entry {
+			mode, ok := freesp.ModeFromString[xmlh.Mode]
+			if !ok {
+				log.Printf("createArchFromXml Warning: hint mode %s not defined\n", xmlh.Mode)
+				continue
+			}
+			a.position[mode] = image.Point{xmlh.X, xmlh.Y}
 		}
-		a.position[mode] = image.Point{xmlh.X, xmlh.Y}
-	}
+	*/
 	return
 }
 
@@ -96,19 +98,6 @@ func (a *arch) Name() string {
 
 func (a *arch) SetName(newName string) {
 	a.name = newName
-}
-
-//
-//      ModePositioner API
-//
-
-func (a *arch) ModePosition(mode gr.PositionMode) (p image.Point) {
-	p = a.position[mode]
-	return
-}
-
-func (a *arch) SetModePosition(mode gr.PositionMode, p image.Point) {
-	a.position[mode] = p
 }
 
 //

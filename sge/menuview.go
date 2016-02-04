@@ -4,7 +4,7 @@ import (
 	"log"
 	//gr "github.com/axel-freesp/sge/interface/graph"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
-	mp "github.com/axel-freesp/sge/interface/mapping"
+	//	mp "github.com/axel-freesp/sge/interface/mapping"
 	tr "github.com/axel-freesp/sge/interface/tree"
 	//"github.com/axel-freesp/sge/models"
 	//"github.com/axel-freesp/sge/views"
@@ -45,8 +45,8 @@ func MenuViewCurrent(menu *GoAppMenu, g *Global) {
 	switch obj.(type) {
 	case bh.NodeIf:
 		n = obj.(bh.NodeIf)
-	case mp.MappedElementIf:
-		n = obj.(mp.MappedElementIf).Node()
+	//case mp.MappedElementIf:
+	//	n = obj.(mp.MappedElementIf).Node()
 	default:
 		return
 	}
@@ -55,6 +55,7 @@ func MenuViewCurrent(menu *GoAppMenu, g *Global) {
 		if i.ImplementationType() == bh.NodeTypeGraph {
 			menu.viewExpand.SetSensitive(true)
 			menu.viewCollapse.SetSensitive(true)
+			break
 		}
 	}
 }

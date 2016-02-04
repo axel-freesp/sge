@@ -7,24 +7,24 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"image"
 	"log"
 )
 
 type channel struct {
+	gr.ModePositionerObject
 	direction gr.PortDirection
 	iotype    pf.IOTypeIf
 	link      pf.ChannelIf
 	process   pf.ProcessIf
 	linkText  string
-	position  map[gr.PositionMode]image.Point
 	archport  pf.ArchPortIf
 }
 
 var _ pf.ChannelIf = (*channel)(nil)
 
 func ChannelNew(dir gr.PortDirection, iotype pf.IOTypeIf, process pf.ProcessIf, linkText string) *channel {
-	return &channel{dir, iotype, nil, process, linkText, make(map[gr.PositionMode]image.Point), nil}
+	return &channel{gr.ModePositionerObjectInit(), dir, iotype, nil, process, linkText, nil}
 }
 
 func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *channel, err error) {
@@ -34,9 +34,9 @@ func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *chan
 		return
 	}
 	ch = ChannelNew(gr.InPort, iot, p, xmlc.Source)
-	ch.channelPositionsFromXml(xmlc.XmlChannel)
+	//ch.channelPositionsFromXml(xmlc.XmlChannel)
 	ap := p.Arch().(*arch).AddArchPort(ch)
-	ap.archPortPositionsFromXml(xmlc.XmlChannel)
+	//ap.archPortPositionsFromXml(xmlc.XmlChannel)
 	ch.archport = ap
 	return
 }
@@ -48,13 +48,14 @@ func createOutChannelFromXml(xmlc backend.XmlOutChannel, p pf.ProcessIf) (ch *ch
 		return
 	}
 	ch = ChannelNew(gr.OutPort, iot, p, xmlc.Dest)
-	ch.channelPositionsFromXml(xmlc.XmlChannel)
+	//ch.channelPositionsFromXml(xmlc.XmlChannel)
 	ap := p.Arch().(*arch).AddArchPort(ch)
-	ap.archPortPositionsFromXml(xmlc.XmlChannel)
+	//ap.archPortPositionsFromXml(xmlc.XmlChannel)
 	ch.archport = ap
 	return
 }
 
+/*
 func (ch *channel) channelPositionsFromXml(xmlc backend.XmlChannel) {
 	for _, xmlh := range xmlc.Entry {
 		mode, ok := freesp.ModeFromString[xmlh.Mode]
@@ -80,6 +81,7 @@ func (ap *archPort) archPortPositionsFromXml(xmlc backend.XmlChannel) {
 	}
 	return
 }
+*/
 
 func channelGetIOTypeFromArch(a pf.ArchIf, iotype string) (iot pf.IOTypeIf, err error) {
 	var ok bool
@@ -129,19 +131,6 @@ func (c *channel) CreateXml() (buf []byte, err error) {
 		buf, err = xmlc.Write()
 	}
 	return
-}
-
-//
-//      ModePositioner API
-//
-
-func (c *channel) ModePosition(mode gr.PositionMode) (p image.Point) {
-	p = c.position[mode]
-	return
-}
-
-func (c *channel) SetModePosition(mode gr.PositionMode, p image.Point) {
-	c.position[mode] = p
 }
 
 //

@@ -7,23 +7,23 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"image"
 	"log"
 	"strings"
 )
 
 type process struct {
+	gr.ModePositionerObject
 	name        string
 	inChannels  channelList
 	outChannels channelList
 	arch        pf.ArchIf
-	position    map[gr.PositionMode]image.Point
 }
 
 var _ pf.ProcessIf = (*process)(nil)
 
 func ProcessNew(name string, arch pf.ArchIf) *process {
-	return &process{name, channelListInit(), channelListInit(), arch, make(map[gr.PositionMode]image.Point)}
+	return &process{gr.ModePositionerObjectInit(), name, channelListInit(), channelListInit(), arch}
 }
 
 func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, err error) {
@@ -44,15 +44,17 @@ func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, er
 		}
 		pr.outChannels.Append(ch)
 	}
-	for _, xmlh := range xmlp.Entry {
-		mode, ok := freesp.ModeFromString[xmlh.Mode]
-		if !ok {
-			log.Printf("createProcessFromXml Warning: hint mode %s not defined\n",
-				xmlh.Mode)
-			continue
+	/*
+		for _, xmlh := range xmlp.Entry {
+			mode, ok := freesp.ModeFromString[xmlh.Mode]
+			if !ok {
+				log.Printf("createProcessFromXml Warning: hint mode %s not defined\n",
+					xmlh.Mode)
+				continue
+			}
+			pr.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
 		}
-		pr.SetModePosition(mode, image.Point{xmlh.X, xmlh.Y})
-	}
+	*/
 	return
 }
 
@@ -84,19 +86,6 @@ func (p *process) Name() string {
 
 func (p *process) SetName(newName string) {
 	p.name = newName
-}
-
-/*
- *      ModePositioner API
- */
-
-func (pr *process) ModePosition(mode gr.PositionMode) (p image.Point) {
-	p = pr.position[mode]
-	return
-}
-
-func (pr *process) SetModePosition(mode gr.PositionMode, p image.Point) {
-	pr.position[mode] = p
 }
 
 /*

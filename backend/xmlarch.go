@@ -10,11 +10,10 @@ type XmlArch struct {
 	Name      string       `xml:"name,attr"`
 	IOType    []XmlIOType  `xml:"io-type"`
 	Processes []XmlProcess `xml:"process"`
-	XmlModeHint
 }
 
 func XmlArchNew(name string) *XmlArch {
-	return &XmlArch{xml.Name{freespNamespace, "arch"}, name, nil, nil, XmlModeHint{}}
+	return &XmlArch{xml.Name{freespNamespace, "arch"}, name, nil, nil}
 }
 
 func (a *XmlArch) Read(data []byte) (cnt int, err error) {

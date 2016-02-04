@@ -24,6 +24,46 @@ func PlatformNew(filename string) *platform {
 	return &platform{filename, "", "", archListInit()}
 }
 
+func PlatformApplyHints(p pf.PlatformIf, xmlhints *backend.XmlPlatformHint) (err error) {
+	if p.Filename() != xmlhints.Ref {
+		err = fmt.Errorf("PlatformApplyHints error: filename mismatch\n")
+		return
+	}
+	for i, xmla := range xmlhints.Arch {
+		a := p.Arch()[i]
+		if a.Name() != xmla.Name {
+			log.Printf("PlatformApplyHints error: arch name mismatch\n")
+			continue
+		}
+		ArchApplyHints(a, &xmla)
+	}
+	return
+}
+
+func ArchApplyHints(a pf.ArchIf, xmla *backend.XmlArchPosHint) {
+	freesp.ModePositionerApplyHints(a, xmla.XmlModeHint)
+	for i, xmlp := range xmla.ArchPorts {
+		p := a.ArchPorts()[i]
+		freesp.ModePositionerApplyHints(p, xmlp.XmlModeHint)
+	}
+	for i, xmlp := range xmla.Processes {
+		p := a.Processes()[i]
+		ProcessApplyHints(p, &xmlp)
+	}
+}
+
+func ProcessApplyHints(p pf.ProcessIf, xmlp *backend.XmlProcessPosHint) {
+	freesp.ModePositionerApplyHints(p, xmlp.XmlModeHint)
+	for i, xmlc := range xmlp.InChannels {
+		c := p.InChannels()[i]
+		freesp.ModePositionerApplyHints(c, xmlc.XmlModeHint)
+	}
+	for i, xmlc := range xmlp.OutChannels {
+		c := p.OutChannels()[i]
+		freesp.ModePositionerApplyHints(c, xmlc.XmlModeHint)
+	}
+}
+
 func (p *platform) PlatformId() string {
 	return p.platformId
 }

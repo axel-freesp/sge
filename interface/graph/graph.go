@@ -4,8 +4,132 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/tool"
 	"image"
+	"log"
 	"strings"
 )
+
+//
+//	PathModePositioner standard implementation
+//
+
+type PathModePositionerObject struct {
+	ModePositionerObject
+	pathlist   tool.StringList
+	activePath string
+}
+
+func PathModePositionerObjectNew() (p *PathModePositionerObject) {
+	p = &PathModePositionerObject{ModePositionerObjectInit(), tool.StringListInit(), ""}
+	p.pathlist.Append("")
+	return
+}
+
+func (p *PathModePositionerObject) Position() image.Point {
+	return p.ModePosition(p.activeMode)
+}
+
+func (p *PathModePositionerObject) SetPosition(pos image.Point) {
+	p.SetModePosition(p.activeMode, pos)
+}
+
+func (p *PathModePositionerObject) ModePosition(mode PositionMode) (pos image.Point) {
+	return p.PathModePosition(p.ActivePath(), mode)
+}
+
+func (p *PathModePositionerObject) SetModePosition(mode PositionMode, pos image.Point) {
+	p.SetPathModePosition(p.ActivePath(), mode, pos)
+}
+
+func (p *PathModePositionerObject) PathModePosition(path string, mode PositionMode) (pos image.Point) {
+	_, ok := p.pathlist.Find(path)
+	if !ok {
+		return
+	}
+	pos = p.position[CreatePathMode(path, mode)]
+	return
+}
+
+func (p *PathModePositionerObject) SetPathModePosition(path string, mode PositionMode, pos image.Point) {
+	log.Printf("PathModePositionerObject.SetPathModePosition(%T): path=%s, mode=%v, pos=%v\n", p, path, mode, pos)
+	_, ok := p.pathlist.Find(path)
+	if !ok {
+		p.pathlist.Append(path)
+	}
+	p.position[CreatePathMode(path, mode)] = pos
+}
+
+func (p *PathModePositionerObject) PathList() []string {
+	return p.pathlist.Strings()
+}
+
+func (p *PathModePositionerObject) SetActivePath(path string) {
+	_, ok := p.pathlist.Find(path)
+	if !ok {
+		p.pathlist.Append(path)
+	}
+	p.activePath = path
+}
+
+func (p *PathModePositionerObject) ActivePath() string {
+	return p.activePath
+}
+
+//
+//	ModePositioner standard implementation
+//
+
+type ModePositionerObject struct {
+	position   map[PositionMode]image.Point
+	activeMode PositionMode
+}
+
+func ModePositionerObjectInit() ModePositionerObject {
+	return ModePositionerObject{make(map[PositionMode]image.Point), PositionMode("normal")}
+}
+
+func (m *ModePositionerObject) Position() image.Point {
+	return m.ModePosition(m.activeMode)
+}
+
+func (m *ModePositionerObject) SetPosition(pos image.Point) {
+	m.SetModePosition(m.activeMode, pos)
+}
+
+func (m *ModePositionerObject) ModePosition(mode PositionMode) (p image.Point) {
+	return m.position[mode]
+}
+
+func (m *ModePositionerObject) SetModePosition(mode PositionMode, p image.Point) {
+	m.position[mode] = p
+}
+
+func (m *ModePositionerObject) SetActiveMode(mode PositionMode) {
+	m.activeMode = mode
+}
+
+func (m *ModePositionerObject) ActiveMode() PositionMode {
+	return m.activeMode
+}
+
+//
+//	Positioner standard implementation
+//
+
+type PositionerObject struct {
+	position image.Point
+}
+
+func (p *PositionerObject) Position() image.Point {
+	return p.position
+}
+
+func (p *PositionerObject) SetPosition(pos image.Point) {
+	p.position = pos
+}
+
+//
+//	PortDirection
+//
 
 var _ fmt.Stringer = PortDirection(false)
 
@@ -18,8 +142,8 @@ func (d PortDirection) String() (s string) {
 	return
 }
 
-func CreatePathMode(path string, mode PositionMode) (m string) {
-	m = fmt.Sprintf("%s/%s", path, string(mode))
+func CreatePathMode(path string, mode PositionMode) (m PositionMode) {
+	m = PositionMode(fmt.Sprintf("%s/%s", path, string(mode)))
 	return
 }
 
@@ -47,23 +171,4 @@ func SeparatePathMode(m string) (path string, mode PositionMode) {
 	}
 	mode = PositionMode(p[l])
 	return
-}
-
-func CreateModePositioner(path string, pmp PathModePositioner) (mp ModePositioner) {
-	return &ModePositionerConverter{path, pmp}
-}
-
-var _ ModePositioner = (*ModePositionerConverter)(nil)
-
-type ModePositionerConverter struct {
-	path string
-	ref  PathModePositioner
-}
-
-func (c ModePositionerConverter) ModePosition(mode PositionMode) (pos image.Point) {
-	return c.ref.PathModePosition(c.path, mode)
-}
-
-func (c *ModePositionerConverter) SetModePosition(mode PositionMode, pos image.Point) {
-	c.ref.SetPathModePosition(c.path, mode, pos)
 }

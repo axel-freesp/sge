@@ -72,6 +72,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 				gv.Sync()
 			}
 		case bh.NodeIf:
+			log.Printf("treeSelectionChangedCB(NodeIf %v)\n", nodeIdFromPath(treeStore, path))
 			global.win.graphViews.Select2(obj, nodeIdFromPath(treeStore, path))
 		case bh.PortIf:
 			p := strings.Split(path, ":")
@@ -80,6 +81,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		case bh.ConnectionIf:
 			global.win.graphViews.Select(obj)
 		case pf.ArchIf, pf.ProcessIf, pf.ChannelIf, mp.MappedElementIf:
+			log.Printf("treeSelectionChangedCB(%T)\n", obj)
 			global.win.graphViews.Select(obj)
 		}
 	}

@@ -8,7 +8,7 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"image"
 	"log"
 	//"strings"
 )
@@ -209,9 +209,9 @@ func createNodeTypeFromXml(xmlnt backend.XmlNodeType, filename string, context m
 			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", xmlp.PType)
 		}
 		pt := PortTypeNew(xmlp.PName, pType.TypeName(), gr.InPort)
-		for _, xmlmp := range xmlp.Entry {
-			pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
-		}
+		//for _, xmlmp := range xmlp.Entry {
+		//	pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
+		//}
 		nt.inPorts.Append(pt)
 		//nt.addInPort(xmlp.PName, pType)
 	}
@@ -221,9 +221,9 @@ func createNodeTypeFromXml(xmlnt backend.XmlNodeType, filename string, context m
 			log.Fatalf("createNodeTypeFromXml error: FIXME: signal type '%s' not found\n", xmlp.PType)
 		}
 		pt := PortTypeNew(xmlp.PName, pType.TypeName(), gr.OutPort)
-		for _, xmlmp := range xmlp.Entry {
-			pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
-		}
+		//for _, xmlmp := range xmlp.Entry {
+		//	pt.position[freesp.ModeFromString[xmlmp.Mode]] = image.Point{xmlmp.X, xmlmp.Y}
+		//}
 		nt.outPorts.Append(pt)
 		//nt.addOutPort(xmlp.PName, pType)
 	}

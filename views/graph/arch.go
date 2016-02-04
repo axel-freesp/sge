@@ -1,12 +1,15 @@
 package graph
 
 import (
+	//	"github.com/axel-freesp/sge/freesp/behaviour"
+	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/gotk3/gotk3/cairo"
 	"image"
 	"log"
+	"strings"
 )
 
 type Arch struct {
@@ -42,18 +45,49 @@ func ArchNew(userObj pf.ArchIf) *Arch {
 	return a
 }
 
+func findNodeByName(nodes []NodeIf, nId string) (n NodeIf, ok bool) {
+	for _, n = range nodes {
+		if n.Name() == nId {
+			ok = true
+			return
+		}
+	}
+	return
+}
+
+func findNodeInTree(nodes []NodeIf, nId string) (n NodeIf, ok bool) {
+	if strings.Contains(nId, "/") {
+		id := strings.Split(nId, "/")
+		var n2 NodeIf
+		n2, ok = findNodeByName(nodes, id[0])
+		if !ok {
+			return
+		}
+		n, ok = findNodeInTree(n2.ChildNodes(), strings.Join(id[1:], "/"))
+	} else {
+		n, ok = findNodeByName(nodes, nId)
+	}
+	return
+}
+
 func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Arch {
 	var processes []ProcessIf
 	var Children []ContainerChild
 	for _, up := range userObj.Processes() {
-		var mappedNodes []*Node
-		for _, n := range nodes {
-			m, ok := mapping.Mapped(n.UserObj())
+		var mappedNodes []NodeIf
+		var mappedIds []bh.NodeIdIf
+		for _, nId := range mapping.MappedIds() {
+			m, ok := mapping.Mapped(nId.String())
 			if ok && m == up {
-				mappedNodes = append(mappedNodes, n.(*Node))
+				log.Printf("ArchMappingNew(p=%s): nId=%s", up.Name(), nId.String())
+				n, ok := findNodeInTree(nodes, nId.String())
+				if ok {
+					mappedNodes = append(mappedNodes, n)
+					mappedIds = append(mappedIds, nId)
+				}
 			}
 		}
-		p := ProcessMappingNew(mappedNodes, up)
+		p := ProcessMappingNew(mappedNodes, mappedIds, up)
 		processes = append(processes, p)
 		Children = append(Children, p)
 	}
@@ -67,14 +101,16 @@ func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Ar
 	a := &Arch{ContainerInit(Children, config, userObj, cconfig), userObj,
 		make(map[pf.ChannelIf]*ContainerPort), processes, gr.PositionModeMapping, mapping}
 	a.init()
-	for _, n := range nodes {
-		melem, ok := mapping.MappedElement(n.UserObj())
-		if !ok {
-			log.Printf("ArchMappingNew warning: node %s not mapped.\n", n.Name())
-			continue
+	/*
+		for _, n := range nodes {
+			melem, ok := mapping.MappedElement(n.UserObj())
+			if !ok {
+				log.Printf("ArchMappingNew warning: node %s not mapped.\n", n.Name())
+				continue
+			}
+			n.SetPosition(melem.PathModePosition("", gr.PositionModeMapping))
 		}
-		n.SetPosition(melem.Position())
-	}
+	*/
 	a.initMappingPorts()
 	return a
 }
@@ -144,7 +180,8 @@ func (a *Arch) addExternalPort(c pf.ChannelIf, mode gr.PositionMode, idx int) {
 	if pos == empty {
 		pos = a.CalcPortPos(idx, a.numExtChannel())
 	}
-	cp := a.AddModePort(pos, config, ap, mode)
+	ap.SetActiveMode(mode)
+	cp := a.AddPort(pos, config, ap)
 	ap.SetModePosition(mode, cp.Position())
 }
 
@@ -177,7 +214,7 @@ func (a Arch) IsLinked(name string) bool {
 
 func (a *Arch) ChannelPort(ch pf.ChannelIf) ArchPortIf {
 	for _, p := range a.ports {
-		if p.UserObj2.(pf.ArchPortIf).Channel() == ch {
+		if p.UserObj.(pf.ArchPortIf).Channel() == ch {
 			return p
 		}
 	}

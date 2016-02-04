@@ -68,9 +68,15 @@ func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerSG.Access: graph file %s not found.", name)
 		return
 	}
+	var filename string
+	if len(filedir) > 0 {
+		filename = fmt.Sprintf("%s/%s", filedir, name)
+	} else {
+		filename = name
+	}
 	sg.SetPathPrefix(filedir)
 	hint := backend.XmlGraphHintNew(name)
-	hintfilename := fmt.Sprintf("%s/%s.hints.xml", filedir, tool.Prefix(name))
+	hintfilename := f.HintFilename(filename)
 	var buf []byte
 	buf, err = tool.ReadFile(hintfilename)
 	if err == nil {
@@ -161,7 +167,7 @@ func (f *fileManagerSG) Store(name string) (err error) {
 		return
 	}
 	hint := behaviour.CreateXmlGraphHint(sg)
-	hintfilename := fmt.Sprintf("%s.hints.xml", tool.Prefix(filename))
+	hintfilename := f.HintFilename(filename)
 	var buf []byte
 	buf, err = hint.Write()
 	if err != nil {

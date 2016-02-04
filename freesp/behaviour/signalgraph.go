@@ -8,7 +8,6 @@ import (
 	gr "github.com/axel-freesp/sge/interface/graph"
 	mod "github.com/axel-freesp/sge/interface/model"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
 	"log"
 )
 
@@ -34,43 +33,18 @@ func SignalGraphApplyHints(s bh.SignalGraphIf, xmlhints *backend.XmlGraphHint) (
 		n, ok := g.NodeByName(xmln.Name)
 		if ok {
 			n.SetExpanded(false)
-			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+			freesp.PathModePositionerApplyHints(n, xmln.XmlModeHint)
 		}
 	}
 	for _, xmln := range xmlhints.OutputNode {
 		n, ok := g.NodeByName(xmln.Name)
 		if ok {
 			n.SetExpanded(false)
-			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+			freesp.PathModePositionerApplyHints(n, xmln.XmlModeHint)
 		}
 	}
 	NodesApplyHints("", g, xmlhints.ProcessingNode)
 	return
-}
-
-func PathModePositionerApplyHints(pmp gr.PathModePositioner, xmln backend.XmlModeHint) {
-	for _, m := range xmln.Entry {
-		path, modestring := gr.SeparatePathMode(m.Mode)
-		mode, ok := freesp.ModeFromString[string(modestring)]
-		if !ok {
-			log.Printf("PathModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
-			continue
-		}
-		pos := image.Point{m.X, m.Y}
-		pmp.SetPathModePosition(path, mode, pos)
-	}
-}
-
-func ModePositionerApplyHints(mp gr.ModePositioner, xmln backend.XmlModeHint) {
-	for _, m := range xmln.Entry {
-		mode, ok := freesp.ModeFromString[m.Mode]
-		if !ok {
-			log.Printf("ModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
-			continue
-		}
-		pos := image.Point{m.X, m.Y}
-		mp.SetModePosition(mode, pos)
-	}
 }
 
 func NodesApplyHints(path string, g bh.SignalGraphTypeIf, xmlh []backend.XmlNodePosHint) {
@@ -91,14 +65,14 @@ func NodesApplyHints(path string, g bh.SignalGraphTypeIf, xmlh []backend.XmlNode
 		}
 		if ok {
 			n.SetExpanded(xmln.Expanded)
-			PathModePositionerApplyHints(n, xmln.XmlModeHint)
+			freesp.PathModePositionerApplyHints(n, xmln.XmlModeHint)
 			for i, p := range n.InPorts() {
 				ok = p.Name() == xmln.InPorts[i].Name
 				if !ok {
 					log.Printf("NodesApplyHints FIXME: name mismatch\n")
 					continue
 				}
-				ModePositionerApplyHints(p, xmln.InPorts[i].XmlModeHint)
+				freesp.ModePositionerApplyHints(p, xmln.InPorts[i].XmlModeHint)
 			}
 			for i, p := range n.OutPorts() {
 				ok = p.Name() == xmln.OutPorts[i].Name
@@ -106,7 +80,7 @@ func NodesApplyHints(path string, g bh.SignalGraphTypeIf, xmlh []backend.XmlNode
 					log.Printf("NodesApplyHints FIXME: name mismatch\n")
 					continue
 				}
-				ModePositionerApplyHints(p, xmln.OutPorts[i].XmlModeHint)
+				freesp.ModePositionerApplyHints(p, xmln.OutPorts[i].XmlModeHint)
 			}
 		}
 		nt := n.ItsType()

@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
 	"github.com/axel-freesp/sge/freesp"
+	//	"github.com/axel-freesp/sge/tool"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	fd "github.com/axel-freesp/sge/interface/filedata"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
 	"log"
 )
 
@@ -21,13 +23,112 @@ type mapping struct {
 	maps       map[string]*mapelem
 	filename   string
 	pathPrefix string
+	maplist    behaviour.NodeIdList
 }
 
 var _ mp.MappingIf = (*mapping)(nil)
 
 func MappingNew(filename string, context mod.ModelContextIf) *mapping {
-	return &mapping{nil, nil, context, make(map[string]*mapelem), filename, ""}
+	return &mapping{nil, nil, context, make(map[string]*mapelem), filename, "", behaviour.NodeIdListInit()}
 }
+
+func findMapHint(xmlhints *backend.XmlMappingHint, nId string) (xmlh backend.XmlNodePosHint, ok bool) {
+	for _, xmlh = range xmlhints.MappedNodes {
+		if xmlh.Name == nId {
+			ok = true
+			break
+		}
+	}
+	return
+}
+
+func MappingApplyHints(m mp.MappingIf, xmlhints *backend.XmlMappingHint) (err error) {
+	if m.Filename() != xmlhints.Ref {
+		err = fmt.Errorf("MappingApplyHints error: filename mismatch\n")
+		return
+	}
+	for _, nId := range m.MappedIds() {
+		melem, ok := m.MappedElement(nId)
+		if !ok {
+			log.Fatal("MappingApplyHints internal error: inconsistent maplist\n")
+		}
+		xmlh, ok := findMapHint(xmlhints, nId.String())
+		if ok {
+			melem.SetExpanded(xmlh.Expanded)
+			freesp.PathModePositionerApplyHints(melem, xmlh.XmlModeHint)
+			log.Printf("MappingApplyHints(%s) applying: expanded=%v, pos=%v\n", nId.String(), xmlh.Expanded, melem.ModePosition(gr.PositionModeMapping))
+			// TODO: ports
+			for i, xmlp := range xmlh.InPorts {
+				freesp.PathModePositionerApplyHints(&melem.(*mapelem).inports[i], xmlp.XmlModeHint)
+			}
+			for i, xmlp := range xmlh.OutPorts {
+				freesp.PathModePositionerApplyHints(&melem.(*mapelem).outports[i], xmlp.XmlModeHint)
+			}
+		}
+	}
+	return
+
+	/*
+		g := m.Graph().ItsType()
+		for _, xmln := range xmlhints.InputNodes {
+			n, ok := g.NodeByName(xmln.Name)
+			if ok {
+				melem, ok := m.MappedElement(behaviour.NodeIdFromString(n.Name(), m.Graph().Filename()))
+				if ok {
+					melem.SetExpanded(false)
+					freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
+				}
+			}
+		}
+		for _, xmln := range xmlhints.OutputNodes {
+			n, ok := g.NodeByName(xmln.Name)
+			if ok {
+				melem, ok := m.MappedElement(behaviour.NodeIdFromString(n.Name(), m.Graph().Filename()))
+				if ok {
+					melem.SetExpanded(false)
+					freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
+				}
+			}
+		}
+		NodesApplyHints("", m, g, xmlhints.MappedNodes)
+		return
+	*/
+}
+
+/*
+func NodesApplyHints(path string, m mp.MappingIf, g bh.SignalGraphTypeIf, xmlh []backend.XmlNodePosHint) {
+	for _, n := range g.ProcessingNodes() {
+		var p string
+		if len(path) == 0 {
+			p = n.Name()
+		} else {
+			p = fmt.Sprintf("%s/%s", path, n.Name())
+		}
+		ok := false
+		var xmln backend.XmlNodePosHint
+		for _, xmln = range xmlh {
+			if p == xmln.Name {
+				ok = true
+				break
+			}
+		}
+		if ok {
+			melem, ok := m.MappedElement(behaviour.NodeIdFromString(p, m.Graph().Filename()))
+			if ok {
+				melem.SetExpanded(xmln.Expanded)
+				freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
+			}
+		}
+		nt := n.ItsType()
+		for _, impl := range nt.Implementation() {
+			if impl.ImplementationType() == bh.NodeTypeGraph {
+				NodesApplyHints(p, m, impl.Graph(), xmlh)
+				break
+			}
+		}
+	}
+}
+*/
 
 func (m *mapping) CreateXml() (buf []byte, err error) {
 	xmlm := CreateXmlMapping(m)
@@ -49,13 +150,13 @@ func (m *mapping) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	m.graph.AddToTree(tree, child)
 	child = tree.Append(cursor)
 	m.platform.AddToTree(tree, child)
-	for _, n := range m.graph.ItsType().Nodes() {
-		child = tree.Append(cursor)
-		melem, ok := m.maps[n.Name()]
+	for _, nId := range m.MappedIds() {
+		log.Printf("mapping.AddToTree: id=%s\n", nId.String())
+		melem, ok := m.MappedElement(nId)
 		if !ok {
-			melem = mapelemNew(n, nil, image.Point{}, m)
-			m.maps[n.Name()] = melem
+			log.Fatal("mapping) AddToTree internal error: inconsistent maplist")
 		}
+		child = tree.Append(cursor)
 		melem.AddToTree(tree, child)
 	}
 }
@@ -82,12 +183,14 @@ func (m *mapping) Identify(te tr.TreeElement) bool {
 //		Mapping interface
 //
 
-func (m *mapping) AddMapping(n bh.NodeIf, p pf.ProcessIf) {
-	m.maps[n.Name()] = mapelemNew(n, p, image.Point{}, m)
+func (m *mapping) AddMapping(n bh.NodeIf, nId bh.NodeIdIf, p pf.ProcessIf) {
+	m.maps[nId.String()] = mapelemNew(n, nId, p, m)
+	m.maplist.Append(nId)
 }
 
 func (m *mapping) SetGraph(g bh.SignalGraphIf) {
 	m.graph = g
+	log.Printf("mapping.SetGraph: TODO: any checks?\n")
 }
 
 func (m *mapping) Graph() bh.SignalGraphIf {
@@ -96,15 +199,16 @@ func (m *mapping) Graph() bh.SignalGraphIf {
 
 func (m *mapping) SetPlatform(p pf.PlatformIf) {
 	m.platform = p
+	log.Printf("mapping.SetPlatform: TODO: any checks?\n")
 }
 
 func (m *mapping) Platform() pf.PlatformIf {
 	return m.platform
 }
 
-func (m *mapping) Mapped(n bh.NodeIf) (pr pf.ProcessIf, ok bool) {
+func (m *mapping) Mapped(nId string) (pr pf.ProcessIf, ok bool) {
 	var melem *mapelem
-	melem, ok = m.maps[n.Name()]
+	melem, ok = m.maps[nId]
 	if ok {
 		pr = melem.process
 	}
@@ -112,9 +216,13 @@ func (m *mapping) Mapped(n bh.NodeIf) (pr pf.ProcessIf, ok bool) {
 	return
 }
 
-func (m *mapping) MappedElement(n bh.NodeIf) (melem mp.MappedElementIf, ok bool) {
-	melem, ok = m.maps[n.Name()]
+func (m *mapping) MappedElement(nId bh.NodeIdIf) (melem mp.MappedElementIf, ok bool) {
+	melem, ok = m.maps[nId.String()]
 	return
+}
+
+func (m mapping) MappedIds() []bh.NodeIdIf {
+	return m.maplist.NodeIds()
 }
 
 //
@@ -204,10 +312,12 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y}, m)
+		nId := behaviour.NodeIdFromString(x.Name, m.Graph().Filename())
+		m.maps[n.Name()] = mapelemNew(n, nId, p, m)
+		m.maplist.Append(nId)
 	}
 	for _, x := range xmlm.Mappings {
-		n, ok = m.graph.ItsType().NodeByName(x.Name)
+		n, ok = m.graph.ItsType().NodeByPath(x.Name)
 		if !ok {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: node %s not in graph %s\n", x.Name, m.graph.Filename())
 			continue
@@ -217,7 +327,9 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
 			continue
 		}
-		m.maps[n.Name()] = mapelemNew(n, p, image.Point{x.Hint.X, x.Hint.Y}, m)
+		nId := behaviour.NodeIdFromString(x.Name, m.Graph().Filename())
+		m.maps[n.Name()] = mapelemNew(n, nId, p, m)
+		m.maplist.Append(nId)
 	}
 	return
 }

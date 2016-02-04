@@ -3,7 +3,7 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	"github.com/axel-freesp/sge/freesp/behaviour"
+	//	"github.com/axel-freesp/sge/freesp/behaviour"
 	"github.com/axel-freesp/sge/freesp/mapping"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
@@ -79,7 +79,7 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 	}
 	m = mapping.MappingNew(name, f.context)
 	var filedir string
-	for _, filedir := range backend.XmlSearchPaths() {
+	for _, filedir = range backend.XmlSearchPaths() {
 		err = m.ReadFile(fmt.Sprintf("%s/%s", filedir, name))
 		if err != nil {
 			log.Printf("fileManagerMap.Access error: %s\n", err)
@@ -92,7 +92,28 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		err = fmt.Errorf("fileManagerMap.Access: mapping file %s not found.", name)
 		return
 	}
+	var filename string
+	if len(filedir) > 0 {
+		filename = fmt.Sprintf("%s/%s", filedir, name)
+	} else {
+		filename = name
+	}
 	m.SetPathPrefix(filedir)
+	hint := backend.XmlMappingHintNew(name)
+	hintfilename := f.HintFilename(filename)
+	var buf []byte
+	buf, err = tool.ReadFile(hintfilename)
+	if err == nil {
+		_, err = hint.Read(buf)
+		if err != nil {
+			return
+		}
+		err = mapping.MappingApplyHints(m.(mp.MappingIf), hint)
+		if err != nil {
+			err = fmt.Errorf("fileManagerMap.Access: %s", err)
+			return
+		}
+	}
 	var newId string
 	newId, err = f.context.FTS().AddToplevel(m.(mp.MappingIf))
 	if err != nil {
@@ -107,7 +128,7 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		return
 	}
 	f.context.GVC().Add(mv, name)
-	log.Println("fileManagerMap.Access: platform %s successfully loaded.", name)
+	log.Printf("fileManagerMap.Access: platform %s successfully loaded.\n", name)
 	f.mappingMap[name] = m.(mp.MappingIf)
 	return
 }
@@ -151,6 +172,18 @@ func (f *fileManagerMap) Store(name string) (err error) {
 		err = fmt.Errorf("fileManagerMap.Store error: mapping %s not found.\n", name)
 		return
 	}
+	context := m.Graph().ItsType().Context()
+	gMgr := context.SignalGraphMgr()
+	err = gMgr.Store(m.Graph().Filename())
+	if err != nil {
+		log.Printf("fileManagerMap.Store WARNING: could not save graph file %s\n", m.Graph().Filename())
+	}
+	pMgr := context.PlatformMgr()
+	err = pMgr.Store(m.Platform().Filename())
+	if err != nil {
+		log.Printf("fileManagerMap.Store WARNING: could not save platform file %s\n", m.Platform().Filename())
+	}
+
 	var filename string
 	if len(m.PathPrefix()) == 0 {
 		filename = m.Filename()
@@ -161,8 +194,8 @@ func (f *fileManagerMap) Store(name string) (err error) {
 	if err != nil {
 		return
 	}
-	hint := behaviour.CreateXmlGraphHint(m.Graph())
-	hintfilename := fmt.Sprintf("%s.hints.xml", tool.Prefix(filename))
+	hint := mapping.CreateXmlMappingHint(m)
+	hintfilename := f.HintFilename(filename)
 	var buf []byte
 	buf, err = hint.Write()
 	if err != nil {

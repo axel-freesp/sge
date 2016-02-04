@@ -26,6 +26,7 @@ type NodeIf interface {
 	SelectNode(ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf)
 	GetHighlightedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 	GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
+	ChildNodes() []NodeIf
 }
 
 type Porter interface {

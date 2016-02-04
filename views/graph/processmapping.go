@@ -6,13 +6,14 @@ import (
 	pf "github.com/axel-freesp/sge/interface/platform"
 	"github.com/gotk3/gotk3/cairo"
 	"image"
-	"log"
+	//"log"
 )
 
 type ProcessMapping struct {
 	Container
 	userObj      pf.ProcessIf
-	nodes        []*Node
+	nodes        []NodeIf
+	mappedIds    []bh.NodeIdIf
 	selectedPort int
 	arch         ArchIf
 }
@@ -20,7 +21,7 @@ type ProcessMapping struct {
 var _ ProcessIf = (*ProcessMapping)(nil)
 var _ ContainerChild = (*Node)(nil)
 
-func ProcessMappingNew(nodes []*Node, userObj pf.ProcessIf) (ret *ProcessMapping) {
+func ProcessMappingNew(nodes []NodeIf, mappedIds []bh.NodeIdIf, userObj pf.ProcessIf) (ret *ProcessMapping) {
 	config := DrawConfig{ColorInit(ColorOption(ProcessNormal)),
 		ColorInit(ColorOption(ProcessHighlight)),
 		ColorInit(ColorOption(ProcessSelected)),
@@ -30,9 +31,9 @@ func ProcessMappingNew(nodes []*Node, userObj pf.ProcessIf) (ret *ProcessMapping
 	cconfig := ContainerConfig{procPortWidth, procPortHeight, procMinWidth, procMinHeight}
 	var children []ContainerChild
 	for _, n := range nodes {
-		children = append(children, n)
+		children = append(children, n.(ContainerChild))
 	}
-	ret = &ProcessMapping{ContainerInit(children, config, userObj, cconfig), userObj, nodes, -1, nil}
+	ret = &ProcessMapping{ContainerInit(children, config, userObj, cconfig), userObj, nodes, mappedIds, -1, nil}
 	ret.ContainerInit()
 	return
 }
@@ -52,12 +53,12 @@ func processDrawMappedChannel(p *ContainerPort, ctxt interface{}) {
 		context := ctxt.(*cairo.Context)
 		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
 		shift2 := image.Point{procPortWidth, procPortHeight}.Div(2)
-		extPort := p.UserObj2.(pf.ChannelIf).ArchPort()
+		extPort := p.UserObj.(pf.ChannelIf).ArchPort()
 		if extPort != nil {
 			extPPos := extPort.ModePosition(gr.PositionModeMapping)
 			if extPPos != empty {
 				var pos1, pos2 image.Point
-				if p.UserObj2.(pf.ChannelIf).Direction() == gr.InPort {
+				if p.UserObj.(pf.ChannelIf).Direction() == gr.InPort {
 					pos1 = extPPos.Add(shift1)
 					pos2 = p.Position().Add(shift2)
 				} else {
@@ -106,7 +107,8 @@ func (pr *ProcessMapping) addPort(c pf.ChannelIf, a ArchIf, idx int) {
 	if pos == empty {
 		pos = pr.CalcPortPos(idx, cnt)
 	}
-	p := pr.AddModePort(pos, config, c, gr.PositionModeMapping)
+	c.SetActiveMode(gr.PositionModeMapping)
+	p := pr.AddPort(pos, config, c)
 	p.RegisterOnDraw(func(ctxt interface{}) {
 		processDrawMappedChannel(p, ctxt)
 	})
@@ -115,12 +117,12 @@ func (pr *ProcessMapping) addPort(c pf.ChannelIf, a ArchIf, idx int) {
 }
 
 func (pr *ProcessMapping) SelectChannel(ch pf.ChannelIf) {
-	pr.SelectModePort(ch)
+	pr.SelectPort(ch)
 }
 
 func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
-	var c gr.ModePositioner
-	ok, c = pr.GetSelectedModePort()
+	var c gr.Positioner
+	ok, c = pr.GetSelectedPort()
 	if !ok {
 		return
 	}
@@ -128,13 +130,17 @@ func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
 	return
 }
 
-func (pr *ProcessMapping) SelectNode(n bh.NodeIf) {
+func (pr *ProcessMapping) SelectNode(ownId, selectId bh.NodeIdIf) (modified bool, node NodeIf) {
 	for _, ch := range pr.Children {
-		if n == ch.(NodeIf).UserObj() {
-			pr.SelectChild(ch)
-			return
+		var n NodeIf
+		var m bool
+		m, n = ch.(NodeIf).SelectNode(ownId, selectId)
+		if n != nil {
+			node = n
 		}
+		modified = modified || m
 	}
+	return
 }
 
 func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
@@ -150,18 +156,20 @@ func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
 func (pr *ProcessMapping) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
 	pr.userObj.SetModePosition(gr.PositionModeMapping, pos)
-	if pr.arch != nil { // else is unmapped process
-		a := pr.arch.(*Arch)
-		if a.mapping != nil {
-			for _, ch := range pr.Children {
-				n := ch.(*Node)
-				melem, ok := a.mapping.MappedElement(n.UserObj())
-				if !ok {
-					log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
-					return
+	/*
+		if pr.arch != nil { // else is unmapped process
+			a := pr.arch.(*Arch)
+			if a.mapping != nil {
+				for i, id := range pr.mappedIds {
+					n := pr.nodes[i]
+					melem, ok := a.mapping.MappedElement(id)
+					if !ok {
+						log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
+						return
+					}
+					melem.SetModePosition(gr.PositionModeMapping, pos)
 				}
-				melem.SetPosition(n.Position())
 			}
 		}
-	}
+	*/
 }

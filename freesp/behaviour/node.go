@@ -6,21 +6,20 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"github.com/axel-freesp/sge/tool"
-	"image"
+	//"github.com/axel-freesp/sge/tool"
+	//"image"
 	"log"
 )
 
 type node struct {
+	gr.PathModePositionerObject
 	context  bh.SignalGraphTypeIf
 	name     string
 	nodetype bh.NodeTypeIf
 	inPort   portList
 	outPort  portList
 	portlink bh.PortTypeIf
-	position map[string]image.Point
 	expanded bool
-	pathlist tool.StringList
 }
 
 /*
@@ -39,8 +38,8 @@ func NodeNew(name string, ntype bh.NodeTypeIf, context bh.SignalGraphTypeIf) (re
 		err = fmt.Errorf("NodeNew error: type '%s' has no ports.", ntype.TypeName())
 		return
 	}
-	ret = &node{context, name, ntype, portListInit(), portListInit(), nil,
-		make(map[string]image.Point), false, tool.StringListInit()}
+	ret = &node{*gr.PathModePositionerObjectNew(), context, name, ntype,
+		portListInit(), portListInit(), nil, false}
 	for _, p := range ntype.InPorts() {
 		ret.addInPort(p)
 	}
@@ -97,14 +96,6 @@ func (n *node) OutPorts() []bh.PortIf {
 
 func (n *node) Context() bh.SignalGraphTypeIf {
 	return n.context
-}
-
-func (n *node) Expanded() bool {
-	return n.expanded
-}
-
-func (n *node) SetExpanded(xp bool) {
-	n.expanded = xp
 }
 
 func (n *node) SubNode(ownId, childId bh.NodeIdIf) (ret bh.NodeIf, ok bool) {
@@ -347,28 +338,15 @@ func IsProcessingNode(n bh.NodeIf) bool {
 }
 
 /*
- *      PathModePositioner API
+ *      Expander API
  */
 
-func (n node) PathModePosition(path string, mode gr.PositionMode) (pos image.Point) {
-	_, ok := n.pathlist.Find(path)
-	if !ok {
-		return
-	}
-	pos = n.position[gr.CreatePathMode(path, mode)]
-	return
+func (n *node) Expanded() bool {
+	return n.expanded
 }
 
-func (n *node) SetPathModePosition(path string, mode gr.PositionMode, pos image.Point) {
-	_, ok := n.pathlist.Find(path)
-	if !ok {
-		n.pathlist.Append(path)
-	}
-	n.position[gr.CreatePathMode(path, mode)] = pos
-}
-
-func (n node) PathList() []string {
-	return n.pathlist.Strings()
+func (n *node) SetExpanded(xp bool) {
+	n.expanded = xp
 }
 
 /*

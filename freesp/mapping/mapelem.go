@@ -4,33 +4,44 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/freesp"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
+	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	pf "github.com/axel-freesp/sge/interface/platform"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"github.com/axel-freesp/sge/tool"
+	//"image"
 	"log"
 )
 
 type mapelem struct {
-	node     bh.NodeIf
-	process  pf.ProcessIf
-	position image.Point
-	mapping  mp.MappingIf
+	gr.PathModePositionerObject
+	node              bh.NodeIf
+	nodeId            bh.NodeIdIf
+	process           pf.ProcessIf
+	mapping           mp.MappingIf
+	expanded          bool
+	inports, outports []gr.PathModePositionerObject
 }
 
-func mapelemNew(n bh.NodeIf, p pf.ProcessIf, nodePos image.Point, mapping mp.MappingIf) (m *mapelem) {
-	m = &mapelem{n, p, nodePos, mapping}
+func mapelemNew(n bh.NodeIf, nId bh.NodeIdIf, p pf.ProcessIf, mapping mp.MappingIf) (m *mapelem) {
+	m = &mapelem{*gr.PathModePositionerObjectNew(), n, nId, p, mapping, false,
+		make([]gr.PathModePositionerObject, len(n.InPorts())),
+		make([]gr.PathModePositionerObject, len(n.OutPorts()))}
 	return
 }
 
 var _ mp.MappedElementIf = (*mapelem)(nil)
 
-func (m mapelem) Position() image.Point {
-	return m.position
+/*
+ *      Expander API
+ */
+
+func (m mapelem) Expanded() bool {
+	return m.expanded
 }
 
-func (m *mapelem) SetPosition(pos image.Point) {
-	m.position = pos
+func (m *mapelem) SetExpanded(xp bool) {
+	m.expanded = xp
 }
 
 func (m *mapelem) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -40,7 +51,7 @@ func (m *mapelem) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	} else {
 		s = tr.SymbolMapped
 	}
-	err := tree.AddEntry(cursor, s, m.node.Name(), m, freesp.MayEdit)
+	err := tree.AddEntry(cursor, s, m.nodeId.String(), m, freesp.MayEdit)
 	if err != nil {
 		log.Fatalf("mapping.AddToTree error: AddEntry failed: %s\n", err)
 	}
@@ -60,8 +71,8 @@ func (m mapelem) Mapping() mp.MappingIf {
 	return m.mapping
 }
 
-func (m mapelem) Node() bh.NodeIf {
-	return m.node
+func (m mapelem) NodeId() bh.NodeIdIf {
+	return m.nodeId
 }
 
 func (m mapelem) Process() (p pf.ProcessIf, ok bool) {
@@ -82,11 +93,11 @@ func (m mapelem) CreateXml() (buf []byte, err error) {
 	if ok {
 		pname = fmt.Sprintf("%s/%s", p.Arch().Name(), p.Name())
 	}
-	if len(m.Node().InPorts()) > 0 && len(m.Node().OutPorts()) > 0 {
-		xmlm := CreateXmlNodeMap(m.Node().Name(), pname, m.Position())
+	if len(m.node.InPorts()) > 0 && len(m.node.OutPorts()) > 0 {
+		xmlm := CreateXmlNodeMap(m.nodeId.String(), pname)
 		buf, err = xmlm.Write()
 	} else {
-		xmlm := CreateXmlIOMap(m.Node().Name(), pname, m.Position())
+		xmlm := CreateXmlIOMap(m.nodeId.String(), pname)
 		buf, err = xmlm.Write()
 	}
 	return

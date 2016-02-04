@@ -6,24 +6,24 @@ import (
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
 	tr "github.com/axel-freesp/sge/interface/tree"
-	"image"
+	//"image"
 	"log"
 	"unsafe"
 )
 
 type port struct {
+	gr.PathModePositionerObject
 	itsType   bh.PortTypeIf
 	connected portList
 	conn      []bh.ConnectionIf
 	node      bh.NodeIf
-	position  map[gr.PositionMode]image.Point
 }
 
 var _ bh.PortIf = (*port)(nil)
 
 // TODO: Create namedPortType object first and hand it here?
 func newPort(pt bh.PortTypeIf, n bh.NodeIf) *port {
-	return &port{pt, portListInit(), nil, n, make(map[gr.PositionMode]image.Point)}
+	return &port{*gr.PathModePositionerObjectNew(), pt, portListInit(), nil, n}
 }
 
 /*
@@ -139,19 +139,6 @@ func (p *port) String() (s string) {
 	s = fmt.Sprintf("%sPort of node %s(%s, %d connections)",
 		p.Direction(), p.Node().Name(), p.Name(), len(p.Connections()))
 	return
-}
-
-/*
- *      ModePositioner API
- */
-
-func (p *port) ModePosition(mode gr.PositionMode) (pos image.Point) {
-	pos = p.position[mode]
-	return
-}
-
-func (p *port) SetModePosition(mode gr.PositionMode, pos image.Point) {
-	p.position[mode] = pos
 }
 
 /*

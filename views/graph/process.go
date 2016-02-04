@@ -49,12 +49,12 @@ func processDrawChannel(p *ContainerPort, ctxt interface{}) {
 		context := ctxt.(*cairo.Context)
 		shift1 := image.Point{archPortWidth, archPortHeight}.Div(2)
 		shift2 := image.Point{procPortWidth, procPortHeight}.Div(2)
-		extPort := p.UserObj2.(pf.ChannelIf).ArchPort()
+		extPort := p.UserObj.(pf.ChannelIf).ArchPort()
 		if extPort != nil {
 			extPPos := extPort.ModePosition(gr.PositionModeNormal)
 			if extPPos != empty {
 				var pos1, pos2 image.Point
-				if p.UserObj2.(pf.ChannelIf).Direction() == gr.InPort {
+				if p.UserObj.(pf.ChannelIf).Direction() == gr.InPort {
 					pos1 = extPPos.Add(shift1)
 					pos2 = p.Position().Add(shift2)
 				} else {
@@ -94,7 +94,8 @@ func (pr *Process) SetArchObject(a ArchIf) {
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt+outCnt)
 		}
-		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
+		c.SetActiveMode(gr.PositionModeNormal)
+		p := pr.AddPort(pos, config, c)
 		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
@@ -106,7 +107,8 @@ func (pr *Process) SetArchObject(a ArchIf) {
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt+outCnt)
 		}
-		p := pr.AddModePort(pos, config, c, gr.PositionModeNormal)
+		c.SetActiveMode(gr.PositionModeNormal)
+		p := pr.AddPort(pos, config, c)
 		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
@@ -116,12 +118,12 @@ func (pr *Process) SetArchObject(a ArchIf) {
 }
 
 func (pr *Process) SelectChannel(ch pf.ChannelIf) {
-	pr.SelectModePort(ch)
+	pr.SelectPort(ch)
 }
 
 func (pr Process) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
-	var p gr.ModePositioner
-	ok, p = pr.GetSelectedModePort()
+	var p gr.Positioner
+	ok, p = pr.GetSelectedPort()
 	if !ok {
 		return
 	}
@@ -131,7 +133,7 @@ func (pr Process) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
 
 func (pr *Process) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
-	pr.userObj.SetModePosition(gr.PositionModeNormal, pos)
+	//pr.userObj.SetModePosition(gr.PositionModeNormal, pos)
 }
 
 const (

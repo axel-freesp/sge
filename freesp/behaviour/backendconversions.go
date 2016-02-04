@@ -67,7 +67,7 @@ func CreateXmlIONodePosHint(n bh.NodeIf, path string) (xmln *backend.XmlNodePosH
 	empty := image.Point{}
 	for _, p := range n.PathList() {
 		for _, m := range freesp.ValidModes {
-			xmlp := gr.CreatePathMode(p, m)
+			xmlp := string(gr.CreatePathMode(p, m))
 			pos := n.PathModePosition(p, m)
 			if pos != empty {
 				xmln.Entry = append(xmln.Entry, *backend.XmlModeHintEntryNew(xmlp, pos.X, pos.Y))
@@ -105,13 +105,13 @@ func CreateXmlOutPort(p bh.PortIf) (xmlp *backend.XmlOutPort) {
 
 func CreateXmlNamedInPort(p bh.PortTypeIf) (xmlp *backend.XmlInPort) {
 	xmlp = backend.XmlInPortNew(p.Name(), p.SignalType().TypeName())
-	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	//xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
 	return
 }
 
 func CreateXmlNamedOutPort(p bh.PortTypeIf) (xmlp *backend.XmlOutPort) {
 	xmlp = backend.XmlOutPortNew(p.Name(), p.SignalType().TypeName())
-	xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
+	//xmlp.Entry = freesp.CreateXmlModePosition(p).Entry
 	return
 }
 
@@ -121,8 +121,6 @@ func CreateXmlInputNode(n bh.NodeIf) *backend.XmlInputNode {
 		tName = ""
 	}
 	ret := backend.XmlInputNodeNew(n.Name(), tName)
-	converter := gr.CreateModePositioner("", n)
-	ret.Entry = freesp.CreateXmlModePosition(converter).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -138,8 +136,6 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 		tName = ""
 	}
 	ret := backend.XmlOutputNodeNew(n.Name(), tName)
-	converter := gr.CreateModePositioner("", n)
-	ret.Entry = freesp.CreateXmlModePosition(converter).Entry
 	if n.(*node).portlink != nil {
 		ret.NPort = n.(*node).portlink.Name()
 	}
@@ -147,32 +143,6 @@ func CreateXmlOutputNode(n bh.NodeIf) *backend.XmlOutputNode {
 		ret.InPort = append(ret.InPort, *CreateXmlInPort(p))
 	}
 	return ret
-}
-
-func CreateXmlProcessingNodeHint(n bh.NodeIf) (xmlh *backend.XmlNodeHint) {
-	//log.Printf("CreateXmlProcessingNodeHint(%s): pathlist = %v, position = %v\n", n.Name(), n.PathList(), n.(*node).position)
-	xmlh = backend.XmlNodeHintNew(n.Expanded())
-	empty := image.Point{}
-	for _, p := range n.PathList() {
-		for _, m := range freesp.ValidModes {
-			xmlp := gr.CreatePathMode(p, m)
-			pos := n.PathModePosition(p, m)
-			if pos != empty {
-				xmlh.Entry = append(xmlh.Entry, *backend.XmlModeHintEntryNew(xmlp, pos.X, pos.Y))
-			}
-		}
-	}
-	nt := n.ItsType()
-	for _, impl := range nt.Implementation() {
-		if impl.ImplementationType() == bh.NodeTypeGraph {
-			g := impl.Graph()
-			for _, chn := range g.ProcessingNodes() {
-				xmlh.Children = append(xmlh.Children, *CreateXmlProcessingNodeHint(chn))
-			}
-			break
-		}
-	}
-	return
 }
 
 func CreateXmlProcessingNode(n bh.NodeIf) *backend.XmlProcessingNode {
@@ -183,7 +153,6 @@ func CreateXmlProcessingNode(n bh.NodeIf) *backend.XmlProcessingNode {
 	for _, p := range n.OutPorts() {
 		ret.OutPort = append(ret.OutPort, *CreateXmlOutPort(p))
 	}
-	ret.XmlNodeHint = *CreateXmlProcessingNodeHint(n)
 	return ret
 }
 

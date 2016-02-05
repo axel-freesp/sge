@@ -35,9 +35,8 @@ type ContainerConfig struct {
 //
 type ContainerPort struct {
 	SelectableBox
-	UserObj graph.Positioner
-	//UserObj2 graph.ModePositioner
-	//mode     graph.PositionMode
+	UserObj    interface{}
+	Positioner graph.Positioner
 }
 
 //
@@ -69,13 +68,13 @@ func (c *Container) ContainerInit() {
 //
 //		Construct port
 //
-func ContainerPortNew(box image.Rectangle, config DrawConfig, userObj graph.Positioner, userObj2 graph.ModePositioner, mode graph.PositionMode) (p *ContainerPort) {
-	return &ContainerPort{SelectableBoxInit(box, config), userObj}
+func ContainerPortNew(box image.Rectangle, config DrawConfig, userObj interface{}, positioner graph.Positioner) (p *ContainerPort) {
+	return &ContainerPort{SelectableBoxInit(box, config), userObj, positioner}
 }
 
 func (p *ContainerPort) SetPosition(pos image.Point) {
-	if p.UserObj != nil {
-		p.UserObj.SetPosition(pos)
+	if p.Positioner != nil {
+		p.Positioner.SetPosition(pos)
 	}
 	p.BBoxDefaultSetPosition(pos)
 }
@@ -83,11 +82,12 @@ func (p *ContainerPort) SetPosition(pos image.Point) {
 //
 //		AddPort
 //
-func (c *Container) AddPort(pos image.Point, config DrawConfig, userObj graph.Positioner) (p *ContainerPort) {
+func (c *Container) AddPort(config DrawConfig, userObj interface{}, positioner graph.Positioner) (p *ContainerPort) {
 	size := image.Point{c.config.portWidth, c.config.portHeight}
-	pos = c.portClipPos(pos)
+	pos := c.portClipPos(positioner.Position())
+	positioner.SetPosition(pos)
 	box := image.Rectangle{pos, pos.Add(size)}
-	p = ContainerPortNew(box, config, userObj, nil, graph.PositionMode(-1))
+	p = ContainerPortNew(box, config, userObj, positioner)
 	c.ports = append(c.ports, p)
 	return
 }
@@ -117,9 +117,8 @@ func (c *Container) ContainerDefaultLayout() (box image.Rectangle) {
 	empty := image.Point{}
 	for i, p := range c.ports {
 		var pos image.Point
-		if p.UserObj != nil {
-			ap := p.UserObj
-			pos = ap.Position()
+		if p.Positioner != nil {
+			pos = p.Positioner.Position()
 			if pos == empty {
 				pos = c.CalcPortPos(i, len(c.ports))
 			}
@@ -249,7 +248,7 @@ func (c *Container) SelectPort(userObj graph.Positioner) {
 	}
 }
 
-func (c Container) GetSelectedPort() (ok bool, userObj graph.Positioner) {
+func (c Container) GetSelectedPort() (ok bool, userObj interface{}) {
 	if c.selectedPort == -1 {
 		return
 	}

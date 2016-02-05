@@ -65,7 +65,6 @@ func (v *mappingView) init() (err error) {
 }
 
 func (v *mappingView) Sync() {
-	log.Printf("mappingView.Sync()\n")
 	g := v.mapping.Graph()
 	gFilename := g.Filename()
 	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
@@ -76,29 +75,34 @@ func (v *mappingView) Sync() {
 		}
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
+	// Construct node tree
+	mapping := v.mapping
 	for i, n := range g.Nodes() {
 		nId := freesp.NodeIdFromString(n.Name(), g.Filename())
 		melem, ok := v.mapping.MappedElement(nId)
 		if ok {
-			getPositioner := func(n bh.NodeIf) gr.PathModePositioner {
+			getPositioner := func(n bh.NodeIf, path string) gr.ModePositioner {
 				nId := freesp.NodeIdFromString(n.Name(), gFilename)
-				melem, ok := v.mapping.MappedElement(nId)
+				melem, ok := mapping.MappedElement(nId)
 				if !ok {
-					log.Panicf("Fatal: no mapped element for node %s", n.Name())
+					log.Printf("mappingView.Sync warning: no mapped element for node %s", n.Name())
+					mapping.AddMapping(n, nId, nil)
+					melem, _ = mapping.MappedElement(nId)
 				}
 				return melem
 			}
 			if melem.Expanded() {
 				melem.SetActiveMode(gr.PositionModeExpanded)
-				v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n)
+				v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, "")
 			} else {
-				melem.SetActiveMode(gr.PositionModeMapping)
-				v.nodes[i] = graph.NodeNew(getPositioner, n)
+				melem.SetActiveMode(gr.PositionModeNormal)
+				v.nodes[i] = graph.NodeNew(getPositioner, n, "")
 			}
 		} else {
 			log.Printf("mappingView.Sync warning: node %s is not mapped\n", n.Name())
 		}
 	}
+	// Construct edges
 	var index = 0
 	for _, n := range g.Nodes() {
 		from := v.findNode(n.Name())
@@ -112,11 +116,13 @@ func (v *mappingView) Sync() {
 			}
 		}
 	}
+	// Construct node leaves mapping
 	p := v.mapping.Platform()
 	v.arch = make([]graph.ArchIf, len(p.Arch()))
 	for i, a := range p.Arch() {
 		v.arch[i] = graph.ArchMappingNew(a, v.nodes, v.mapping)
 	}
+	// Handle unmapped nodes
 	var unmappedNodes []graph.NodeIf
 	var unmappedIds []bh.NodeIdIf
 	for _, n := range v.nodes {
@@ -128,7 +134,6 @@ func (v *mappingView) Sync() {
 		}
 	}
 	v.unmapped = graph.ProcessMappingNew(unmappedNodes, unmappedIds, v.unmappedObj)
-	// TODO: add v.unmapped to scene
 	v.area.SetSizeRequest(v.calcSceneWidth(), v.calcSceneHeight())
 	v.drawAll()
 }
@@ -557,7 +562,7 @@ func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 						log.Printf("mappingView.drawChannels error: invalid nil port (%s - %s).\n", a.Name(), la.Name())
 						continue
 					}
-					r, g, b := graph.ColorOption(graph.NormalLine)
+					r, g, b, _ := graph.ColorOption(graph.NormalLine)
 					context.SetLineWidth(2)
 					context.SetSourceRGB(r, g, b)
 					pos1 := p1.Position().Add(image.Point{5, 5})
@@ -613,7 +618,7 @@ type unmappedProcess struct {
 }
 
 func unmappedProcessNew() *unmappedProcess {
-	return &unmappedProcess{gr.ModePositionerObjectInit()}
+	return &unmappedProcess{*gr.ModePositionerObjectNew()}
 }
 
 var _ pf.ProcessIf = (*unmappedProcess)(nil)

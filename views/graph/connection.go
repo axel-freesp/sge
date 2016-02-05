@@ -61,11 +61,11 @@ func (c Connection) Draw(ctxt interface{}) {
 		context := ctxt.(*cairo.Context)
 		var r, g, b float64
 		if c.IsSelected() {
-			r, g, b = ColorOption(SelectLine)
+			r, g, b, _ = ColorOption(SelectLine)
 		} else if c.IsHighlighted() {
-			r, g, b = ColorOption(HighlightLine)
+			r, g, b, _ = ColorOption(HighlightLine)
 		} else {
-			r, g, b = ColorOption(NormalLine)
+			r, g, b, _ = ColorOption(NormalLine)
 		}
 		context.SetLineWidth(2)
 		context.SetSourceRGB(r, g, b)

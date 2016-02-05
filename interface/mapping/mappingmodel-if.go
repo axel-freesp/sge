@@ -25,7 +25,7 @@ type MappingIf interface {
 
 type MappedElementIf interface {
 	tree.TreeElement
-	graph.PathModePositioner
+	graph.ModePositioner
 	graph.Expander
 	Mapping() MappingIf
 	NodeId() behaviour.NodeIdIf

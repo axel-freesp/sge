@@ -66,7 +66,7 @@ func CreateXmlIONodePosHint(n bh.NodeIf, path string) (xmln *backend.XmlNodePosH
 	}
 	empty := image.Point{}
 	for _, p := range n.PathList() {
-		for _, m := range freesp.ValidModes {
+		for _, m := range gr.ValidModes {
 			xmlp := string(gr.CreatePathMode(p, m))
 			pos := n.PathModePosition(p, m)
 			if pos != empty {

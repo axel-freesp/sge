@@ -88,13 +88,17 @@ func (v *signalGraphView) Sync() {
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
+	getPositioner := func(n bh.NodeIf, path string) gr.ModePositioner {
+		n.SetActivePath(path)
+		return n
+	}
 	for i, n := range g.Nodes() {
 		if n.Expanded() {
 			n.SetActiveMode(gr.PositionModeExpanded)
-			v.nodes[i] = graph.ExpandedNodeNew(func(n bh.NodeIf) gr.PathModePositioner { return n }, n)
+			v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, "")
 		} else {
 			n.SetActiveMode(gr.PositionModeNormal)
-			v.nodes[i] = graph.NodeNew(func(n bh.NodeIf) gr.PathModePositioner { return n }, n)
+			v.nodes[i] = graph.NodeNew(getPositioner, n, "")
 		}
 	}
 	var index = 0

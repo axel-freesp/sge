@@ -24,7 +24,7 @@ type channel struct {
 var _ pf.ChannelIf = (*channel)(nil)
 
 func ChannelNew(dir gr.PortDirection, iotype pf.IOTypeIf, process pf.ProcessIf, linkText string) *channel {
-	return &channel{gr.ModePositionerObjectInit(), dir, iotype, nil, process, linkText, nil}
+	return &channel{*gr.ModePositionerObjectNew(), dir, iotype, nil, process, linkText, nil}
 }
 
 func createInChannelFromXml(xmlc backend.XmlInChannel, p pf.ProcessIf) (ch *channel, err error) {

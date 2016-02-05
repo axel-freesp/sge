@@ -14,7 +14,7 @@ type archPort struct {
 var _ pf.ArchPortIf = (*archPort)(nil)
 
 func archPortNew(ch pf.ChannelIf) *archPort {
-	return &archPort{gr.ModePositionerObjectInit(), ch}
+	return &archPort{*gr.ModePositionerObjectNew(), ch}
 }
 
 func (p *archPort) Channel() pf.ChannelIf {

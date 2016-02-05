@@ -63,11 +63,11 @@ func processDrawChannel(p *ContainerPort, ctxt interface{}) {
 				}
 				var r, g, b float64
 				if p.IsSelected() {
-					r, g, b = ColorOption(SelectChannelLine)
+					r, g, b, _ = ColorOption(SelectChannelLine)
 				} else if p.IsHighlighted() {
-					r, g, b = ColorOption(HighlightChannelLine)
+					r, g, b, _ = ColorOption(HighlightChannelLine)
 				} else {
-					r, g, b = ColorOption(NormalChannelLine)
+					r, g, b, _ = ColorOption(NormalChannelLine)
 				}
 				context.SetLineWidth(2)
 				context.SetSourceRGB(r, g, b)
@@ -90,12 +90,13 @@ func (pr *Process) SetArchObject(a ArchIf) {
 		Color{},
 		image.Point{}}
 	for _, c := range pr.userObj.InChannels() {
-		pos := c.ModePosition(gr.PositionModeNormal)
+		positioner := gr.ModePositionerProxyNew(c, gr.PositionModeNormal)
+		pos := positioner.Position()
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt+outCnt)
+			positioner.SetPosition(pos)
 		}
-		c.SetActiveMode(gr.PositionModeNormal)
-		p := pr.AddPort(pos, config, c)
+		p := pr.AddPort(config, c, positioner)
 		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
@@ -103,12 +104,13 @@ func (pr *Process) SetArchObject(a ArchIf) {
 		idx++
 	}
 	for _, c := range pr.userObj.OutChannels() {
-		pos := c.ModePosition(gr.PositionModeNormal)
+		positioner := gr.ModePositionerProxyNew(c, gr.PositionModeNormal)
+		pos := positioner.Position()
 		if pos == empty {
 			pos = pr.CalcPortPos(idx, inCnt+outCnt)
+			positioner.SetPosition(pos)
 		}
-		c.SetActiveMode(gr.PositionModeNormal)
-		p := pr.AddPort(pos, config, c)
+		p := pr.AddPort(config, c, positioner)
 		p.RegisterOnDraw(func(ctxt interface{}) {
 			processDrawChannel(p, ctxt)
 		})
@@ -122,7 +124,7 @@ func (pr *Process) SelectChannel(ch pf.ChannelIf) {
 }
 
 func (pr Process) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
-	var p gr.Positioner
+	var p interface{}
 	ok, p = pr.GetSelectedPort()
 	if !ok {
 		return
@@ -133,7 +135,7 @@ func (pr Process) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
 
 func (pr *Process) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
-	//pr.userObj.SetModePosition(gr.PositionModeNormal, pos)
+	pr.userObj.SetModePosition(gr.PositionModeNormal, pos)
 }
 
 const (

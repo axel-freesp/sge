@@ -87,11 +87,12 @@ const (
 	NormalExpandedNode
 )
 
-func ColorOption(index int) (r, g, b float64) {
+func ColorOption(index int) (r, g, b, a float64) {
 	c := options.colorOptions[index].val
 	r = float64(c.R) / 255.0
 	g = float64(c.G) / 255.0
 	b = float64(c.B) / 255.0
+	a = float64(c.A) / 255.0
 	return
 }
 
@@ -175,9 +176,9 @@ var defaultOptions = gOptions{
 		{"SelectChannelLine", color.RGBA{190, 0, 0, 0xff}},
 		{"HighlightChannelLine", color.RGBA{255, 255, 180, 0xff}},
 		{"NormalChannelLine", color.RGBA{0, 0, 0, 0xff}},
-		{"SelectExpandedNode", color.RGBA{220, 255, 255, 0x80}},
-		{"HighlightExpandedNode", color.RGBA{255, 255, 220, 0x80}},
-		{"NormalExpandedNode", color.RGBA{255, 255, 255, 0x80}},
+		{"SelectExpandedNode", color.RGBA{220, 255, 255, 0x40}},
+		{"HighlightExpandedNode", color.RGBA{255, 255, 220, 0x40}},
+		{"NormalExpandedNode", color.RGBA{255, 255, 255, 0x40}},
 	},
 	[]optionString{ // actually not needed anymore:
 		{"FontPath", "/usr/share/fonts/truetype"},

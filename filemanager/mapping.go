@@ -99,6 +99,7 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 		filename = name
 	}
 	m.SetPathPrefix(filedir)
+	// TODO: check consistency with graph/platform
 	hint := backend.XmlMappingHintNew(name)
 	hintfilename := f.HintFilename(filename)
 	var buf []byte

@@ -67,11 +67,11 @@ func processDrawMappedChannel(p *ContainerPort, ctxt interface{}) {
 				}
 				var r, g, b float64
 				if p.IsSelected() {
-					r, g, b = ColorOption(SelectChannelLine)
+					r, g, b, _ = ColorOption(SelectChannelLine)
 				} else if p.IsHighlighted() {
-					r, g, b = ColorOption(HighlightChannelLine)
+					r, g, b, _ = ColorOption(HighlightChannelLine)
 				} else {
-					r, g, b = ColorOption(NormalChannelLine)
+					r, g, b, _ = ColorOption(NormalChannelLine)
 				}
 				context.SetLineWidth(2)
 				context.SetSourceRGB(r, g, b)
@@ -103,12 +103,13 @@ func (pr *ProcessMapping) addPort(c pf.ChannelIf, a ArchIf, idx int) {
 		ColorInit(ColorOption(BoxFrame)),
 		Color{},
 		image.Point{}}
-	pos := c.ModePosition(gr.PositionModeMapping)
+	positioner := gr.ModePositionerProxyNew(c, gr.PositionModeMapping)
+	pos := positioner.Position()
 	if pos == empty {
 		pos = pr.CalcPortPos(idx, cnt)
+		positioner.SetPosition(pos)
 	}
-	c.SetActiveMode(gr.PositionModeMapping)
-	p := pr.AddPort(pos, config, c)
+	p := pr.AddPort(config, c, positioner)
 	p.RegisterOnDraw(func(ctxt interface{}) {
 		processDrawMappedChannel(p, ctxt)
 	})
@@ -121,7 +122,7 @@ func (pr *ProcessMapping) SelectChannel(ch pf.ChannelIf) {
 }
 
 func (pr ProcessMapping) GetSelectedChannel() (ok bool, ch pf.ChannelIf) {
-	var c gr.Positioner
+	var c interface{}
 	ok, c = pr.GetSelectedPort()
 	if !ok {
 		return

@@ -14,19 +14,25 @@ import (
 )
 
 type mapelem struct {
-	gr.PathModePositionerObject
+	gr.ModePositionerObject
 	node              bh.NodeIf
 	nodeId            bh.NodeIdIf
 	process           pf.ProcessIf
 	mapping           mp.MappingIf
 	expanded          bool
-	inports, outports []gr.PathModePositionerObject
+	inports, outports []gr.ModePositionerObject
 }
 
 func mapelemNew(n bh.NodeIf, nId bh.NodeIdIf, p pf.ProcessIf, mapping mp.MappingIf) (m *mapelem) {
-	m = &mapelem{*gr.PathModePositionerObjectNew(), n, nId, p, mapping, false,
-		make([]gr.PathModePositionerObject, len(n.InPorts())),
-		make([]gr.PathModePositionerObject, len(n.OutPorts()))}
+	m = &mapelem{*gr.ModePositionerObjectNew(), n, nId, p, mapping, false,
+		make([]gr.ModePositionerObject, len(n.InPorts())),
+		make([]gr.ModePositionerObject, len(n.OutPorts()))}
+	for i := 0; i < len(m.inports); i++ {
+		m.inports[i] = *gr.ModePositionerObjectNew()
+	}
+	for i := 0; i < len(m.outports); i++ {
+		m.outports[i] = *gr.ModePositionerObjectNew()
+	}
 	return
 }
 

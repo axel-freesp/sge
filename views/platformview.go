@@ -319,7 +319,7 @@ func (v *platformView) drawChannels(context *cairo.Context, r image.Rectangle) {
 						log.Printf("platformView.drawChannels error: invalid nil port (%s - %s).\n", a.Name(), la.Name())
 						continue
 					}
-					r, g, b := graph.ColorOption(graph.NormalLine)
+					r, g, b, _ := graph.ColorOption(graph.NormalLine)
 					context.SetLineWidth(2)
 					context.SetSourceRGB(r, g, b)
 					pos1 := p1.Position().Add(image.Point{5, 5})

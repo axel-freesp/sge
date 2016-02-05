@@ -61,8 +61,8 @@ const (
 	expandedPortHeight = 10
 )
 
-func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *ExpandedNode) {
-	positioner := getPositioner(userObj)
+func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf, path string) (ret *ExpandedNode) {
+	positioner := getPositioner(userObj, path)
 	pos := positioner.Position()
 	config := DrawConfig{ColorInit(ColorOption(NormalExpandedNode)),
 		ColorInit(ColorOption(HighlightExpandedNode)),
@@ -85,7 +85,6 @@ func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *Expan
 		empty := image.Point{}
 		first := image.Point{16, 32}
 		shift := image.Point{16, 16}
-		path := positioner.ActivePath()
 		for i, n := range g.ProcessingNodes() {
 			var ch ContainerChild
 			var nPath string
@@ -108,9 +107,9 @@ func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *Expan
 				chpos = pos.Add(first.Add(shift.Mul(i)))
 			}
 			if n.Expanded() {
-				ch = ExpandedNodeNew(getPositioner, n)
+				ch = ExpandedNodeNew(getPositioner, n, nPath)
 			} else {
-				ch = NodeNew(getPositioner, n)
+				ch = NodeNew(getPositioner, n, nPath)
 			}
 			children = append(children, ch)
 		}
@@ -130,8 +129,8 @@ func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *Expan
 		if pos == empty {
 			pos = ret.CalcInPortPos(i)
 		}
-		p.SetActiveMode(gr.PositionModeExpanded)
-		ret.AddPort(ret.portClipPos(pos), config, p)
+		positioner := gr.ModePositionerProxyNew(p, gr.PositionModeExpanded)
+		ret.AddPort(config, p, positioner)
 	}
 	config = DrawConfig{ColorInit(ColorOption(OutputPort)),
 		ColorInit(ColorOption(HighlightOutPort)),
@@ -144,8 +143,8 @@ func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf) (ret *Expan
 		if pos == empty {
 			pos = ret.CalcOutPortPos(i)
 		}
-		p.SetActiveMode(gr.PositionModeExpanded)
-		ret.AddPort(ret.portClipPos(pos), config, p)
+		positioner := gr.ModePositionerProxyNew(p, gr.PositionModeExpanded)
+		ret.AddPort(config, p, positioner)
 	}
 	for _, n := range g.ProcessingNodes() {
 		from, ok := ret.ChildByName(n.Name())

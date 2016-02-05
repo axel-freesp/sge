@@ -23,7 +23,7 @@ type arch struct {
 var _ pf.ArchIf = (*arch)(nil)
 
 func ArchNew(name string, platform pf.PlatformIf) *arch {
-	return &arch{gr.ModePositionerObjectInit(), name, ioTypeListInit(),
+	return &arch{*gr.ModePositionerObjectNew(), name, ioTypeListInit(),
 		processListInit(), platform, nil}
 }
 

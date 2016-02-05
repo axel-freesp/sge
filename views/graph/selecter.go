@@ -87,11 +87,11 @@ type SelectableBox struct {
 }
 
 type Color struct {
-	r, g, b float64
+	r, g, b, a float64
 }
 
-func ColorInit(r, g, b float64) Color {
-	return Color{r, g, b}
+func ColorInit(r, g, b, a float64) Color {
+	return Color{r, g, b, a}
 }
 
 var _ BoxedSelecter = (*SelectableBox)(nil)
@@ -137,7 +137,7 @@ func (b SelectableBox) SelectorDefaultDraw(ctxt interface{}) {
 			color = b.config.nCol
 		}
 		x, y, w, h := boxToDraw(&b, b.config.pad)
-		context.SetSourceRGB(color.r, color.g, color.b)
+		context.SetSourceRGBA(color.r, color.g, color.b, color.a)
 		context.Rectangle(x, y, w, h)
 		context.FillPreserve()
 		context.SetSourceRGB(b.config.fCol.r, b.config.fCol.g, b.config.fCol.b)

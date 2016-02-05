@@ -4,9 +4,50 @@ import (
 	"fmt"
 	"github.com/axel-freesp/sge/tool"
 	"image"
-	"log"
+	//"log"
 	"strings"
 )
+
+var ValidModes = []PositionMode{
+	PositionModeNormal,
+	PositionModeMapping,
+	PositionModeExpanded,
+}
+
+var StringFromMode = map[PositionMode]string{
+	PositionModeNormal:   "normal",
+	PositionModeMapping:  "mapping",
+	PositionModeExpanded: "expanded",
+}
+
+var ModeFromString = map[string]PositionMode{
+	"normal":   PositionModeNormal,
+	"mapping":  PositionModeMapping,
+	"expanded": PositionModeExpanded,
+}
+
+//
+//	ModePositioner Proxy
+//
+
+type ModePositionerProxy struct {
+	ref        ModePositioner
+	activeMode PositionMode
+}
+
+var _ Positioner = (*ModePositionerProxy)(nil)
+
+func ModePositionerProxyNew(ref ModePositioner, activeMode PositionMode) *ModePositionerProxy {
+	return &ModePositionerProxy{ref, activeMode}
+}
+
+func (m *ModePositionerProxy) Position() image.Point {
+	return m.ref.ModePosition(m.activeMode)
+}
+
+func (m *ModePositionerProxy) SetPosition(pos image.Point) {
+	m.ref.SetModePosition(m.activeMode, pos)
+}
 
 //
 //	PathModePositioner standard implementation
@@ -19,7 +60,7 @@ type PathModePositionerObject struct {
 }
 
 func PathModePositionerObjectNew() (p *PathModePositionerObject) {
-	p = &PathModePositionerObject{ModePositionerObjectInit(), tool.StringListInit(), ""}
+	p = &PathModePositionerObject{*ModePositionerObjectNew(), tool.StringListInit(), ""}
 	p.pathlist.Append("")
 	return
 }
@@ -50,7 +91,6 @@ func (p *PathModePositionerObject) PathModePosition(path string, mode PositionMo
 }
 
 func (p *PathModePositionerObject) SetPathModePosition(path string, mode PositionMode, pos image.Point) {
-	log.Printf("PathModePositionerObject.SetPathModePosition(%T): path=%s, mode=%v, pos=%v\n", p, path, mode, pos)
 	_, ok := p.pathlist.Find(path)
 	if !ok {
 		p.pathlist.Append(path)
@@ -83,8 +123,8 @@ type ModePositionerObject struct {
 	activeMode PositionMode
 }
 
-func ModePositionerObjectInit() ModePositionerObject {
-	return ModePositionerObject{make(map[PositionMode]image.Point), PositionMode("normal")}
+func ModePositionerObjectNew() *ModePositionerObject {
+	return &ModePositionerObject{make(map[PositionMode]image.Point), PositionMode("normal")}
 }
 
 func (m *ModePositionerObject) Position() image.Point {
@@ -117,6 +157,10 @@ func (m *ModePositionerObject) ActiveMode() PositionMode {
 
 type PositionerObject struct {
 	position image.Point
+}
+
+func PositionerObjectNew() *PositionerObject {
+	return &PositionerObject{}
 }
 
 func (p *PositionerObject) Position() image.Point {

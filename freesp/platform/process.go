@@ -23,7 +23,7 @@ type process struct {
 var _ pf.ProcessIf = (*process)(nil)
 
 func ProcessNew(name string, arch pf.ArchIf) *process {
-	return &process{gr.ModePositionerObjectInit(), name, channelListInit(), channelListInit(), arch}
+	return &process{*gr.ModePositionerObjectNew(), name, channelListInit(), channelListInit(), arch}
 }
 
 func createProcessFromXml(xmlp backend.XmlProcess, a pf.ArchIf) (pr *process, err error) {

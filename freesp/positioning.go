@@ -10,7 +10,7 @@ import (
 func PathModePositionerApplyHints(pmp gr.PathModePositioner, xmln backend.XmlModeHint) {
 	for _, m := range xmln.Entry {
 		path, modestring := gr.SeparatePathMode(m.Mode)
-		mode, ok := ModeFromString[string(modestring)]
+		mode, ok := gr.ModeFromString[string(modestring)]
 		if !ok {
 			log.Printf("PathModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
 			continue
@@ -22,7 +22,7 @@ func PathModePositionerApplyHints(pmp gr.PathModePositioner, xmln backend.XmlMod
 
 func ModePositionerApplyHints(mp gr.ModePositioner, xmln backend.XmlModeHint) {
 	for _, m := range xmln.Entry {
-		mode, ok := ModeFromString[m.Mode]
+		mode, ok := gr.ModeFromString[m.Mode]
 		if !ok {
 			log.Printf("ModePositionerApplyHints Warning: hint mode %s not defined\n", m.Mode)
 			continue

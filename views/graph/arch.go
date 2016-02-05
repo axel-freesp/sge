@@ -170,19 +170,13 @@ func (a *Arch) addExternalPort(c pf.ChannelIf, mode gr.PositionMode, idx int) {
 		ColorInit(ColorOption(BoxFrame)),
 		Color{},
 		image.Point{}}
-	empty := image.Point{}
 	ap := c.ArchPort()
 	if ap == nil {
 		log.Printf("Arch.addExternalPort error: channel %v has no arch port\n", c)
 		return
 	}
-	pos := ap.ModePosition(mode)
-	if pos == empty {
-		pos = a.CalcPortPos(idx, a.numExtChannel())
-	}
-	ap.SetActiveMode(mode)
-	cp := a.AddPort(pos, config, ap)
-	ap.SetModePosition(mode, cp.Position())
+	positioner := gr.ModePositionerProxyNew(ap, mode)
+	a.AddPort(config, ap, positioner)
 }
 
 func (a Arch) Processes() []ProcessIf {
@@ -304,11 +298,11 @@ func (a Arch) drawLocalChannel(ctxt interface{}, ch pf.ChannelIf) {
 			p1 := a.channelMap[ch]
 			p2 := a.channelMap[link]
 			if p1.IsSelected() || p2.IsSelected() {
-				r, g, b = ColorOption(SelectChannelLine)
+				r, g, b, _ = ColorOption(SelectChannelLine)
 			} else if p1.IsHighlighted() || p2.IsHighlighted() {
-				r, g, b = ColorOption(HighlightChannelLine)
+				r, g, b, _ = ColorOption(HighlightChannelLine)
 			} else {
-				r, g, b = ColorOption(NormalChannelLine)
+				r, g, b, _ = ColorOption(NormalChannelLine)
 			}
 			context.SetLineWidth(2)
 			context.SetSourceRGB(r, g, b)

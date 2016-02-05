@@ -8,7 +8,7 @@ import (
 	"github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	fd "github.com/axel-freesp/sge/interface/filedata"
-	gr "github.com/axel-freesp/sge/interface/graph"
+	//	gr "github.com/axel-freesp/sge/interface/graph"
 	mp "github.com/axel-freesp/sge/interface/mapping"
 	mod "github.com/axel-freesp/sge/interface/model"
 	pf "github.com/axel-freesp/sge/interface/platform"
@@ -55,80 +55,17 @@ func MappingApplyHints(m mp.MappingIf, xmlhints *backend.XmlMappingHint) (err er
 		xmlh, ok := findMapHint(xmlhints, nId.String())
 		if ok {
 			melem.SetExpanded(xmlh.Expanded)
-			freesp.PathModePositionerApplyHints(melem, xmlh.XmlModeHint)
-			log.Printf("MappingApplyHints(%s) applying: expanded=%v, pos=%v\n", nId.String(), xmlh.Expanded, melem.ModePosition(gr.PositionModeMapping))
-			// TODO: ports
+			freesp.ModePositionerApplyHints(melem, xmlh.XmlModeHint)
 			for i, xmlp := range xmlh.InPorts {
-				freesp.PathModePositionerApplyHints(&melem.(*mapelem).inports[i], xmlp.XmlModeHint)
+				freesp.ModePositionerApplyHints(&melem.(*mapelem).inports[i], xmlp.XmlModeHint)
 			}
 			for i, xmlp := range xmlh.OutPorts {
-				freesp.PathModePositionerApplyHints(&melem.(*mapelem).outports[i], xmlp.XmlModeHint)
+				freesp.ModePositionerApplyHints(&melem.(*mapelem).outports[i], xmlp.XmlModeHint)
 			}
 		}
 	}
 	return
-
-	/*
-		g := m.Graph().ItsType()
-		for _, xmln := range xmlhints.InputNodes {
-			n, ok := g.NodeByName(xmln.Name)
-			if ok {
-				melem, ok := m.MappedElement(behaviour.NodeIdFromString(n.Name(), m.Graph().Filename()))
-				if ok {
-					melem.SetExpanded(false)
-					freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
-				}
-			}
-		}
-		for _, xmln := range xmlhints.OutputNodes {
-			n, ok := g.NodeByName(xmln.Name)
-			if ok {
-				melem, ok := m.MappedElement(behaviour.NodeIdFromString(n.Name(), m.Graph().Filename()))
-				if ok {
-					melem.SetExpanded(false)
-					freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
-				}
-			}
-		}
-		NodesApplyHints("", m, g, xmlhints.MappedNodes)
-		return
-	*/
 }
-
-/*
-func NodesApplyHints(path string, m mp.MappingIf, g bh.SignalGraphTypeIf, xmlh []backend.XmlNodePosHint) {
-	for _, n := range g.ProcessingNodes() {
-		var p string
-		if len(path) == 0 {
-			p = n.Name()
-		} else {
-			p = fmt.Sprintf("%s/%s", path, n.Name())
-		}
-		ok := false
-		var xmln backend.XmlNodePosHint
-		for _, xmln = range xmlh {
-			if p == xmln.Name {
-				ok = true
-				break
-			}
-		}
-		if ok {
-			melem, ok := m.MappedElement(behaviour.NodeIdFromString(p, m.Graph().Filename()))
-			if ok {
-				melem.SetExpanded(xmln.Expanded)
-				freesp.ModePositionerApplyHints(melem, xmln.XmlModeHint)
-			}
-		}
-		nt := n.ItsType()
-		for _, impl := range nt.Implementation() {
-			if impl.ImplementationType() == bh.NodeTypeGraph {
-				NodesApplyHints(p, m, impl.Graph(), xmlh)
-				break
-			}
-		}
-	}
-}
-*/
 
 func (m *mapping) CreateXml() (buf []byte, err error) {
 	xmlm := CreateXmlMapping(m)

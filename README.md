@@ -5,7 +5,7 @@ SGE is the new frontend tool for freeSP. It lets you create and edit all
 the artifacts signal graphs, signal processing libraries and platforms,
 which are the input files for the freeSP toolchain. Details about the
 concepts, tagets and methodologies of freeSP can be read
-[here](https://github.com/axel.freesp/freesp/overview.html)
+[here](https://github.com/axel-freesp/freesp/blob/master/overview.md)
 
 SGE has been written from scratch using Go and its
 [GTK+3 bindings](https://github.com/gotk3/gotk3/). Please report any
@@ -41,7 +41,7 @@ SGE requires some environment variables
 - *FREESP_PATH* is used for the file dialogs when opening or saving
   artifacts.
 - *FREESP_SEARCH_PATH* lists all paths that may contain freeSP-libraries
-  (see [freeSP overview](https://github.com/axel.freesp/freesp/overview.html)
+  (see [freeSP overview](https://github.com/axel-freesp/freesp/blob/master/overview.md)
   for details)
 
 ```bash

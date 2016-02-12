@@ -13,6 +13,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"image"
 	"log"
+	"strings"
 )
 
 type mappingView struct {
@@ -66,7 +67,7 @@ func (v *mappingView) init() (err error) {
 
 func (v *mappingView) Sync() {
 	g := v.mapping.Graph()
-	gFilename := g.Filename()
+	//gFilename := g.Filename()
 	v.nodes = make([]graph.NodeIf, len(g.Nodes()))
 	var numberOfConnections = 0
 	for _, n := range g.Nodes() {
@@ -77,39 +78,45 @@ func (v *mappingView) Sync() {
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 	// Construct node tree
 	mapping := v.mapping
+	getPositioner := func(nId bh.NodeIdIf) gr.ModePositioner {
+		melem, ok := mapping.MappedElement(nId)
+		if !ok {
+			log.Printf("mappingView.Sync warning: no mapped element for node %s\n", nId)
+			return gr.ModePositionerObjectNew()
+		}
+		return melem
+	}
 	for i, n := range g.Nodes() {
 		nId := freesp.NodeIdFromString(n.Name(), g.Filename())
 		melem, ok := v.mapping.MappedElement(nId)
-		if ok {
-			getPositioner := func(n bh.NodeIf, path string) gr.ModePositioner {
-				nId := freesp.NodeIdFromString(n.Name(), gFilename)
-				melem, ok := mapping.MappedElement(nId)
-				if !ok {
-					log.Printf("mappingView.Sync warning: no mapped element for node %s", n.Name())
-					mapping.AddMapping(n, nId, nil)
-					melem, _ = mapping.MappedElement(nId)
-				}
-				return melem
-			}
-			if melem.Expanded() {
-				melem.SetActiveMode(gr.PositionModeExpanded)
-				v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, "")
-			} else {
-				melem.SetActiveMode(gr.PositionModeNormal)
-				v.nodes[i] = graph.NodeNew(getPositioner, n, "")
-			}
+		if !ok {
+			log.Printf("mappingView.Sync error: node %s is expanded\n", n.Name())
+			continue
+		}
+		if melem.Expanded() {
+			n.SetExpanded(true)
+			v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, nId)
 		} else {
-			log.Printf("mappingView.Sync warning: node %s is not mapped\n", n.Name())
+			melem.SetActiveMode(gr.PositionModeNormal)
+			v.nodes[i] = graph.NodeNew(getPositioner, n, nId)
 		}
 	}
 	// Construct edges
 	var index = 0
 	for _, n := range g.Nodes() {
-		from := v.findNode(n.Name())
+		from, ok := v.findNode(n.Name())
+		if !ok {
+			log.Printf("mappingView.Sync error: from node %s not in nodelist\n", n.Name())
+			continue
+		}
 		for _, p := range n.OutPorts() {
 			fromId := from.OutPortIndex(p.Name())
 			for _, c := range p.Connections() {
-				to := v.findNode(c.Node().Name())
+				to, ok := v.findNode(c.Node().Name())
+				if !ok {
+					log.Printf("mappingView.Sync error: to node %s not in nodelist\n", c.Node().Name())
+					continue
+				}
 				toId := to.InPortIndex(c.Name())
 				v.connections[index] = graph.ConnectionNew(from, to, fromId, toId)
 				index++
@@ -125,12 +132,37 @@ func (v *mappingView) Sync() {
 	// Handle unmapped nodes
 	var unmappedNodes []graph.NodeIf
 	var unmappedIds []bh.NodeIdIf
+	/*
 	for _, n := range v.nodes {
 		nId := freesp.NodeIdFromString(n.Name(), g.Filename())
 		_, ok := v.mapping.Mapped(n.Name())
 		if !ok {
 			unmappedNodes = append(unmappedNodes, n)
 			unmappedIds = append(unmappedIds, nId)
+		}
+	}
+	*/
+	for _, id := range v.mapping.MappedIds() {
+		melem, ok := v.mapping.MappedElement(id)
+		if !ok {
+			log.Fatalf("mappingView.Sync FIXME: internal error inconsistent maplist\n")
+		}
+		if !melem.Expanded() {
+			_, ok = melem.Process()
+			if !ok {	// we want unmapped nodes
+				n, ok := findNodeByPath(v.nodes, melem.NodeId().String())
+				if !ok {
+					log.Printf("mappingView.Sync: unmapped node %s not found\n", melem.NodeId().String())
+					continue
+				}
+				unmappedNodes = append(unmappedNodes, n)
+				unmappedIds = append(unmappedIds, id)
+			}
+		}
+	}
+	for _, n := range v.nodes {
+		if n.UserObj().Expanded() {
+			n.Layout()
 		}
 	}
 	v.unmapped = graph.ProcessMappingNew(unmappedNodes, unmappedIds, v.unmappedObj)
@@ -196,12 +228,7 @@ func (v *mappingView) Select(obj interface{}) {
 				return
 			}
 		}
-		/*
-			n := melem.Node()
-			if n != nil {
-				pr.(*graph.ProcessMapping).SelectNode(n)
-			}
-		*/
+		pr.(*graph.ProcessMapping).SelectNode(melem.NodeId(), melem.NodeId())
 		if isMapped {
 			v.repaintArch(a)
 		} else {
@@ -340,6 +367,8 @@ func (v *mappingView) ButtonCallback(area DrawArea, evType gdk.EventType, positi
 	}
 }
 
+// TODO: add handleNodeSelect
+
 func (v *mappingView) handleArchSelect(pos image.Point) {
 	for _, a := range v.arch {
 		hit, _ := a.CheckHit(pos)
@@ -442,6 +471,9 @@ func (v *mappingView) handleDrag(pos image.Point) {
 		v.unmapped.SetPosition(box.Min)
 		v.repaintUnmapped(v.unmapped)
 	}
+	for _, n := range v.nodes {
+		n.Layout()
+	}
 }
 
 func (v *mappingView) handleMouseover(pos image.Point) {
@@ -455,20 +487,18 @@ func (v *mappingView) handleMouseover(pos image.Point) {
 	if mod {
 		v.repaintUnmapped(v.unmapped)
 	}
-	/*
-		for _, n := range v.nodes {
-			_, mod := n.CheckHit(pos)
-			if mod {
-				v.repaintNode(n)
-			}
+	for _, n := range v.nodes {
+		_, mod := n.CheckHit(pos)
+		if mod {
+			v.repaintNode(n)
 		}
-		for _, c := range v.connections {
-			_, modified := c.CheckHit(pos)
-			if modified {
-				v.repaintConnection(c)
-			}
+	}
+	for _, c := range v.connections {
+		_, modified := c.CheckHit(pos)
+		if modified {
+			v.repaintConnection(c)
 		}
-	*/
+	}
 }
 
 func (v *mappingView) repaintArch(a graph.ArchIf) {
@@ -477,6 +507,24 @@ func (v *mappingView) repaintArch(a graph.ArchIf) {
 
 func (v *mappingView) repaintUnmapped(p graph.ProcessIf) {
 	v.drawScene(v.unmappedDrawBox())
+}
+
+func (v *mappingView) repaintNode(n graph.NodeIf) {
+	v.drawScene(v.nodeDrawBox(n))
+}
+
+func (v *mappingView) repaintConnection(c graph.ConnectIf) {
+	v.drawScene(c.BBox())
+}
+
+func (v *mappingView) nodeDrawBox(n graph.NodeIf) image.Rectangle {
+	ret := n.BBox()
+	for _, c := range v.connections {
+		if c.IsLinked(n.Name()) {
+			ret = ret.Union(c.BBox())
+		}
+	}
+	return ret
 }
 
 func (v *mappingView) archDrawBox(a graph.ArchIf) image.Rectangle {
@@ -521,6 +569,7 @@ func (v *mappingView) DrawCallback(area DrawArea, context *cairo.Context) {
 		v.unmapped.Draw(context)
 	}
 	v.drawArch(context, r)
+	v.drawNodes(context, r)
 	v.drawChannels(context, r)
 	v.drawConnections(context, r)
 }
@@ -538,6 +587,19 @@ func (v *mappingView) drawArch(context *cairo.Context, r image.Rectangle) {
 	for _, a := range v.arch {
 		if r.Overlaps(a.BBox()) {
 			a.Draw(context)
+		}
+	}
+}
+
+func (v *mappingView) drawNodes(context *cairo.Context, r image.Rectangle) {
+	for _, o := range v.nodes {
+		if !o.IsSelected() && o.BBox().Overlaps(r) {
+			o.Draw(context)
+		}
+	}
+	for _, o := range v.nodes {
+		if o.IsSelected() && o.BBox().Overlaps(r) {
+			o.Draw(context)
 		}
 	}
 }
@@ -578,13 +640,37 @@ func (v *mappingView) drawChannels(context *cairo.Context, r image.Rectangle) {
 //		Private methods
 //
 
-func (v *mappingView) findNode(name string) graph.NodeIf {
-	for _, d := range v.nodes {
-		if d.Name() == name {
-			return d
+func (v *mappingView) findNode(name string) (n graph.NodeIf, ok bool) {
+	for _, n = range v.nodes {
+		if n.Name() == name {
+			ok = true
+			return
 		}
 	}
-	return nil
+	return
+}
+
+func findNodeByPath(list []graph.NodeIf, path string) (n graph.NodeIf, ok bool) {
+	var name string
+	log.Printf("findNodeByPath: path=%s, len(list)=%d\n", path, len(list))
+	if strings.Contains(path, "/") {
+		p := strings.Split(path, "/")
+		for _, n = range list {
+			if n.Name() == p[0] {
+				n, ok = findNodeByPath(n.ChildNodes(), strings.Join(p[1:], "/"))
+				return
+			}
+		}
+	} else {
+		name = path
+		for _, n = range list {
+			if n.Name() == name {
+				ok = true
+				return
+			}
+		}
+	}
+	return
 }
 
 func (v *mappingView) drawAll() {

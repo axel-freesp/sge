@@ -27,6 +27,7 @@ type NodeIf interface {
 	GetHighlightedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 	GetSelectedNode(ownId bh.NodeIdIf) (selectId bh.NodeIdIf, ok bool)
 	ChildNodes() []NodeIf
+	Layout() image.Rectangle
 }
 
 type Porter interface {

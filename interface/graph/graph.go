@@ -27,6 +27,62 @@ var ModeFromString = map[string]PositionMode{
 }
 
 //
+//	PathModePositioner Proxy
+//
+
+type PathModePositionerProxy struct {
+	ref        PathModePositioner
+	activeMode PositionMode
+	activePath string
+}
+
+var _ ModePositioner = (*PathModePositionerProxy)(nil)
+
+func PathModePositionerProxyNew(ref PathModePositioner) *PathModePositionerProxy {
+	return &PathModePositionerProxy{ref, ref.ActiveMode(), ref.ActivePath()}
+}
+
+func (m *PathModePositionerProxy) ModePosition(mode PositionMode) image.Point {
+	return m.ref.PathModePosition(m.activePath, mode)
+}
+
+func (m *PathModePositionerProxy) SetModePosition(mode PositionMode, pos image.Point) {
+	m.ref.SetPathModePosition(m.activePath, mode, pos)
+}
+
+func (m *PathModePositionerProxy) SetActiveMode(mode PositionMode) {
+	m.activeMode = mode
+}
+
+func (m *PathModePositionerProxy) ActiveMode() PositionMode {
+	return m.activeMode
+}
+
+func (m *PathModePositionerProxy) PathList() []string {
+	return m.ref.PathList()
+}
+
+func (m *PathModePositionerProxy) SetActivePath(path string) {
+	p := m.ref.ActivePath()
+	m.ref.SetActivePath(path)	// to add path to the pathlist
+	m.ref.SetActivePath(p)
+	m.activePath = path
+}
+
+func (m *PathModePositionerProxy) ActivePath() string {
+	return m.activePath
+}
+
+func (m *PathModePositionerProxy) Position() image.Point {
+	return m.ref.PathModePosition(m.activePath, m.ref.ActiveMode())
+}
+
+func (m *PathModePositionerProxy) SetPosition(pos image.Point) {
+	m.ref.SetPathModePosition(m.activePath, m.ref.ActiveMode(), pos)
+}
+
+
+//
 //	ModePositioner Proxy
 //
 

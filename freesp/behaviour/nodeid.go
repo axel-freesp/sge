@@ -1,7 +1,7 @@
 package behaviour
 
 import (
-	"fmt"
+	//"fmt"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	"log"
 	"strings"
@@ -12,17 +12,20 @@ type nodeId struct {
 	filename string
 }
 
-var EmptyNodeId bh.NodeIdIf = (*nodeId)(nil)
-
 func NodeIdNew(parentId bh.NodeIdIf, id string) *nodeId {
-	if parentId == EmptyNodeId {
-		log.Panic("NodeIdNew FIXME: parent = nil")
-	}
-	return NodeIdFromString(fmt.Sprintf("%s/%s", parentId, id), parentId.Filename())
+	path := parentId.(*nodeId).path
+	path = append(path, id)
+	return &nodeId{path, parentId.Filename()}
 }
 
 func NodeIdFromString(idString, filename string) *nodeId {
-	return &nodeId{strings.Split(idString, "/"), filename}
+	var path []string
+	if strings.Contains(idString, "/") {
+		path = strings.Split(idString, "/")
+	} else if len(idString) > 0 {
+		path = append(path, idString)
+	}
+	return &nodeId{path, filename}
 }
 
 func (n nodeId) String() string {
@@ -35,9 +38,6 @@ func (n nodeId) Parent() bh.NodeIdIf {
 
 func (n nodeId) IsAncestor(id bh.NodeIdIf) bool {
 	if n.filename != id.Filename() {
-		return false
-	}
-	if id == EmptyNodeId {
 		return false
 	}
 	nid := id.(*nodeId)

@@ -17,7 +17,7 @@ type MappingIf interface {
 	Graph() behaviour.SignalGraphIf
 	SetPlatform(platform.PlatformIf)
 	Platform() platform.PlatformIf
-	AddMapping(n behaviour.NodeIf, nId behaviour.NodeIdIf, p platform.ProcessIf)
+	AddMapping(n behaviour.NodeIf, nId behaviour.NodeIdIf, p platform.ProcessIf) MappedElementIf
 	Mapped(string) (platform.ProcessIf, bool)
 	MappedElement(behaviour.NodeIdIf) (MappedElementIf, bool)
 	MappedIds() []behaviour.NodeIdIf
@@ -29,6 +29,7 @@ type MappedElementIf interface {
 	graph.Expander
 	Mapping() MappingIf
 	NodeId() behaviour.NodeIdIf
+	Node() behaviour.NodeIf
 	Process() (platform.ProcessIf, bool)
 	SetProcess(platform.ProcessIf)
 }

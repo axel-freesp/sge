@@ -81,7 +81,7 @@ func ArchMappingNew(userObj pf.ArchIf, nodes []NodeIf, mapping mp.MappingIf) *Ar
 			if ok && m == up {
 				log.Printf("ArchMappingNew(p=%s): nId=%s", up.Name(), nId.String())
 				n, ok := findNodeInTree(nodes, nId.String())
-				if ok {
+				if ok && !n.UserObj().Expanded() {
 					mappedNodes = append(mappedNodes, n)
 					mappedIds = append(mappedIds, nId)
 				}

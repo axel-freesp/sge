@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"fmt"
+	//"fmt"
 	freesp "github.com/axel-freesp/sge/freesp/behaviour"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	gr "github.com/axel-freesp/sge/interface/graph"
@@ -61,9 +61,10 @@ const (
 	expandedPortHeight = 10
 )
 
-func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf, path string) (ret *ExpandedNode) {
-	positioner := getPositioner(userObj, path)
+func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf, nId bh.NodeIdIf) (ret *ExpandedNode) {
+	positioner := getPositioner(nId)
 	pos := positioner.Position()
+	path := nId.String()
 	config := DrawConfig{ColorInit(ColorOption(NormalExpandedNode)),
 		ColorInit(ColorOption(HighlightExpandedNode)),
 		ColorInit(ColorOption(SelectExpandedNode)),
@@ -87,29 +88,26 @@ func ExpandedNodeNew(getPositioner GetPositioner, userObj bh.NodeIf, path string
 		shift := image.Point{16, 16}
 		for i, n := range g.ProcessingNodes() {
 			var ch ContainerChild
-			var nPath string
 			var mode gr.PositionMode
-			if len(path) > 0 {
-				nPath = fmt.Sprintf("%s/%s", path, userObj.Name())
-			} else {
-				nPath = userObj.Name()
-			}
-			n.SetActivePath(nPath)
 			if n.Expanded() {
 				mode = gr.PositionModeExpanded
 			} else {
 				mode = gr.PositionModeNormal
 			}
-			n.SetActiveMode(mode)
-			log.Printf("ExpandedNodeNew TODO: position of child nodes...\n")
-			chpos := n.PathModePosition(nPath, mode)
+			proxy := gr.PathModePositionerProxyNew(n)
+			proxy.SetActivePath(path)
+			proxy.SetActiveMode(mode)
+			log.Printf("ExpandedNodeNew TODO: position of child nodes. path=%s, mode=%v\n", path, mode)
+			chpos := proxy.Position()
 			if chpos == empty {
 				chpos = pos.Add(first.Add(shift.Mul(i)))
+				proxy.SetPosition(chpos)
 			}
+			id := freesp.NodeIdNew(nId, n.Name())
 			if n.Expanded() {
-				ch = ExpandedNodeNew(getPositioner, n, nPath)
+				ch = ExpandedNodeNew(getPositioner, n, id)
 			} else {
-				ch = NodeNew(getPositioner, n, nPath)
+				ch = NodeNew(getPositioner, n, id)
 			}
 			children = append(children, ch)
 		}

@@ -81,6 +81,10 @@ func (m mapelem) NodeId() bh.NodeIdIf {
 	return m.nodeId
 }
 
+func (m mapelem) Node() bh.NodeIf {
+	return m.node
+}
+
 func (m mapelem) Process() (p pf.ProcessIf, ok bool) {
 	ok = m.process != nil
 	if ok {

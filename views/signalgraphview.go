@@ -88,17 +88,24 @@ func (v *signalGraphView) Sync() {
 	}
 	v.connections = make([]graph.ConnectIf, numberOfConnections)
 
-	getPositioner := func(n bh.NodeIf, path string) gr.ModePositioner {
-		n.SetActivePath(path)
-		return n
+	getPositioner := func(nId bh.NodeIdIf) gr.ModePositioner {
+		n, ok := g.NodeByPath(nId.String())
+		if !ok {
+			log.Panicf("getPositioner: could not find node %v\n", nId)
+		}
+		log.Printf("getPositioner(%v): node=%s\n", nId, n.Name())
+		proxy := gr.PathModePositionerProxyNew(n)
+		proxy.SetActivePath(nId.Parent().String())
+		return proxy
 	}
 	for i, n := range g.Nodes() {
+		nId := freesp.NodeIdFromString(n.Name(), v.graphId)
 		if n.Expanded() {
 			n.SetActiveMode(gr.PositionModeExpanded)
-			v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, "")
+			v.nodes[i] = graph.ExpandedNodeNew(getPositioner, n, nId)
 		} else {
 			n.SetActiveMode(gr.PositionModeNormal)
-			v.nodes[i] = graph.NodeNew(getPositioner, n, "")
+			v.nodes[i] = graph.NodeNew(getPositioner, n, nId)
 		}
 	}
 	var index = 0
@@ -275,7 +282,7 @@ func (v *signalGraphView) ButtonCallback(area DrawArea, evType gdk.EventType, po
 	case gdk.EVENT_2BUTTON_PRESS:
 		log.Println("areaButtonCallback 2BUTTON_PRESS")
 		for _, n := range v.nodes {
-			selected, ok := n.GetHighlightedNode(freesp.NodeIdNew(freesp.EmptyNodeId, n.Name()))
+			selected, ok := n.GetHighlightedNode(freesp.NodeIdFromString(n.Name(), v.graphId))
 			if ok {
 				v.context.EditNode(selected)
 				break

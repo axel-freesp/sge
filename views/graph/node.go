@@ -21,10 +21,10 @@ type Node struct {
 var _ NodeIf = (*Node)(nil)
 var _ ContainerChild = (*Node)(nil)
 
-type GetPositioner func(n bh.NodeIf, path string) gr.ModePositioner
+type GetPositioner func(nId bh.NodeIdIf) gr.ModePositioner
 
-func NodeNew(getPositioner GetPositioner, n bh.NodeIf, path string) (ret *Node) {
-	positioner := getPositioner(n, path)
+func NodeNew(getPositioner GetPositioner, n bh.NodeIf, nId bh.NodeIdIf) (ret *Node) {
+	positioner := getPositioner(nId)
 	pos := positioner.Position()
 	dy := NumericOption(PortDY)
 	box := image.Rect(pos.X, pos.Y, pos.X+global.nodeWidth, pos.Y+global.nodeHeight+numPorts(n)*dy)

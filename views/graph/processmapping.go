@@ -157,20 +157,4 @@ func (pr ProcessMapping) GetSelectedNode() (ok bool, n NodeIf) {
 func (pr *ProcessMapping) SetPosition(pos image.Point) {
 	pr.ContainerDefaultSetPosition(pos)
 	pr.userObj.SetModePosition(gr.PositionModeMapping, pos)
-	/*
-		if pr.arch != nil { // else is unmapped process
-			a := pr.arch.(*Arch)
-			if a.mapping != nil {
-				for i, id := range pr.mappedIds {
-					n := pr.nodes[i]
-					melem, ok := a.mapping.MappedElement(id)
-					if !ok {
-						log.Printf("Arch.SetPosition Warning: node %s not mapped\n", n.Name())
-						return
-					}
-					melem.SetModePosition(gr.PositionModeMapping, pos)
-				}
-			}
-		}
-	*/
 }

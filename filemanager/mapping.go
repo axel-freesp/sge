@@ -3,7 +3,7 @@ package filemanager
 import (
 	"fmt"
 	"github.com/axel-freesp/sge/backend"
-	//	"github.com/axel-freesp/sge/freesp/behaviour"
+	"github.com/axel-freesp/sge/freesp/behaviour"
 	"github.com/axel-freesp/sge/freesp/mapping"
 	bh "github.com/axel-freesp/sge/interface/behaviour"
 	mp "github.com/axel-freesp/sge/interface/mapping"
@@ -100,6 +100,13 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 	}
 	m.SetPathPrefix(filedir)
 	// TODO: check consistency with graph/platform
+	//mapping.AddMapping(n, nId, nil)
+	//melem, _ = mapping.MappedElement(nId)
+	err = f.Consistent(m.(mp.MappingIf))
+	if err != nil {
+		return
+	}
+
 	hint := backend.XmlMappingHintNew(name)
 	hintfilename := f.HintFilename(filename)
 	var buf []byte
@@ -131,6 +138,76 @@ func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err erro
 	f.context.GVC().Add(mv, name)
 	log.Printf("fileManagerMap.Access: platform %s successfully loaded.\n", name)
 	f.mappingMap[name] = m.(mp.MappingIf)
+	return
+}
+
+func findNodeInIdList(n bh.NodeIf, parent bh.NodeIdIf, idlist []bh.NodeIdIf) bool {
+	nId := behaviour.NodeIdNew(parent, n.Name())
+	log.Printf("findNodeInIdList: n=%s, parent=%v\n", n.Name(), parent)
+	for _, id := range idlist {
+		if nId.String() == id.String() {
+			return true
+		}
+	}
+	for _, impl := range n.ItsType().Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			for _, nn := range impl.Graph().ProcessingNodes() {
+				if !findNodeInIdList(nn, nId, idlist) {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func addExpandedMappings(m mp.MappingIf, n bh.NodeIf, parentId bh.NodeIdIf) {
+	idlist := m.MappedIds()
+	nId := behaviour.NodeIdNew(parentId, n.Name())
+	for _, id := range idlist {
+		if nId.String() == id.String() {
+			return
+		}
+	}
+	melem := m.AddMapping(n, nId, nil)
+	melem.SetExpanded(true)
+	for _, impl := range n.ItsType().Implementation() {
+		if impl.ImplementationType() == bh.NodeTypeGraph {
+			for _, nn := range impl.Graph().ProcessingNodes() {
+				addExpandedMappings(m, nn, nId)
+			}
+		}
+	}
+}
+
+func (f *fileManagerMap) Consistent(m mp.MappingIf) (err error) {
+	nodelist := m.Graph().ItsType().Nodes()
+	idlist := m.MappedIds()
+	for _, n := range nodelist {
+		// check that every node has a mapping
+		if !findNodeInIdList(n, behaviour.NodeIdFromString("", m.Graph().Filename()), idlist){
+			// TODO: add missing mapping(s)
+			err = fmt.Errorf("fileManagerMap.Consistent error: node %s is not fully mapped\n", n.Name())
+			return
+		}
+		addExpandedMappings(m, n, behaviour.NodeIdFromString("", m.Graph().Filename()))
+	}
+	for _, id := range idlist {
+		// check that every mapping has a node
+		melem, ok := m.MappedElement(id)
+		if !ok {
+			// Should never occur, nothing to recover though...
+			err = fmt.Errorf("fileManagerMap.Consistent error: invalid maplist\n")
+			return
+		}
+		n := melem.Node()
+		if n == nil {
+			// TODO: remove this mapping from mappings
+			err = fmt.Errorf("fileManagerMap.Consistent error: mapping %s has no node\n", id)
+			return
+		}
+	}
 	return
 }
 

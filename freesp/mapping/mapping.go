@@ -47,14 +47,17 @@ func MappingApplyHints(m mp.MappingIf, xmlhints *backend.XmlMappingHint) (err er
 		err = fmt.Errorf("MappingApplyHints error: filename mismatch\n")
 		return
 	}
+	//log.Printf("MappingApplyHints: xmlhints = %v\n", xmlhints)
 	for _, nId := range m.MappedIds() {
 		melem, ok := m.MappedElement(nId)
 		if !ok {
-			log.Fatal("MappingApplyHints internal error: inconsistent maplist\n")
+			log.Fatalf("MappingApplyHints internal error: %v has no mapping\n", nId)
 		}
+		log.Printf("MappingApplyHints: %v\n", nId)
 		xmlh, ok := findMapHint(xmlhints, nId.String())
 		if ok {
 			melem.SetExpanded(xmlh.Expanded)
+			log.Printf("MappingApplyHints: %v expanded: %v\n", nId, melem.Expanded())
 			freesp.ModePositionerApplyHints(melem, xmlh.XmlModeHint)
 			for i, xmlp := range xmlh.InPorts {
 				freesp.ModePositionerApplyHints(&melem.(*mapelem).inports[i], xmlp.XmlModeHint)
@@ -120,9 +123,10 @@ func (m *mapping) Identify(te tr.TreeElement) bool {
 //		Mapping interface
 //
 
-func (m *mapping) AddMapping(n bh.NodeIf, nId bh.NodeIdIf, p pf.ProcessIf) {
+func (m *mapping) AddMapping(n bh.NodeIf, nId bh.NodeIdIf, p pf.ProcessIf) mp.MappedElementIf {
 	m.maps[nId.String()] = mapelemNew(n, nId, p, m)
 	m.maplist.Append(nId)
+	return m.maps[nId.String()]
 }
 
 func (m *mapping) SetGraph(g bh.SignalGraphIf) {
@@ -244,13 +248,15 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: node %s not in graph %s\n", x.Name, m.graph.Filename())
 			continue
 		}
-		p, ok = m.platform.ProcessByName(x.Process)
-		if !ok {
-			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
-			continue
+		if len(x.Process) > 0 {
+			p, ok = m.platform.ProcessByName(x.Process)
+			if !ok {
+				fmt.Printf("mapping.CreateMappingFromXml warning: process %s not in platform %s, assume unmapped\n", x.Process, m.platform.Filename())
+				//continue
+			}
 		}
 		nId := behaviour.NodeIdFromString(x.Name, m.Graph().Filename())
-		m.maps[n.Name()] = mapelemNew(n, nId, p, m)
+		m.maps[nId.String()] = mapelemNew(n, nId, p, m)
 		m.maplist.Append(nId)
 	}
 	for _, x := range xmlm.Mappings {
@@ -259,13 +265,15 @@ func (m *mapping) createMappingFromXml(xmlm *backend.XmlMapping) (err error) {
 			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: node %s not in graph %s\n", x.Name, m.graph.Filename())
 			continue
 		}
-		p, ok = m.platform.ProcessByName(x.Process)
-		if !ok {
-			err = fmt.Errorf("mapping.CreateMappingFromXml FIXME: process %s not in platform %s\n", x.Process, m.platform.Filename())
-			continue
+		if len(x.Process) > 0 {
+			p, ok = m.platform.ProcessByName(x.Process)
+			if !ok {
+				fmt.Printf("mapping.CreateMappingFromXml warning: process %s not in platform %s\n", x.Process, m.platform.Filename())
+				//continue
+			}
 		}
 		nId := behaviour.NodeIdFromString(x.Name, m.Graph().Filename())
-		m.maps[n.Name()] = mapelemNew(n, nId, p, m)
+		m.maps[nId.String()] = mapelemNew(n, nId, p, m)
 		m.maplist.Append(nId)
 	}
 	return

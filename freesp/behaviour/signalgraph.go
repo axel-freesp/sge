@@ -176,10 +176,10 @@ func (s *signalGraph) Nodes() []bh.NodeIf {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*signalGraph)(nil)
+var _ tr.TreeElementIf = (*signalGraph)(nil)
 
 func (t *signalGraph) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	prop := freesp.PropertyNew(true, false, false)
@@ -190,7 +190,7 @@ func (t *signalGraph) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	t.ItsType().AddToTree(tree, cursor)
 }
 
-func (t *signalGraph) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (t *signalGraph) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	return t.ItsType().AddNewObject(tree, cursor, obj)
 }
 

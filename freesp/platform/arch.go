@@ -109,7 +109,7 @@ func (a *arch) String() string {
 }
 
 //
-//  tr.TreeElement API
+//  tr.TreeElementIf API
 //
 
 func (a *arch) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -129,7 +129,7 @@ func (a *arch) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (a *arch) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (a *arch) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("arch.AddNewObject error: nil object")
 		return
@@ -231,7 +231,7 @@ func (a *arch) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.IdWi
 	return
 }
 
-func (a *arch) Identify(te tr.TreeElement) bool {
+func (a *arch) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *arch:
 		return te.(*arch).Name() == a.Name()

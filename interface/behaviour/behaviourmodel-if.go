@@ -12,13 +12,13 @@ import (
  */
 
 type SignalGraphIf interface {
-	tree.ToplevelTreeElement
+	tree.ToplevelTreeElementIf
 	ItsType() SignalGraphTypeIf
 	Nodes() []NodeIf
 }
 
 type SignalGraphTypeIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	Libraries() []LibraryIf
 	Nodes() []NodeIf
 	NodeByName(string) (NodeIf, bool)
@@ -32,7 +32,7 @@ type SignalGraphTypeIf interface {
 }
 
 type LibraryIf interface {
-	tree.ToplevelTreeElement
+	tree.ToplevelTreeElementIf
 	SignalTypes() []SignalTypeIf
 	NodeTypes() []NodeTypeIf
 	AddNodeType(NodeTypeIf) error
@@ -42,7 +42,7 @@ type LibraryIf interface {
 }
 
 type NodeTypeIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	TypeName() string
 	SetTypeName(string)
 	DefinedAt() string
@@ -57,7 +57,7 @@ type NodeTypeIf interface {
 }
 
 type ImplementationIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	ImplementationType() ImplementationType
 	ElementName() string
 	SetElemName(string)
@@ -97,7 +97,7 @@ type NodeIdIf interface {
 }
 
 type SignalTypeIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	DefinedAt() string
 	TypeName() string
 	SetTypeName(string)
@@ -132,7 +132,7 @@ type PortTypeIf interface {
 }
 
 type PortIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	graph.Directioner
 	graph.ModePositioner
 	Name() string
@@ -145,7 +145,7 @@ type PortIf interface {
 }
 
 type ConnectionIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	From() PortIf
 	To() PortIf
 }

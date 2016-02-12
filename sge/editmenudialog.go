@@ -230,7 +230,7 @@ func (dialog *EditMenuDialog) CreateDialog(extra *gtk.Widget) (err error) {
 }
 
 // For connection only: lookup matching ports to connect.
-func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []bh.PortIf) {
+func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElementIf) (ret []bh.PortIf) {
 	var thisPort bh.PortIf
 	switch object.(type) {
 	case bh.PortIf:
@@ -258,7 +258,7 @@ func getMatchingPorts(fts *models.FilesTreeStore, object tr.TreeElement) (ret []
 	return
 }
 
-func getOtherProcesses(fts *models.FilesTreeStore, object tr.TreeElement) (ret []pf.ProcessIf) {
+func getOtherProcesses(fts *models.FilesTreeStore, object tr.TreeElementIf) (ret []pf.ProcessIf) {
 	var thisProcess pf.ProcessIf
 	switch object.(type) {
 	case pf.ChannelIf:

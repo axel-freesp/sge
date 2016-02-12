@@ -29,7 +29,7 @@ func FileManagerPFNew(context FilemanagerContextIf) *fileManagerPF {
 //      FileManagerIf interface
 //
 
-func (f *fileManagerPF) New() (pl tr.ToplevelTreeElement, err error) {
+func (f *fileManagerPF) New() (pl tr.ToplevelTreeElementIf, err error) {
 	filename := f.NewFilename()
 	pl = platform.PlatformNew(filename)
 	f.platformMap[filename] = pl.(pf.PlatformIf)
@@ -51,7 +51,7 @@ func (f *fileManagerPF) New() (pl tr.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElement, err error) {
+func (f *fileManagerPF) Access(name string) (pl tr.ToplevelTreeElementIf, err error) {
 	var ok bool
 	pl, ok = f.platformMap[name]
 	if ok {

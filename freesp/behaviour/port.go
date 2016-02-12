@@ -142,10 +142,10 @@ func (p *port) String() (s string) {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*port)(nil)
+var _ tr.TreeElementIf = (*port)(nil)
 
 func (p *port) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop tr.Property
@@ -185,7 +185,7 @@ func (p *port) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, conn bh.Connec
 	return
 }
 
-func (p *port) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (p *port) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
 	case bh.ConnectionIf:
 		conn := obj.(bh.ConnectionIf)

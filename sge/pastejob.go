@@ -33,7 +33,7 @@ func (j *PasteJob) String() (text string) {
 }
 
 func ParseText(text string, fts *models.FilesTreeStore) (job *EditorJob, err error) {
-	var parent tr.TreeElement
+	var parent tr.TreeElementIf
 	context := fts.GetCurrentId()
 	if len(context) == 0 {
 		err = fmt.Errorf("NewElementJob.ParseText TODO: Toplevel elements not implemented")

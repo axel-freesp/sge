@@ -12,8 +12,8 @@ type ModelContextIf interface {
 }
 
 type FileManagerIf interface {
-	New() (tree.ToplevelTreeElement, error)
-	Access(name string) (tree.ToplevelTreeElement, error)
+	New() (tree.ToplevelTreeElementIf, error)
+	Access(name string) (tree.ToplevelTreeElementIf, error)
 	Remove(name string)
 	Rename(oldName, newName string) error
 	Store(name string) error

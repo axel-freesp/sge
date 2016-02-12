@@ -85,7 +85,7 @@ func (t *iotype) SetName(newName string) {
 }
 
 //
-//  TreeElement API
+//  TreeElementIf API
 //
 
 func (t *iotype) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -96,7 +96,7 @@ func (t *iotype) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (t *iotype) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (t *iotype) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatalf("iotype.AddNewObject error: nothing to add\n")
 	return
 }
@@ -106,7 +106,7 @@ func (t *iotype) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.Id
 	return
 }
 
-func (t *iotype) Identify(te tr.TreeElement) bool {
+func (t *iotype) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *iotype:
 		return te.(*iotype).Name() == t.Name()

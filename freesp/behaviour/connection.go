@@ -46,10 +46,10 @@ func (c *connection) String() (s string) {
 }
 
 //
-//  tr.TreeElement API
+//  tr.TreeElementIf API
 //
 
-var _ tr.TreeElement = (*connection)(nil)
+var _ tr.TreeElementIf = (*connection)(nil)
 
 func (c *connection) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	text := fmt.Sprintf("%s/%s -> %s/%s", c.from.Node().Name(), c.from.Name(),
@@ -61,7 +61,7 @@ func (c *connection) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (c *connection) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (c *connection) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatal("Connection.AddNewObject - nothing to add.")
 	return
 }
@@ -71,7 +71,7 @@ func (c *connection) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []t
 	return
 }
 
-func (c *connection) Identify(te tr.TreeElement) bool {
+func (c *connection) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *connection:
 		return te.(*connection) == c

@@ -175,10 +175,10 @@ func (n *node) String() (s string) {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*node)(nil)
+var _ tr.TreeElementIf = (*node)(nil)
 
 func (n *node) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop tr.Property
@@ -211,7 +211,7 @@ func (n *node) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (n *node) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (n *node) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatal("node.AddNewObject - nothing to add.")
 	return
 }

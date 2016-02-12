@@ -237,10 +237,10 @@ func (l *library) CreateXml() (buf []byte, err error) {
 	return
 }
 
-var _ tr.TreeElement = (*library)(nil)
+var _ tr.TreeElementIf = (*library)(nil)
 
 //
-//		tr.TreeElement interface
+//		tr.TreeElementIf interface
 //
 
 func (l *library) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -259,7 +259,7 @@ func (l *library) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (l *library) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (l *library) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("library.AddNewObject error: nil object")
 		return
@@ -342,7 +342,7 @@ func (l *library) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.I
 	return
 }
 
-func (l *library) Identify(te tr.TreeElement) bool {
+func (l *library) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *library:
 		return te.(*library).Filename() == l.Filename()

@@ -73,7 +73,7 @@ func (a *jobApplier) Apply(jobI interface{}) (state interface{}, err error) {
 	job := jobI.(*EditorJob)
 	switch job.jobType {
 	case JobNewElement:
-		var object tr.TreeElement
+		var object tr.TreeElementIf
 		object, err = job.newElement.CreateObject(a.fts)
 		if err != nil {
 			log.Printf("jobApplier.Apply error (JobNewElement): %s\n", err)

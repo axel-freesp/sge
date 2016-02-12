@@ -10,11 +10,11 @@ type TreeViewIf interface {
 }
 
 type TreeMgrIf interface {
-	AddToplevel(ToplevelTreeElement) (newId string, err error)
+	AddToplevel(ToplevelTreeElementIf) (newId string, err error)
 	RemoveToplevel(id string) (deleted []IdWithObject, err error)
 	SetValueById(id, value string) error
-	GetToplevelId(ToplevelTreeElement) (id string, err error)
-	GetObjectById(string) (TreeElement, error)
+	GetToplevelId(ToplevelTreeElementIf) (id string, err error)
+	GetObjectById(string) (TreeElementIf, error)
 }
 
 type TreeIf interface {
@@ -23,26 +23,26 @@ type TreeIf interface {
 	Insert(c Cursor) Cursor
 	Remove(c Cursor) (prefix string, index int)
 	Parent(c Cursor) Cursor
-	Object(c Cursor) (obj TreeElement)
-	Cursor(obj TreeElement) (cursor Cursor)
-	CursorAt(start Cursor, obj TreeElement) (cursor Cursor)
-	AddEntry(c Cursor, sym Symbol, text string, obj TreeElement, prop Property) (err error)
+	Object(c Cursor) (obj TreeElementIf)
+	Cursor(obj TreeElementIf) (cursor Cursor)
+	CursorAt(start Cursor, obj TreeElementIf) (cursor Cursor)
+	AddEntry(c Cursor, sym Symbol, text string, obj TreeElementIf, prop Property) (err error)
 	Property(c Cursor) Property
 }
 
 type NamedTreeElementIf interface {
-	TreeElement
+	TreeElementIf
 	graph.Namer
 }
-type TreeElement interface {
+type TreeElementIf interface {
 	graph.XmlCreator
 	AddToTree(tree TreeIf, cursor Cursor)
-	AddNewObject(tree TreeIf, cursor Cursor, obj TreeElement) (newCursor Cursor, err error)
+	AddNewObject(tree TreeIf, cursor Cursor, obj TreeElementIf) (newCursor Cursor, err error)
 	RemoveObject(tree TreeIf, cursor Cursor) (removed []IdWithObject)
 }
 
-type ToplevelTreeElement interface {
-	TreeElement
+type ToplevelTreeElementIf interface {
+	TreeElementIf
 	filedata.FileDataIf
 	RemoveFromTree(TreeIf)
 }
@@ -57,7 +57,7 @@ const AppendCursor = -1
 type IdWithObject struct {
 	ParentId string
 	Position int
-	Object   TreeElement
+	Object   TreeElementIf
 }
 
 type Symbol int

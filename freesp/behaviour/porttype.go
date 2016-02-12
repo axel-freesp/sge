@@ -69,10 +69,10 @@ func (t *portType) CreateXml() (buf []byte, err error) {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*portType)(nil)
+var _ tr.TreeElementIf = (*portType)(nil)
 
 func (p *portType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop tr.Property
@@ -96,7 +96,7 @@ func (p *portType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	p.SignalType().AddToTree(tree, child)
 }
 
-func (p *portType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (p *portType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatal("bh.PortTypeIf.AddNewObject - nothing to add.")
 	return
 }

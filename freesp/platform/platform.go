@@ -233,7 +233,7 @@ func (p *platform) RemoveFromTree(tree tr.TreeIf) {
 }
 
 //
-//  tr.TreeElement API
+//  tr.TreeElementIf API
 //
 
 func (p *platform) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -248,7 +248,7 @@ func (p *platform) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (p *platform) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (p *platform) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("platform.AddNewObject error: nil object")
 		return

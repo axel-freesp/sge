@@ -66,10 +66,10 @@ func (n *implementation) String() string {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*implementation)(nil)
+var _ tr.TreeElementIf = (*implementation)(nil)
 
 func (impl *implementation) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var image tr.Symbol
@@ -105,7 +105,7 @@ func (impl *implementation) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (impl *implementation) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (impl *implementation) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
 	case bh.NodeIf:
 		if impl.ImplementationType() == bh.NodeTypeGraph {

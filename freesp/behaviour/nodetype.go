@@ -254,10 +254,10 @@ func createNodeTypeFromXml(xmlnt backend.XmlNodeType, filename string, context m
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*nodeType)(nil)
+var _ tr.TreeElementIf = (*nodeType)(nil)
 
 func (t *nodeType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop tr.Property
@@ -289,7 +289,7 @@ func (t *nodeType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (t *nodeType) treeNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor) {
+func (t *nodeType) treeNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor) {
 	switch obj.(type) {
 	case bh.ImplementationIf:
 		cursor.Position = len(t.Implementation()) - 1
@@ -335,7 +335,7 @@ func (t *nodeType) treeNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeEl
 	return
 }
 
-func (t *nodeType) treeInstObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor) {
+func (t *nodeType) treeInstObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor) {
 	switch obj.(type) {
 	case bh.ImplementationIf:
 		impl := obj.(bh.ImplementationIf)
@@ -382,7 +382,7 @@ func (t *nodeType) treeInstObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeE
 	return
 }
 
-func (t *nodeType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (t *nodeType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
 	case bh.ImplementationIf:
 		t.AddImplementation(obj.(bh.ImplementationIf))

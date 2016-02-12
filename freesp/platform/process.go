@@ -97,7 +97,7 @@ func (p *process) String() string {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
 func (p *process) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -116,7 +116,7 @@ func (p *process) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (p *process) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (p *process) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	if obj == nil {
 		err = fmt.Errorf("process.AddNewObject error: %v nil object", p)
 		return

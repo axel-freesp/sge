@@ -63,7 +63,7 @@ func (m *mapelem) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (m mapelem) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (m mapelem) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatalf("mapping.AddNewObject error: Nothing to add\n")
 	return
 }

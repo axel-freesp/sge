@@ -10,7 +10,7 @@ import (
  */
 
 type PlatformIf interface {
-	tree.ToplevelTreeElement
+	tree.ToplevelTreeElementIf
 	PlatformId() string
 	SetPlatformId(string)
 	ProcessByName(string) (ProcessIf, bool)

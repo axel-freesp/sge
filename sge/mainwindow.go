@@ -28,7 +28,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		var err error
 		var tpath *gtk.TreePath
 		var path string
-		var obj tr.TreeElement
+		var obj tr.TreeElementIf
 		tpath, err = treeStore.TreeStore().GetPath(&iter)
 		if err != nil {
 			log.Println("treeSelectionChangedCB: Could not get path from model", err)

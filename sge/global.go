@@ -65,7 +65,7 @@ func (g *Global) MappingMgr() mod.FileManagerMappingIf {
 	return g.mappingMgr
 }
 
-func (g *Global) FileMgr(obj tr.TreeElement) (mgr mod.FileManagerIf) {
+func (g *Global) FileMgr(obj tr.TreeElementIf) (mgr mod.FileManagerIf) {
 	switch obj.(type) {
 	case bh.SignalGraphIf:
 		mgr = global.SignalGraphMgr()
@@ -134,7 +134,7 @@ func (g *Global) CleanupSignalTypesFromNodes(nodes []bh.NodeIf) {
 }
 
 func (g *Global) NodeTypeIsInUse(nt bh.NodeTypeIf) bool {
-	var te tr.TreeElement
+	var te tr.TreeElementIf
 	var err error
 	for i := 0; err == nil; i++ {
 		id := fmt.Sprintf("%d", i)
@@ -163,7 +163,7 @@ func (g *Global) CleanupNodeType(nt bh.NodeTypeIf) {
 }
 
 func (g *Global) SignalTypeIsInUse(st bh.SignalTypeIf) bool {
-	var te tr.TreeElement
+	var te tr.TreeElementIf
 	var err error
 	for i := 0; err == nil; i++ {
 		id := fmt.Sprintf("%d", i)

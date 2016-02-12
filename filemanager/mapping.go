@@ -42,7 +42,7 @@ func (f *fileManagerMap) SetPlatformForNew(p interface{}) {
 //      FileManagerIf interface
 //
 
-func (f *fileManagerMap) New() (m tr.ToplevelTreeElement, err error) {
+func (f *fileManagerMap) New() (m tr.ToplevelTreeElementIf, err error) {
 	if f.graphForNew == nil || f.platformForNew == nil {
 		err = fmt.Errorf("fileManagerMap.New: not completely prepared.\n")
 		return
@@ -71,7 +71,7 @@ func (f *fileManagerMap) New() (m tr.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElement, err error) {
+func (f *fileManagerMap) Access(name string) (m tr.ToplevelTreeElementIf, err error) {
 	var ok bool
 	m, ok = f.mappingMap[name]
 	if ok {

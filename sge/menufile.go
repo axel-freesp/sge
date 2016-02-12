@@ -51,11 +51,11 @@ var descriptionFileTypes = map[FileType]string{
 	FileTypeMap:   "Mapping File (*.mml)",
 }
 
-func Suffix(obj tr.ToplevelTreeElement) string {
+func Suffix(obj tr.ToplevelTreeElementIf) string {
 	return string(fileType(obj))
 }
 
-func fileType(obj tr.ToplevelTreeElement) (ft FileType) {
+func fileType(obj tr.ToplevelTreeElementIf) (ft FileType) {
 	switch obj.(type) {
 	case bh.SignalGraphIf:
 		ft = FileTypeGraph
@@ -71,7 +71,7 @@ func fileType(obj tr.ToplevelTreeElement) (ft FileType) {
 	return
 }
 
-func Description(obj tr.ToplevelTreeElement) string {
+func Description(obj tr.ToplevelTreeElementIf) string {
 	return descriptionFileTypes[fileType(obj)]
 }
 
@@ -208,7 +208,7 @@ func fileNewMap(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	if !ok {
 		return
 	}
-	var f tr.ToplevelTreeElement
+	var f tr.ToplevelTreeElementIf
 	var err error
 	prefix, fname := dirMgr.FilenameToShow(sgname)
 	f, err = global.SignalGraphMgr().Access(fname)
@@ -257,7 +257,7 @@ func fileOpen(fts *models.FilesTreeStore, ftv *views.FilesTreeView) {
 	}
 	prefix, fname := dirMgr.FilenameToShow(filename)
 	var err error
-	var obj tr.ToplevelTreeElement
+	var obj tr.ToplevelTreeElementIf
 	var fileMgr mod.FileManagerIf
 	fileMgr, err = getFileMgr(FileType(tool.Suffix(fname)))
 	obj, err = fileMgr.Access(fname)
@@ -429,11 +429,11 @@ func setCurrentTopValue(fts *models.FilesTreeStore, value string) {
 	fts.SetValueById(id0, value)
 }
 
-func getCurrentTopObject(fts *models.FilesTreeStore) tr.ToplevelTreeElement {
+func getCurrentTopObject(fts *models.FilesTreeStore) tr.ToplevelTreeElementIf {
 	id0 := getToplevelId(fts)
 	obj, err := fts.GetObjectById(id0)
 	if err != nil {
 		log.Fatal("fileSave error: fts.GetObjectByPath failed:", err)
 	}
-	return obj.(tr.ToplevelTreeElement)
+	return obj.(tr.ToplevelTreeElementIf)
 }

@@ -28,7 +28,7 @@ func FileManagerSGNew(context FilemanagerContextIf) *fileManagerSG {
 //      FileManagerIf interface
 //
 
-func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
+func (f *fileManagerSG) New() (sg tr.ToplevelTreeElementIf, err error) {
 	filename := f.NewFilename()
 	sg = behaviour.SignalGraphNew(filename, f.context)
 	f.signalGraphMap[filename] = sg.(bh.SignalGraphIf)
@@ -50,7 +50,7 @@ func (f *fileManagerSG) New() (sg tr.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElement, err error) {
+func (f *fileManagerSG) Access(name string) (sg tr.ToplevelTreeElementIf, err error) {
 	var ok bool
 	sg, ok = f.signalGraphMap[name]
 	if ok {

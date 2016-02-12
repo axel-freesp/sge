@@ -24,7 +24,7 @@ func MenuViewPost(menu *GoAppMenu, g *Global) {
 
 	fts := g.FTS().(tr.TreeIf)
 	cursor := fts.Current()
-	var obj tr.TreeElement
+	var obj tr.TreeElementIf
 	if len(cursor.Path) != 0 {
 		obj = fts.Object(cursor)
 	}

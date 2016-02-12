@@ -12,7 +12,7 @@ import (
  */
 
 type MappingIf interface {
-	tree.ToplevelTreeElement
+	tree.ToplevelTreeElementIf
 	SetGraph(behaviour.SignalGraphIf)
 	Graph() behaviour.SignalGraphIf
 	SetPlatform(platform.PlatformIf)
@@ -24,7 +24,7 @@ type MappingIf interface {
 }
 
 type MappedElementIf interface {
-	tree.TreeElement
+	tree.TreeElementIf
 	graph.ModePositioner
 	graph.Expander
 	Mapping() MappingIf

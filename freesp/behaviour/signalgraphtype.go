@@ -461,10 +461,10 @@ func (t *signalGraphType) CreateXml() (buf []byte, err error) {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*signalGraphType)(nil)
+var _ tr.TreeElementIf = (*signalGraphType)(nil)
 
 func (t *signalGraphType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	for _, n := range t.InputNodes() {
@@ -487,7 +487,7 @@ func (t *signalGraphType) treeAddNewObject(tree tr.TreeIf, cursor tr.Cursor, n b
 	return
 }
 
-func (t *signalGraphType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (t *signalGraphType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	switch obj.(type) {
 	case bh.NodeIf:
 		// TODO: Check if IO node and exists: copy position only and return

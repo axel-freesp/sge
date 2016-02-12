@@ -32,7 +32,7 @@ func MenuEditInit(menu *GoAppMenu) {
 func MenuEditPost(menu *GoAppMenu, fts *models.FilesTreeStore, jl IJobList) {
 	MenuEditCurrent(menu, fts, jl)
 	cursor := fts.Current()
-	var obj tr.TreeElement
+	var obj tr.TreeElementIf
 	if len(cursor.Path) != 0 {
 		obj = fts.Object(cursor)
 	}

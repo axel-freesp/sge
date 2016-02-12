@@ -127,10 +127,10 @@ func (t *signalType) String() string {
 }
 
 /*
- *  tr.TreeElement API
+ *  tr.TreeElementIf API
  */
 
-var _ tr.TreeElement = (*signalType)(nil)
+var _ tr.TreeElementIf = (*signalType)(nil)
 
 func (t *signalType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	var prop tr.Property
@@ -150,7 +150,7 @@ func (t *signalType) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (t *signalType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (t *signalType) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatal("signalType.AddNewObject - nothing to add.")
 	return
 }

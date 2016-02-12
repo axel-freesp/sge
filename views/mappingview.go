@@ -731,7 +731,7 @@ func (p *unmappedProcess) OutChannels() []pf.ChannelIf {
 func (p *unmappedProcess) AddToTree(tr.TreeIf, tr.Cursor) {
 	return
 }
-func (p *unmappedProcess) AddNewObject(tr.TreeIf, tr.Cursor, tr.TreeElement) (c tr.Cursor, e error) {
+func (p *unmappedProcess) AddNewObject(tr.TreeIf, tr.Cursor, tr.TreeElementIf) (c tr.Cursor, e error) {
 	return
 }
 func (p *unmappedProcess) RemoveObject(tr.TreeIf, tr.Cursor) (r []tr.IdWithObject) {

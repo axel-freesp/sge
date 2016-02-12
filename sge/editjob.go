@@ -49,7 +49,7 @@ func (j *EditJob) EditObject(fts *models.FilesTreeStore, direction EditJobDirect
 	} else {
 		old, detail = &j.detail, &j.old
 	}
-	var obj tr.TreeElement
+	var obj tr.TreeElementIf
 	obj, err = fts.GetObjectById(j.objId)
 	state = j.objId
 	switch j.elemType {

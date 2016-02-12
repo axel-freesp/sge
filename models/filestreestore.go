@@ -33,7 +33,7 @@ func Init() (err error) {
 
 type Element struct {
 	prop tr.Property
-	elem tr.TreeElement
+	elem tr.TreeElementIf
 }
 
 type FilesTreeStore struct {
@@ -73,7 +73,7 @@ func (s *FilesTreeStore) GetCurrentId() (id string) {
 	return
 }
 
-func (s *FilesTreeStore) GetObjectById(id string) (ret tr.TreeElement, err error) {
+func (s *FilesTreeStore) GetObjectById(id string) (ret tr.TreeElementIf, err error) {
 	if len(id) == 0 {
 		err = fmt.Errorf("FilesTreeStore.GetObjectById warning: empty id.\n")
 		return
@@ -129,7 +129,7 @@ func (s *FilesTreeStore) GetValue(iter *gtk.TreeIter) (ret string, err error) {
 }
 
 // Returns the object stored with the row
-func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret tr.TreeElement, err error) {
+func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret tr.TreeElementIf, err error) {
 	var ok bool
 	ret, ok = s.getObject(iter)
 	if !ok {
@@ -140,14 +140,14 @@ func (s *FilesTreeStore) GetObject(iter *gtk.TreeIter) (ret tr.TreeElement, err 
 	return
 }
 
-func (s *FilesTreeStore) AddToplevel(obj tr.ToplevelTreeElement) (newId string, err error) {
+func (s *FilesTreeStore) AddToplevel(obj tr.ToplevelTreeElementIf) (newId string, err error) {
 	cursor := s.Append(rootCursor)
 	obj.AddToTree(s, cursor)
 	newId = cursor.Path
 	return
 }
 
-func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj tr.TreeElement) (newId string, err error) {
+func (tree *FilesTreeStore) AddNewObject(parentId string, position int, obj tr.TreeElementIf) (newId string, err error) {
 	parent, _, err := tree.getObjAndIterById(parentId)
 	if err != nil {
 		return
@@ -184,16 +184,16 @@ func (tree *FilesTreeStore) RemoveToplevel(id string) (deleted []tr.IdWithObject
 		err = fmt.Errorf("FilesTreeStore.RemoveToplevel: not removing toplevel object (abort)")
 		return
 	}
-	var obj tr.TreeElement
+	var obj tr.TreeElementIf
 	obj, err = tree.GetObjectById(id)
 	if err != nil {
 		return
 	}
-	obj.(tr.ToplevelTreeElement).RemoveFromTree(tree)
+	obj.(tr.ToplevelTreeElementIf).RemoveFromTree(tree)
 	return
 }
 
-func (tree *FilesTreeStore) GetToplevelId(obj tr.ToplevelTreeElement) (id string, err error) {
+func (tree *FilesTreeStore) GetToplevelId(obj tr.ToplevelTreeElementIf) (id string, err error) {
 	var o Element
 	ok := true
 	for i := 0; ok; i++ {
@@ -317,12 +317,12 @@ func (s *FilesTreeStore) Parent(c tr.Cursor) tr.Cursor {
 	return tr.Cursor{prefix, index}
 }
 
-func (s *FilesTreeStore) Object(c tr.Cursor) (obj tr.TreeElement) {
+func (s *FilesTreeStore) Object(c tr.Cursor) (obj tr.TreeElementIf) {
 	return s.lookup[c.Path].elem
 }
 
 // Toplevel search
-func (s *FilesTreeStore) getIterAndPathFromObject(obj tr.TreeElement) (iter *gtk.TreeIter, path string, err error) {
+func (s *FilesTreeStore) getIterAndPathFromObject(obj tr.TreeElementIf) (iter *gtk.TreeIter, path string, err error) {
 	var o Element
 	ok := false
 	for i := 0; !ok; i++ {
@@ -353,7 +353,7 @@ func (s *FilesTreeStore) getIterAndPathFromObject(obj tr.TreeElement) (iter *gtk
 }
 
 // Toplevel search
-func (s *FilesTreeStore) Cursor(obj tr.TreeElement) (cursor tr.Cursor) {
+func (s *FilesTreeStore) Cursor(obj tr.TreeElementIf) (cursor tr.Cursor) {
 	_, path, err := s.getIterAndPathFromObject(obj)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -363,7 +363,7 @@ func (s *FilesTreeStore) Cursor(obj tr.TreeElement) (cursor tr.Cursor) {
 }
 
 // Subtree search
-func (s *FilesTreeStore) CursorAt(start tr.Cursor, obj tr.TreeElement) (cursor tr.Cursor) {
+func (s *FilesTreeStore) CursorAt(start tr.Cursor, obj tr.TreeElementIf) (cursor tr.Cursor) {
 	path, ok := s.getIdFromObjectRecursive(start.Path, obj)
 	if !ok {
 		log.Println("FilesTreeStore.CursorAt: start =", start)
@@ -372,7 +372,7 @@ func (s *FilesTreeStore) CursorAt(start tr.Cursor, obj tr.TreeElement) (cursor t
 	return tr.Cursor{path, tr.AppendCursor}
 }
 
-func (s *FilesTreeStore) AddEntry(c tr.Cursor, sym tr.Symbol, text string, data tr.TreeElement, prop tr.Property) (err error) {
+func (s *FilesTreeStore) AddEntry(c tr.Cursor, sym tr.Symbol, text string, data tr.TreeElementIf, prop tr.Property) (err error) {
 	var icon *gdk.Pixbuf
 	if prop.IsReadOnly() {
 		icon = readonlyPixbuf(sym)
@@ -409,7 +409,7 @@ func (s *FilesTreeStore) Property(c tr.Cursor) tr.Property {
  *      Local functions
  */
 
-func (s *FilesTreeStore) getObjAndIterById(id string) (obj tr.TreeElement, iter *gtk.TreeIter, err error) {
+func (s *FilesTreeStore) getObjAndIterById(id string) (obj tr.TreeElementIf, iter *gtk.TreeIter, err error) {
 	obj, err = s.GetObjectById(id)
 	if err != nil {
 		return
@@ -463,7 +463,7 @@ func (s *FilesTreeStore) setValue(value string, iter *gtk.TreeIter) (err error) 
 	return
 }
 
-func (s *FilesTreeStore) getIterFromObject(obj tr.TreeElement) (iter *gtk.TreeIter, err error) {
+func (s *FilesTreeStore) getIterFromObject(obj tr.TreeElementIf) (iter *gtk.TreeIter, err error) {
 	var id string
 	var o Element
 	ok := false
@@ -484,7 +484,7 @@ func (s *FilesTreeStore) getIterFromObject(obj tr.TreeElement) (iter *gtk.TreeIt
 	return
 }
 
-func (s *FilesTreeStore) getIdFromObject(obj tr.TreeElement) (id string, err error) {
+func (s *FilesTreeStore) getIdFromObject(obj tr.TreeElementIf) (id string, err error) {
 	iter, err := s.getIterFromObject(obj)
 	if err != nil {
 		return
@@ -501,7 +501,7 @@ func (s *FilesTreeStore) getIdFromObject(obj tr.TreeElement) (id string, err err
 	return
 }
 
-func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj tr.TreeElement) (id string, ok bool) {
+func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj tr.TreeElementIf) (id string, ok bool) {
 	ok = false
 	var o Element
 	for i := 0; !ok; i++ {
@@ -516,7 +516,7 @@ func (s *FilesTreeStore) getIdFromObjectRecursive(parent string, obj tr.TreeElem
 	return
 }
 
-func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj tr.TreeElement, ok bool) {
+func (s *FilesTreeStore) getObject(iter *gtk.TreeIter) (obj tr.TreeElementIf, ok bool) {
 	ok = false
 	if iter == nil {
 		fmt.Println("FilesTreeStore.getObject: zero iter")

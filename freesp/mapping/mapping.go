@@ -77,7 +77,7 @@ func (m *mapping) CreateXml() (buf []byte, err error) {
 }
 
 //
-//		TreeElement interface
+//		TreeElementIf interface
 //
 
 func (m *mapping) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -101,7 +101,7 @@ func (m *mapping) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (m mapping) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (m mapping) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatalf("mapping.AddNewObject error: Nothing to add\n")
 	return
 }
@@ -111,7 +111,7 @@ func (m mapping) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.Id
 	return
 }
 
-func (m *mapping) Identify(te tr.TreeElement) bool {
+func (m *mapping) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *mapping:
 		return te.(*mapping).Filename() == m.Filename()

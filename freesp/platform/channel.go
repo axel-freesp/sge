@@ -181,7 +181,7 @@ func (c *channel) String() string {
 }
 
 //
-//  tr.TreeElement API
+//  tr.TreeElementIf API
 //
 
 func (c *channel) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
@@ -198,7 +198,7 @@ func (c *channel) AddToTree(tree tr.TreeIf, cursor tr.Cursor) {
 	}
 }
 
-func (c *channel) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElement) (newCursor tr.Cursor, err error) {
+func (c *channel) AddNewObject(tree tr.TreeIf, cursor tr.Cursor, obj tr.TreeElementIf) (newCursor tr.Cursor, err error) {
 	log.Fatalf("channel.AddNewObject error: nothing to add\n")
 	return
 }
@@ -208,7 +208,7 @@ func (c *channel) RemoveObject(tree tr.TreeIf, cursor tr.Cursor) (removed []tr.I
 	return
 }
 
-func (c *channel) Identify(te tr.TreeElement) bool {
+func (c *channel) Identify(te tr.TreeElementIf) bool {
 	switch te.(type) {
 	case *channel:
 		return te.(*channel).Name() == c.Name()

@@ -8,7 +8,7 @@ import (
 
 /*
 type SignalType interface {
-	TreeElement
+	TreeElementIf
 	TypeName() string
 	CType() string
 	ChannelId() string
@@ -36,7 +36,7 @@ func TestSignalType(t *testing.T) {
 		 * 	Compatible duplicates are allowed (all fields identical!),
 		 * 	but duplicates are registered only once.
 		 *
-		 * 	TreeElement interface not tested.
+		 * 	TreeElementIf interface not tested.
 		 */
 		{"", "s1", "", "", 0, 0, true},
 		{"", "s1", "", "", 0, 0, true},        // compatible duplicate

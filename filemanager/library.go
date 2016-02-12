@@ -26,7 +26,7 @@ func FileManagerLibNew(context FilemanagerContextIf) *fileManagerLib {
 //      FileManagerIf interface
 //
 
-func (f *fileManagerLib) New() (lib tr.ToplevelTreeElement, err error) {
+func (f *fileManagerLib) New() (lib tr.ToplevelTreeElementIf, err error) {
 	filename := f.NewFilename()
 	lib = behaviour.LibraryNew(filename, f.context)
 	f.libraryMap[filename] = lib.(bh.LibraryIf)
@@ -40,7 +40,7 @@ func (f *fileManagerLib) New() (lib tr.ToplevelTreeElement, err error) {
 	return
 }
 
-func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElement, err error) {
+func (f *fileManagerLib) Access(name string) (lib tr.ToplevelTreeElementIf, err error) {
 	var ok bool
 	lib, ok = f.libraryMap[name]
 	if ok {

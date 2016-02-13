@@ -144,6 +144,7 @@ func (s *FilesTreeStore) AddToplevel(obj tr.ToplevelTreeElementIf) (newId string
 	cursor := s.Append(rootCursor)
 	obj.AddToTree(s, cursor)
 	newId = cursor.Path
+	log.Printf("FilesTreeStore.AddToplevel: newId=%s\n", newId)
 	return
 }
 

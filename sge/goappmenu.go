@@ -64,7 +64,7 @@ func (m *GoAppMenu) Init() {
 	if err != nil {
 		log.Fatal("Unable to create fileNewSg:", err)
 	}
-	m.fileNewLib, err = gtk.MenuItemNewWithLabel("New LibraryIf")
+	m.fileNewLib, err = gtk.MenuItemNewWithLabel("New Library")
 	if err != nil {
 		log.Fatal("Unable to create fileNewLib:", err)
 	}

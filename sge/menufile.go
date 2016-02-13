@@ -46,7 +46,7 @@ var allFileTypes = [4]FileType{
 
 var descriptionFileTypes = map[FileType]string{
 	FileTypeGraph: "Graph File (*.sml)",
-	FileTypeLib:   "LibraryIf File (*.alml)",
+	FileTypeLib:   "Library File (*.alml)",
 	FileTypePlat:  "Platform File (*.spml)",
 	FileTypeMap:   "Mapping File (*.mml)",
 }

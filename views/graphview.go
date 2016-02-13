@@ -75,8 +75,8 @@ func (gvc *graphViewCollection) Rename(old, new string) {
 		log.Printf("graphViewCollection.Rename warning: old %s not found\n", old)
 		return
 	}
-	widget, err := gvc.stack.GetChildByName(old)
-	if err != nil {
+	widget := gvc.stack.GetChildByName(old)
+	if widget == nil {
 		log.Printf("graphViewCollection.Rename warning: stack child %s not found\n", old)
 		return
 	}
@@ -93,7 +93,7 @@ func (gvc *graphViewCollection) Rename(old, new string) {
 	delete(gvc.gmap, old)
 	gvc.gmap[new] = v
 }
-
+    
 func (gvc *graphViewCollection) RemoveGraphView(g bh.SignalGraphIf) {
 	var tmp []GraphViewIf
 	for _, v := range gvc.graphview {

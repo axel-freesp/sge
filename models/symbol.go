@@ -129,7 +129,8 @@ func normalInit(iconPath string, config symbolConfig) (img *gdk.Pixbuf, err erro
 			err = fmt.Errorf("readonlyInit error: image.Decode failed: %s", err)
 			return
 		}
-		img, err = gdk.PixbufNewFromBytes(ImageRgbaToGdkColorspace(decImg))
+		//img, err = gdk.PixbufNewFromBytes(ImageRgbaToGdkColorspace(decImg))
+		_ = decImg
 		if err != nil {
 			err = fmt.Errorf("readonlyInit error: PixbufNewFromBytes failed: %s", err)
 		}

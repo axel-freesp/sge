@@ -22,7 +22,7 @@ var global Global
 
 func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 	treeStore := global.fts
-	var iter gtk.TreeIter
+	var iter *gtk.TreeIter
 	var model gtk.ITreeModel
 	var ok bool
 	model, iter, ok = selection.GetSelected()
@@ -31,13 +31,13 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection, menu *GoAppMenu) {
 		var tpath *gtk.TreePath
 		var path string
 		var obj tr.TreeElementIf
-		tpath, err = model.(*gtk.TreeModel).GetPath(&iter)
+		tpath, err = model.(*gtk.TreeModel).GetPath(iter)
 		if err != nil {
 			log.Println("treeSelectionChangedCB: Could not get path from model", err)
 			return
 		}
 		path = tpath.String()
-		obj, err = treeStore.GetObject(&iter) // This one updates treeStore.Current...
+		obj, err = treeStore.GetObject(iter) // This one updates treeStore.Current...
 		if err != nil {
 			log.Println("treeSelectionChangedCB: Could not get object from model", err)
 			obj, err = treeStore.GetObjectById("0")
